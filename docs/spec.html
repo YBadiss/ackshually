@@ -127,42 +127,47 @@
   <h3>S4 · Answer arriving <span class="mtag">M2</span></h3>
   <p>The sheet rises as soon as the first words arrive and fills in this order:</p>
   <ol><li><b>Restated question</b> ("3 energy + a Battery, at end of turn"). If it's wrong, <b>Stop</b> and rephrase without waiting.</li>
-  <li><b>Verdict + confidence label.</b></li>
+  <li><b>Verdict + proof line</b> (placeholder text until they arrive).</li>
   <li><b>Step 1</b>: the PDF jumps to the page, zooms and highlights. Later steps keep loading.</li></ol>
+  <p>Between send and the first token the ask field shows <i>Reading the rulebook…</i> with the question and Stop; the sheet rises on the first token.</p>
 </div><div class="shot" data-screen="s4"></div></section>
 
 <section class="screen" id="s5"><div>
   <h3>S5 · The answer sheet <span class="mtag">M2</span></h3>
   <p>Two layers, no Back/Continue buttons:</p>
-  <ul><li><b>Answer header</b>, fixed while stepping: restated question · verdict · confidence label with pages (<code>✓ Stated · p.12, p.14</code>) · branch pills (<code>No Battery? Discard 3 ›</code>).</li>
-  <li><b>Step cards</b>: a horizontal carousel; the next card peeks from the edge, which signals "swipe". Each card: number, title, page, one or two sentences.</li></ul>
+  <p>A system sheet with three detents (collapsed, medium, large); the PDF stays usable under it up to medium. No Back/Continue buttons:</p>
+  <ul><li><b>Answer header</b>, fixed while stepping: text hierarchy, no chips. Bold verdict, then one secondary proof line (<code>checkmark.seal Stated in the rules · p.12, p.14</code>). Close (or Stop while streaming) top-right.</li>
+  <li><b>Step cards</b>: a horizontal shelf of system cards; the next card peeks from the edge, which signals "swipe". Caption = step title + page, then one or two sentences. Page dots below.</li>
+  <li><b>Branch rows</b> under the cards (<code>Without a Battery … Discard all 3 ›</code>), grouped like Settings.</li></ul>
 </div><div class="shot" data-screen="s5"></div></section>
 
 <section class="screen" id="s6"><div>
   <h3>S6 · Stepping <span class="mtag">M2</span></h3>
   <ul><li><b>Swipe left / tap the right peek</b> → next step. The PDF follows the card: page turn, zoom, highlight.</li>
   <li><b>Swipe right / tap the left peek</b> → previous step.</li>
-  <li><b>Last card</b>: the result + 👍/👎, with the follow-up field under it.</li>
+  <li><b>Last card</b>: the result + thumbs up / down, with the follow-up field under it.</li>
   <li>A step can cite several passages (pager "1 of 2 ›" on the PDF) or a figure (box outline; if no usable box, the whole page + "see the diagram, lower half").</li></ul>
 </div><div class="shot" data-screen="s6"></div></section>
 
 <section class="screen" id="s7"><div>
   <h3>S7 · Show the skeptic <span class="mtag">M2</span></h3>
-  <ul><li><b>Drag the sheet down</b> → page near full-screen, one-line verdict + page pinned at the bottom.</li>
+  <ul><li><b>Drag the sheet down</b> → page near full-screen, the collapsed detent keeps the verdict + proof line (with pages) at the bottom.</li>
   <li><b>Drag up</b> to restore.</li></ul>
 </div><div class="shot" data-screen="s7"></div></section>
 
 <section class="screen" id="s8"><div>
   <h3>S8 · Inspect freely <span class="mtag">M2</span></h3>
   <ul><li><b>Pinch / pan</b> the PDF at any time to read the surrounding qualifications. Tapping the PDF never changes steps.</li>
-  <li>A <b>⤺ Back to step N</b> pill re-centers on the highlight.</li>
+  <li>A <b>Back to Step N</b> glass button re-centers on the highlight.</li>
   <li><b>Double-tap</b>: evidence zoom ↔ full page.</li></ul>
 </div><div class="shot" data-screen="s8"></div></section>
 
 <section class="screen" id="s9"><div>
   <h3>S9 · Full answer <span class="mtag">M2</span></h3>
-  <ul><li><b>Drag the sheet up</b> → header, all steps (<b>tap</b> to jump), assumptions.</li>
-  <li><b>Tap a branch pill</b> → the step cards switch to that branch; a "Main answer" pill returns.</li></ul>
+  <ul><li><b>Drag the sheet up</b> (large detent) → restated question, header, then grouped rows: Steps (<b>tap</b> to jump), If…, Assumes, Was this right?, follow-up.</li>
+  <li><b>Tap a branch row</b> → the header shows that branch's verdict and the step cards switch to the branch's own steps (<code>branches[].steps</code>); a "Main Answer" row returns.</li>
+  <li><b>Wide screens</b> (iPad, Mac, phone landscape): the same content in the standard inspector column beside the PDF; a toolbar button shows/hides it.</li></ul>
+  <p>Screenshots of the built app: <a href="m2-screenshots/restyle/">m2-screenshots/restyle/</a> (they supersede the mockups' visual treatment).</p>
 </div><div class="shot" data-screen="s9"></div></section>
 
 <section class="screen" id="s10"><div>
@@ -191,29 +196,29 @@
 <h2 id="style">3 · Visual style</h2>
 <p><b>Direction (2026-11-21): native iOS, warm.</b> Use standard components and let the warm palette tint them. Reference: <a href="design/native-ios.html">design/native-ios.html</a>. It overrides the visual treatment of the S-mockups above (which still define layout and interactions) until they are redrawn.</p>
 <ul>
-<li><b>System components first:</b> system sheet with detents and material, navigation bar, grouped lists (like Settings), SF Symbols, native page/scroll behavior, Liquid Glass where the SDK provides it. No custom pills, outlined chips or boxed web-style cards.</li>
-<li><b>Text hierarchy instead of decoration:</b> bold verdict, then one secondary line of proof ("✔ Stated in the rules · p.3, p.4"). The restated question shows only while waiting and in the expanded view.</li>
+<li><b>System components first:</b> system sheet with detents, navigation bar with a standard ⋯ menu, inspector on wide screens, grouped rows (like Settings), SF Symbols, native page/scroll behavior, Liquid Glass for controls floating over the PDF (ask field, Back to Step, passage pager, close/stop). No custom pills, outlined chips or boxed web-style cards.</li>
+<li><b>Text hierarchy instead of decoration:</b> bold verdict (title3), then one secondary line of proof ("checkmark.seal Stated in the rules · p.3, p.4"; inferred: exclamationmark.triangle, not covered: questionmark.circle). The restated question shows only while waiting and in the expanded view. "Demo answer" is a footnote in the expanded view and a note in the ⋯ menu, never on the verdict.</li>
 <li><b>Step cards keep the peek</b>, styled as system cards (App Store / Music shelves): rounded, no borders or shadows; caption = step title + page.</li>
 <li><b>Branches, steps, feedback</b> are standard rows with chevrons / values.</li>
 <li><b>Warm, but restrained:</b> brick red as the app tint, warm-tinted bars, sheet and grouped backgrounds, warm highlighter on the PDF. Not plain white; not beige everywhere.</li>
 </ul>
 <h3>Tokens</h3>
-
+<p>All tokens live in <code>App/Sources/DesignSystem/Theme.swift</code> as light/dark pairs. Text, secondary text and separators are the system's own (<code>label</code>, <code>secondaryLabel</code>, <code>separator</code>) so hierarchy reads as iOS.</p>
 <div class="tbl"><table>
-  <tr><th>Token</th><th>Value</th><th>Use</th></tr>
-  <tr><td>background</td><td><span class="swatch" style="background:#efe4d0"></span><code>#efe4d0</code></td><td>App chrome, nav</td></tr>
-  <tr><td>sheet</td><td><span class="swatch" style="background:#f4e9d5"></span><code>#f4e9d5</code> + 1px <code>#d8c6a8</code> top border</td><td>Answer sheet; a shade darker than the page so app and rulebook never blend</td></tr>
-  <tr><td>card</td><td><span class="swatch" style="background:#fffaf0"></span><code>#fffaf0</code></td><td>Step cards, list rows</td></tr>
-  <tr><td>ink / muted</td><td><span class="swatch" style="background:#33261b"></span><code>#33261b</code> / <span class="swatch" style="background:#8a735c"></span><code>#8a735c</code></td><td>Text</td></tr>
-  <tr><td>line</td><td><span class="swatch" style="background:#d8c6a8"></span><code>#d8c6a8</code></td><td>Borders, dividers, inactive dots</td></tr>
-  <tr><td>accent</td><td><span class="swatch" style="background:#a2412b"></span><code>#a2412b</code></td><td>Primary actions, active dot, warnings</td></tr>
-  <tr><td>highlight</td><td><span class="swatch" style="background:#f2b134"></span><code>#f2b134</code> ~40% fill, <code>#d39320</code> outline</td><td>Evidence on the PDF</td></tr>
-  <tr><td>stated</td><td><span class="swatch" style="background:#3f6b2a"></span><code>#3f6b2a</code> on <code>#e3efd9</code></td><td>"✓ Stated" label</td></tr>
+  <tr><th>Token</th><th>Light</th><th>Dark</th><th>Use</th></tr>
+  <tr><td>tint</td><td><span class="swatch" style="background:#a2412b"></span><code>#a2412b</code></td><td><span class="swatch" style="background:#e2775c"></span><code>#e2775c</code></td><td>App tint (brick): buttons, symbols, selection</td></tr>
+  <tr><td>bar</td><td><span class="swatch" style="background:#f3ece1"></span><code>#f3ece1</code></td><td><span class="swatch" style="background:#1c1916"></span><code>#1c1916</code></td><td>Navigation bar, canvas around the PDF pages</td></tr>
+  <tr><td>sheet</td><td><span class="swatch" style="background:#f6efe4"></span><code>#f6efe4</code></td><td><span class="swatch" style="background:#221e1a"></span><code>#221e1a</code></td><td>Answer sheet / inspector; a shade off the page so app and rulebook never blend</td></tr>
+  <tr><td>groupedBackground</td><td><span class="swatch" style="background:#f3ece1"></span><code>#f3ece1</code></td><td><span class="swatch" style="background:#14110f"></span><code>#14110f</code></td><td>Empty state, Settings</td></tr>
+  <tr><td>card</td><td><span class="swatch" style="background:#fffdf9"></span><code>#fffdf9</code></td><td><span class="swatch" style="background:#2f2a25"></span><code>#2f2a25</code></td><td>Step cards, grouped rows</td></tr>
+  <tr><td>fieldFill</td><td><span class="swatch" style="background:#ede3d4"></span><code>#ede3d4</code></td><td><span class="swatch" style="background:#3a342d"></span><code>#3a342d</code></td><td>Follow-up field on the sheet (the floating ask field is Liquid Glass)</td></tr>
+  <tr><td>stated / inferred / not covered</td><td colspan="2">systemGreen / systemOrange / secondaryLabel</td><td>Proof-line symbol</td></tr>
+  <tr><td>highlight</td><td colspan="2"><span class="swatch" style="background:#f2b134"></span><code>#f2b134</code> 42% fill, <code>#d39320</code> outline (the page stays white in dark mode)</td><td>Evidence on the PDF</td></tr>
 </table></div>
-<ul><li><b>One font:</b> SF (system) everywhere. The rulebook keeps its own fonts.</li>
-<li><b>Corners:</b> sheet 16 · cards 11–12 · buttons 9 · labels 6.</li>
-<li><b>Voice:</b> short, precise, a little nerdy, never smug: "Well, according to p.14…", "✓ Stated · p.12, p.14", "? Not covered", "⚠ Designer disagrees", "Reading the rulebook…".</li>
-<li><b>Dark mode:</b> not designed yet.</li></ul>
+<ul><li><b>One font:</b> SF (system) everywhere, Dynamic Type text styles. The rulebook keeps its own fonts.</li>
+<li><b>Corners:</b> step cards 18 · grouped sections 22 · follow-up field 20 (continuous); the sheet, buttons and glass use the system's shapes.</li>
+<li><b>Voice:</b> short, precise, a little nerdy, never smug: "Well, according to p.14…", "Stated in the rules · p.12, p.14", "Not covered by the rules", "Designer disagrees", "Reading the rulebook…".</li>
+<li><b>Dark mode:</b> every token has a dark variant (warm near-black chrome, lighter brick tint); see the dark screenshots in <a href="m2-screenshots/restyle/">m2-screenshots/restyle/</a>.</li></ul>
 <p>Earlier explorations (grey wireframes, three style directions, sheet v2) are kept in <a href="design/explorations/">design/explorations/</a> for reference only.</p>
 
 <!-- ============================================================ -->
@@ -223,7 +228,11 @@
   "restated_question": "You have 3 energy and a Battery at end of turn.",
   "verdict": "Keep 2 energy, discard 1.",
   "confidence": "stated | inferred | not_covered",
-  "branches": [{ "condition": "Without a Battery", "verdict": "Discard all 3." }],
+  "branches": [{
+    "condition": "Without a Battery",
+    "verdict": "Discard all 3.",
+    "steps": [{ "title": "General rule", "text": "…", "evidence": [ … ] }]
+  }],
   "assumptions": ["The Battery is already in play."],
   "steps": [
     {
@@ -236,7 +245,7 @@
   ],
   "needs_web": false
 }</pre>
-<p><code>box</code> is <code>{x, y, w, h}</code> normalized 0–1, used for figures.</p>
+<p><code>box</code> is <code>{x, y, w, h}</code> normalized 0–1, used for figures. <code>title</code> (2–4 words) is the card caption. A branch carries its own <code>steps</code> (usually one) so the cards can switch to it (S9). Both are required by the structured-output schema and optional when decoding, so older answers still load (no title → "Step N"; a branch without steps → one card).</p>
 <h4>Placing a highlight, in order</h4>
 <ol><li>Match <code>quote</code> to the page's words as a continuous passage (PDF text layer, or OCR words for scanned/outlined pages) → word-level highlight.</li>
 <li><b>Layout-tolerant match:</b> multi-column pages and text over art scramble the text layer's reading order. Find the region where the quote's words cluster by position instead of requiring them in sequence; if that fails, OCR the page with Vision (visual reading order) and retry. <i>M1: all 4 misses were this case, not model misquotes.</i></li>
@@ -299,7 +308,11 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>Prompt cache TTL 1 hour (was 5 min)</td><td>Gaps between questions at the table often exceed 5 minutes; a cold cache re-pays the whole rulebook</td></tr>
   <tr><td>2026-11-21</td><td>Bench uses the owner's editions: Power Grid <i>Recharged</i>, Root <i>Learning to Play</i></td><td>Those are the PDFs at the table; answers verified against them</td></tr>
   <tr><td>2026-11-21</td><td>Wide screens (iPad, Mac, phone landscape) show the answer in a side panel beside the PDF instead of the bottom sheet</td><td>A bottom sheet covers most of a short landscape screen; one container decides (see <a href="m2-notes.md">m2-notes</a>)</td></tr>
-  <tr><td>2026-11-21</td><td>Answer sheet is a custom overlay with three detents, not a system <code>.sheet</code></td><td>The PDF stays interactive underneath and the app knows exactly how much page is covered, so evidence centers above the sheet</td></tr>
+  <tr><td>2026-11-21</td><td><s>Answer sheet is a custom overlay with three detents, not a system <code>.sheet</code></s> (superseded below)</td><td>The PDF stays interactive underneath and the app knows exactly how much page is covered, so evidence centers above the sheet</td></tr>
+  <tr><td>2026-11-21</td><td>Answer sheet is the system <code>.sheet</code>: detents sized from the content (collapsed = verdict + proof, medium = + cards and branches, large), background interaction up to medium, no swipe-to-dismiss (Close button)</td><td>Native look and drag feel; the system sheet now meets S7–S9: the PDF stays pinchable under it and the sheet reports its top edge, so evidence still centers above it</td></tr>
+  <tr><td>2026-11-21</td><td>Wide screens use the standard <code>.inspector</code> column instead of a custom side panel; the layout is decided from the window width</td><td>Standard iPad pattern with a toolbar toggle; deciding from the PDF column's width made the inspector flip the layout</td></tr>
+  <tr><td>2026-11-21</td><td>Header is text hierarchy (bold verdict + one proof line with an SF Symbol); branches, steps, feedback are grouped rows; SF Symbols replace emoji; ask field is a Liquid Glass bottom field with the mic inside</td><td>Spec §3 native direction; <code>.searchable</code> can't host hold-to-talk, so the field is a glass <code>TextField</code> placed like the iOS 26 bottom search field</td></tr>
+  <tr><td>2026-11-21</td><td>Answer contract: <code>steps[].title</code> and <code>branches[].steps</code> (required in the schema, optional when decoding)</td><td>Card captions need a title; S9's "cards switch to the branch" needs evidence per branch. Costs a few dozen tokens per branch before step 1 streams: watch the step-1 latency in the next bench run</td></tr>
 </table></div>
 
 <!-- ============================================================ -->
@@ -307,7 +320,8 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
 <ul class="todo">
   <li>Draw <code>expected_box</code> for the Azul figure questions (az-04, az-06).</li>
   <li>Photograph a few Azul pages for the scanned variant (M3).</li>
-  <li>Design dark mode and the app icon.</li>
+  <li>Design the app icon.</li>
+  <li>Bench run with the v2 contract (titles + branch steps): check step-1 latency and accuracy didn't move.</li>
   <li>Set a cost ceiling per question (M1: Sonnet ≈ $0.01 per question after the first).</li>
   <li>Add a question whose answer exists only in a diagram (assumption 4 barely tested).</li>
 </ul>
