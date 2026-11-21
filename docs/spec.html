@@ -57,9 +57,9 @@
 <p class="lede">Settle a board-game rules dispute mid-game. Ask about the rulebook PDF, get the ruling at once, and swipe through the highlighted evidence when someone pushes back.</p>
 
 <div class="docmeta">
-  <b>Status</b><span>M1 built and merged; 28 questions verified against the PDFs. Waiting on the API key to run.</span>
+  <b>Status</b><span>M1 done (<a href="m1-report.md">report</a>): accurate and cheap, not yet fast enough. Next: M2 + a page-selection speed experiment.</span>
   <b>Platform</b><span>iOS (SwiftUI), also runs on Mac. The owner's iPhone is the only target device.</span>
-  <b>Model</b><span>Claude, behind a provider interface.</span>
+  <b>Model</b><span>Claude Sonnet 5.5 (from M1), behind a provider interface.</span>
   <b>Origins</b><span><a href="original/app-concept.md">App concept</a> · <a href="original/technical-test-plan.md">Technical test plan</a> · <a href="design/screens.html">All screens on one page</a></span>
 </div>
 <nav class="toc"><a href="#product">1 Product</a><a href="#screens">2 Screens</a><a href="#style">3 Style</a><a href="#contract">4 Answer contract</a><a href="#arch">5 Architecture</a><a href="#milestones">6 Milestones</a><a href="#decisions">7 Decisions</a><a href="#open">8 Open items</a></nav>
@@ -233,19 +233,19 @@
 <li><b>Repair call</b> (background, cheap model): "this quote wasn't found on p.N; here is the page text; return the exact passage." The highlight appears a moment later.</li>
 <li>Otherwise draw <code>box</code> if it passes sanity checks.</li>
 <li>Otherwise show the whole page and log a miss.</li></ol>
-<p>M1 compares two evidence modes: quotes written by the model (<code>json</code>, supports figure boxes) and Claude's native PDF citations (<code>citations</code>, no boxes). The winner becomes the default.</p>
+<p>Evidence mode: quotes written by the model (<code>json</code>). M1 compared it with Claude's native PDF citations, which gave lower accuracy, fewer clean highlights and no figure boxes.</p>
 
 <!-- ============================================================ -->
 <h2 id="arch">5 · Architecture</h2>
 <pre>Core/    Swift package, no UI (macOS + iOS)
          models · AnswerProvider protocol + ClaudeProvider · streaming field parser
          quote matcher (fuzzy) · box checks · [M3] Vision OCR prep · [M4] web fallback
-bench/   Swift CLI on Core: runs question sets, writes report + JSONL
+evals/   bench CLI on Core: question sets, runs, kept results
 App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
-<ul><li>The app and the bench share <code>Core</code>, so benchmark numbers reflect the app.</li>
+<ul><li>The app and the evals share <code>Core</code>, so benchmark numbers reflect the app.</li>
 <li>Whole PDF + question + conversation in one streamed request; the PDF is prompt-cached so follow-ups are cheap.</li>
 <li>Data model: <code>Game → [Document]</code>, <code>Game → [Session] → [Answer]</code>. Everything on device.</li>
-<li>API key: Keychain in the app, <code>ANTHROPIC_API_KEY</code> for the bench. The app calls the API directly; no server yet.</li>
+<li>API key: Keychain in the app, <code>ANTHROPIC_API_KEY</code> for the evals. The app calls the API directly; no server yet.</li>
 <li>Step carousel: horizontal <code>ScrollView</code> + <code>.scrollTargetBehavior(.viewAligned)</code>, side margins for the peek, <code>.scrollPosition(id:)</code> drives the PDF. Fallback: <code>TabView(.page)</code>.</li>
 <li>Figures: v1 uses the model-proposed box. If boxes score badly, use Vision-detected candidate regions and let the model pick one.</li></ul>
 
@@ -253,7 +253,7 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
 <h2 id="milestones">6 · Milestones</h2>
 <div class="tbl"><table>
   <tr><th></th><th>Goal</th><th>Contents</th><th>Done when</th></tr>
-  <tr><td><b>M1</b><br>Assumption check</td><td>Prove the approach, quickly</td><td><code>Core</code> + <code>bench</code>, 28 questions over Power Grid Recharged, Root (Learning to Play), Azul, Dune Imperium</td><td>Numbers look viable, or we know what broke</td></tr>
+  <tr><td><b>M1</b><br>Assumption check</td><td>Prove the approach, quickly</td><td><code>Core</code> + <code>evals</code>, 28 questions over Power Grid Recharged, Root (Learning to Play), Azul, Dune Imperium</td><td>Numbers look viable, or we know what broke</td></tr>
   <tr><td><b>M2</b><br>iOS viewer</td><td>Something to use at the table</td><td><a href="#s3">S3</a>–<a href="#s9">S9</a>: ask, streaming, answer sheet, stepping, collapse/expand, inspect, follow-ups</td><td>Usable on the owner's iPhone</td></tr>
   <tr><td><b>M3</b><br>Real tool</td><td>Game-night ready</td><td><a href="#s1">S1</a>, <a href="#s2">S2</a> with OCR, <a href="#s11">S11</a>, <a href="#s12">S12</a>; full ~60-question bench incl. a scanned variant</td><td>Used unprompted at game night</td></tr>
   <tr><td><b>M4</b><br>Fallbacks</td><td>Cover the gaps</td><td><a href="#s10">S10</a> web fallback, read-aloud, better figure boxes if needed</td><td>—</td></tr>
@@ -264,7 +264,8 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
 <li>Quotes land on the right words (≥90% of highlights).</li>
 <li>Model-proposed boxes land roughly right on figures (Azul).</li>
 <li>Cost per question is tolerable, and caching makes follow-ups cheap.</li></ol>
-<p>Results go in <a href="m1-report.md">m1-report.md</a>.</p>
+<p><b>Result:</b> 1 ✅ (Sonnet 27/28, Opus 28/28) · 2 ❌ (step 1 median 6.0 s; the PDF size sets a ~4–5 s floor) · 3 ✅ (94–97%; misses were our text extraction) · 4 ⚠️ barely exercised · 5 ✅ (Sonnet ~$0.28 for 20 questions). See <a href="m1-report.md">m1-report.md</a> and <a href="../evals/results/README.md">eval results</a>.</p>
+<p><b>Speed experiment (alongside M2):</b> select the relevant pages locally and send only those; success = step 1 median ≤5 s with no accuracy loss.</p>
 
 <!-- ============================================================ -->
 <h2 id="decisions">7 · Decisions log</h2>
@@ -282,17 +283,19 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>Sheet v2: fixed header + peeking step cards, no buttons</td><td>Buttons + swipe were redundant; old sheet mixed answer and step</td></tr>
   <tr><td>2026-11-21</td><td>Warm palette, one font (SF), precise nerdy wording</td><td>Owner's pick from three directions</td></tr>
   <tr><td>2026-11-21</td><td>Spec is HTML with live mockups, not Markdown</td><td>Screens sit next to the text that describes them</td></tr>
+  <tr><td>2026-11-21</td><td>Default model Sonnet 5.5, model-written quotes, effort low</td><td>M1: near-Opus accuracy, fastest, cleanest highlights, half the cost; native citations lost on every metric</td></tr>
+  <tr><td>2026-11-21</td><td>Next speed lever is sending fewer pages, not a different model</td><td>First token ~4–5 s on a full rulebook for every model vs ~1.5 s on a 4-page PDF</td></tr>
   <tr><td>2026-11-21</td><td>Bench uses the owner's editions: Power Grid <i>Recharged</i>, Root <i>Learning to Play</i></td><td>Those are the PDFs at the table; answers verified against them</td></tr>
 </table></div>
 
 <!-- ============================================================ -->
 <h2 id="open">8 · Open items</h2>
 <ul class="todo">
-  <li>Owner: provide the API key for the M1 run.</li>
   <li>Draw <code>expected_box</code> for the Azul figure questions (az-04, az-06).</li>
   <li>Photograph a few Azul pages for the scanned variant (M3).</li>
   <li>Design dark mode and the app icon.</li>
-  <li>Set a cost ceiling per question after the M1 numbers.</li>
+  <li>Set a cost ceiling per question (M1: Sonnet ≈ $0.01 per question after the first).</li>
+  <li>Add a question whose answer exists only in a diagram (assumption 4 barely tested).</li>
 </ul>
 
 </main>

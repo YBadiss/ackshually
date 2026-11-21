@@ -11,8 +11,8 @@ usage:
   bench match PDF PAGE "QUOTE"     debug the quote matcher on one quote
   bench pages PDF                  print per-page text-layer status
 
-defaults: --questions questions/m1.json --model claude-opus-5-5 --mode json --effort low
-          --judge-model claude-sonnet-5-5 --timeout 120   (paths relative to bench/ or repo root)
+defaults: --questions questions/m1.json --model claude-sonnet-5-5 --mode json --effort low
+          --judge-model claude-sonnet-5-5 --timeout 120   (paths relative to evals/ or repo root)
 """
 
 var args = Array(CommandLine.arguments.dropFirst())
@@ -31,10 +31,10 @@ args.removeFirst()
 }
 
 let benchDir: URL = {
-    // Works from bench/ or from the repo root.
+    // Works from evals/ or from the repo root.
     let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
     if FileManager.default.fileExists(atPath: cwd.appendingPathComponent("questions").path) { return cwd }
-    return cwd.appendingPathComponent("bench")
+    return cwd.appendingPathComponent("evals")
 }()
 
 func resolveLocal(_ p: String) -> URL {
@@ -80,7 +80,7 @@ case "report":
 
 case "run":
     let questions = resolveLocal(option("--questions") ?? "questions/m1.json")
-    let model = option("--model") ?? "claude-opus-5-5"
+    let model = option("--model") ?? "claude-sonnet-5-5"
     let modeS = option("--mode") ?? "json"
     guard let mode = EvidenceMode(rawValue: modeS) else { print("bad --mode \(modeS)"); exit(1) }
     let effort = option("--effort") ?? "low"

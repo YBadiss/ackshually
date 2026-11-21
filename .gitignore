@@ -1,5 +1,5 @@
 .build/
 *.xcodeproj/xcuserdata/
 .swiftpm/
-bench/out/
+evals/out/
 assets/rulebooks/*.pdf

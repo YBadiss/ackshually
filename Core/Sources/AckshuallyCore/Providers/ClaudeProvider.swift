@@ -15,7 +15,7 @@ public struct ClaudeConfig: Sendable {
     /// Idle timeout for the HTTP stream.
     public var requestTimeout: TimeInterval
 
-    public init(apiKey: String, model: String = "claude-opus-5-5", effort: String = "low", mode: EvidenceMode = .json,
+    public init(apiKey: String, model: String = "claude-sonnet-5-5", effort: String = "low", mode: EvidenceMode = .json,
                 maxTokens: Int = 16000, useSchema: Bool = true, useFallbacks: Bool = true,
                 baseURL: URL = URL(string: "https://api.anthropic.com")!, requestTimeout: TimeInterval = 120) {
         self.apiKey = apiKey

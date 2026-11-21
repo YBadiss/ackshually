@@ -1,10 +1,10 @@
 {
-  "description": "Smoke-test set against the generated fake rulebook (bench/fixtures/fake-rulebook.pdf). Use it to check the pipeline end-to-end before the real rulebooks are in assets/rulebooks/.",
+  "description": "Smoke-test set against the generated fake rulebook (evals/fixtures/fake-rulebook.pdf). Use it to check the pipeline end-to-end before the real rulebooks are in assets/rulebooks/.",
   "games": [
     {
       "id": "fixture",
       "name": "Power Plant Rush (fake test rulebook)",
-      "pdf": "bench/fixtures/fake-rulebook.pdf",
+      "pdf": "evals/fixtures/fake-rulebook.pdf",
       "questions": [
         {
           "id": "fx-01",

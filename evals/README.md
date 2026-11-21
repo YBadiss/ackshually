@@ -1,4 +1,6 @@
-# bench — M1 assumption check
+# evals — answer-engine evals
+
+The `bench` CLI runs question sets against rulebook PDFs and scores correctness, evidence, highlights, latency and cost. Same `Core` code path as the app.
 
 Runs a question set against rulebook PDFs through the same `AckshuallyCore` code the app will use
 (`ClaudeProvider` → streaming → `QuoteMatcher`) and writes a markdown report plus raw JSONL.
@@ -23,19 +25,19 @@ Runs a question set against rulebook PDFs through the same `AckshuallyCore` code
 ## Run
 
 ```sh
-cd bench
+cd evals
 
 # 0. smoke test on the generated fake rulebook (~5 cheap questions, ~1 minute)
 swift run bench run --questions questions/fixture.json
 
-# 1. the M1 set (28 questions), default: claude-opus-5-5, json evidence mode, effort low
+# 1. the M1 set (28 questions), default: claude-sonnet-5-5, json evidence mode, effort low
 swift run bench run
 
 # 2. the comparison matrix (opus json / opus citations / sonnet json / haiku json)
 ./compare.sh
 ```
 
-Each run prints progress to stderr and writes `bench/out/<stamp>-<model>-<mode>-<effort>/`:
+Each run prints progress to stderr and writes `evals/out/<stamp>-<model>-<mode>-<effort>/`:
 `report.md`, `results.jsonl` (one record per question: timings, usage, cost, full answer, raw
 model text, judge verdict, per-quote highlight outcome), `config.txt`.
 
@@ -101,3 +103,10 @@ read / **followup** = same session with conversation context):
 
 Once the PDFs are in, fill `expected_pages` (and boxes for `az-04..06`) in `questions/m1.json`,
 then re-run; until then the page metric shows TODO.
+
+## Results: what gets committed
+
+- `out/` is scratch and git-ignored: every run lands there.
+- Runs worth keeping are copied to `results/<date>-<label>/` (`report.md` + `results.jsonl`) and listed in
+  [results/README.md](results/README.md) with one line of key numbers and what was learned.
+- A run is worth keeping when it informs a decision (model choice, evidence mode, a fix) or is a new baseline.
