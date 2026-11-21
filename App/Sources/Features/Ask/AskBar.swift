@@ -40,6 +40,10 @@ struct AskBar: View {
                     in: RoundedRectangle(cornerRadius: holding ? theme.radius.sheet : theme.radius.field))
         .shadow(color: theme.colors.line, radius: 0, y: compact ? 0 : theme.size.hairline)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onChange(of: text) { _, t in
+            // Vertical text fields insert Return as a newline instead of submitting.
+            if t.contains("\n") { text = t.replacingOccurrences(of: "\n", with: " "); send() }
+        }
         .onChange(of: voice.transcript) { _, _ in if let t = voice.dictatedText() { text = t } }
         .onChange(of: voice.speech.isRecording) { _, rec in if !rec { voice.recordingStopped() } }
     }

@@ -43,3 +43,23 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
         ENABLE_PREVIEWS: YES
+  AckshuallyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Ackshually
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ackshually.viewer.uitests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Ackshually
+schemes:
+  Ackshually:
+    build:
+      targets:
+        Ackshually: all
+        AckshuallyUITests: [test]
+    test:
+      targets: [AckshuallyUITests]

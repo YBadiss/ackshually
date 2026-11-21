@@ -30,6 +30,7 @@
 		6107E6680EB8A263CE7116C0 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102E6D47E6FA5C71743874B5 /* Fixtures.swift */; };
 		6BD20FD146A9CCDE1187908A /* HoldToTalkPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7A4A50F93B1BEB27F61C07 /* HoldToTalkPanel.swift */; };
 		6C4E36CD61F7D98949FEDEB0 /* HighlightOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7565E829215E08E02461A87E /* HighlightOverlay.swift */; };
+		6EFF94CAF579D67219D94CF5 /* ViewerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22393459CE7F473663CF6910 /* ViewerUITests.swift */; };
 		70C7891F749D7CC91A55FC14 /* AnswerSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A9C4A10C99686E6577A79B /* AnswerSections.swift */; };
 		73C3F6FA67B8B72F68176B44 /* AskBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B4E21C517F266464C99FB17 /* AskBar.swift */; };
 		74BB2B3E2038F1081F00B82F /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EB5117455A43A77A18604F /* Keychain.swift */; };
@@ -54,6 +55,16 @@
 		F55F5355C9FCEA4E35956E5E /* ViewerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F88923699873C814D32FD274 /* ViewerScreen.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		7C6584B3A2A544560CADDE06 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B1067B09D5F0528E81F3F969 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 61D0FF6DD5BF6FD2B4CC3775;
+			remoteInfo = Ackshually;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0A46B6130AF60A5FC0316330 /* WaitingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaitingBar.swift; sourceTree = "<group>"; };
 		102E6D47E6FA5C71743874B5 /* Fixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fixtures.swift; sourceTree = "<group>"; };
@@ -61,6 +72,7 @@
 		14E94F1C368DC1547CACA7C8 /* FlowRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowRow.swift; sourceTree = "<group>"; };
 		200786EC68D2F0305FBF679D /* ThemeEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEnvironment.swift; sourceTree = "<group>"; };
 		2160FF16296C3F381247D42E /* Core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Core; path = ../Core; sourceTree = SOURCE_ROOT; };
+		22393459CE7F473663CF6910 /* ViewerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerUITests.swift; sourceTree = "<group>"; };
 		242977544A35AC63B09CD682 /* ViewerModel+Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ViewerModel+Content.swift"; sourceTree = "<group>"; };
 		2B21FFE633E93C19D45FDC50 /* CollapsedVerdictBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsedVerdictBar.swift; sourceTree = "<group>"; };
 		39C27031204BB606CC31BC3E /* FailureHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FailureHeader.swift; sourceTree = "<group>"; };
@@ -95,6 +107,7 @@
 		DFF11A1E4D6F537C1201C323 /* BackToStepPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackToStepPill.swift; sourceTree = "<group>"; };
 		E1B7FD03271490C2D9C7071C /* Waveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waveform.swift; sourceTree = "<group>"; };
 		E4EB5117455A43A77A18604F /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		EE05BB4C8CA28D22A535AD93 /* AckshuallyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = AckshuallyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2835F5042669F248C1452EB /* EmptyLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyLibraryView.swift; sourceTree = "<group>"; };
 		F566BD96B12F2EE5DB83B036 /* DemoProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoProvider.swift; sourceTree = "<group>"; };
 		F88923699873C814D32FD274 /* ViewerScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewerScreen.swift; sourceTree = "<group>"; };
@@ -135,6 +148,7 @@
 			children = (
 				AA6278EA975B3BA2CD3EC984 /* Packages */,
 				153B6779EB405A8034265ADC /* Sources */,
+				329600E863C52B10423AC72C /* UITests */,
 				A76E92F4C57F7DC94A625D97 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -150,6 +164,14 @@
 				F88923699873C814D32FD274 /* ViewerScreen.swift */,
 			);
 			path = Viewer;
+			sourceTree = "<group>";
+		};
+		329600E863C52B10423AC72C /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				22393459CE7F473663CF6910 /* ViewerUITests.swift */,
+			);
+			path = UITests;
 			sourceTree = "<group>";
 		};
 		48659D375ED2754540612FEE /* Model */ = {
@@ -228,6 +250,7 @@
 			isa = PBXGroup;
 			children = (
 				D67212BD9E16896C4E1494FF /* Ackshually.app */,
+				EE05BB4C8CA28D22A535AD93 /* AckshuallyUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -304,6 +327,22 @@
 			productReference = D67212BD9E16896C4E1494FF /* Ackshually.app */;
 			productType = "com.apple.product-type.application";
 		};
+		6F03967B75DA5A9AA68FC47B /* AckshuallyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6BCA20DC1BC1857509D0ADCC /* Build configuration list for PBXNativeTarget "AckshuallyUITests" */;
+			buildPhases = (
+				19257E3F92B0F9079E2DA601 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1DB7887AB53F3C88C8EE322A /* PBXTargetDependency */,
+			);
+			name = AckshuallyUITests;
+			productName = AckshuallyUITests;
+			productReference = EE05BB4C8CA28D22A535AD93 /* AckshuallyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -315,6 +354,9 @@
 				TargetAttributes = {
 					61D0FF6DD5BF6FD2B4CC3775 = {
 						ProvisioningStyle = Automatic;
+					};
+					6F03967B75DA5A9AA68FC47B = {
+						TestTargetID = 61D0FF6DD5BF6FD2B4CC3775;
 					};
 				};
 			};
@@ -334,6 +376,7 @@
 			projectRoot = "";
 			targets = (
 				61D0FF6DD5BF6FD2B4CC3775 /* Ackshually */,
+				6F03967B75DA5A9AA68FC47B /* AckshuallyUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -400,7 +443,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		19257E3F92B0F9079E2DA601 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6EFF94CAF579D67219D94CF5 /* ViewerUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1DB7887AB53F3C88C8EE322A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 61D0FF6DD5BF6FD2B4CC3775 /* Ackshually */;
+			targetProxy = 7C6584B3A2A544560CADDE06 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		21E8F3772866B94077268477 /* Debug */ = {
@@ -422,6 +481,23 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
+		};
+		30A35E6D007E595A905A547C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ackshually.viewer.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Ackshually;
+			};
+			name = Release;
 		};
 		4D6A8218F904A702B0C6513E /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -566,9 +642,35 @@
 			};
 			name = Release;
 		};
+		C4FFF9050A7D644CDEC16FC5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ackshually.viewer.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Ackshually;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		6BCA20DC1BC1857509D0ADCC /* Build configuration list for PBXNativeTarget "AckshuallyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C4FFF9050A7D644CDEC16FC5 /* Debug */,
+				30A35E6D007E595A905A547C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		8E1D3F139A24280EEBD64174 /* Build configuration list for PBXProject "Ackshually" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -107,6 +107,7 @@ struct BottomSheet<Collapsed: View, Medium: View, Expanded: View>: View {
             .gesture(sheetDrag)
             .accessibilityElement()
             .accessibilityLabel("Answer sheet")
+            .accessibilityIdentifier("sheetGrabber")
             .accessibilityHint("Swipe up or down to resize")
             .accessibilityAdjustableAction { dir in
                 withAnimation(theme.sheetAnimation) { detent = step(detent, up: dir == .increment) }

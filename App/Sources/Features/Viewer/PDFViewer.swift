@@ -95,6 +95,16 @@ struct PDFViewer: UIViewRepresentable {
             v.addGestureRecognizer(dbl)
         }
 
+        private weak var observedScroll: UIScrollView?
+
+        /// Also listen to PDFKit's own scroll-view gestures (created lazily by PDFView).
+        func observeScrollGestures() {
+            guard let v = view, let sv = Self.scrollView(in: v), sv !== observedScroll else { return }
+            observedScroll = sv
+            sv.panGestureRecognizer.addTarget(self, action: #selector(userGesture(_:)))
+            sv.pinchGestureRecognizer?.addTarget(self, action: #selector(userGesture(_:)))
+        }
+
         @objc func userGesture(_ g: UIGestureRecognizer) {
             if g.state == .began { onUserMove() }
         }
@@ -182,6 +192,7 @@ struct PDFViewer: UIViewRepresentable {
                 return
             }
             applied = focus
+            observeScrollGestures()
             drawHighlights(focus.highlight, on: page)
             let m = style.margin
             let top = v.safeAreaInsets.top + m
@@ -248,3 +259,4 @@ struct PDFViewer: UIViewRepresentable {
         .ignoresSafeArea()
         .themed()
 }
+

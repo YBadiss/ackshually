@@ -21,6 +21,7 @@ struct AnswerHeader: View {
         }
         .padding(.horizontal, theme.spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .dynamicTypeSize(...theme.layout.maxHeaderTypeSize)
     }
 
     private var arriving: some View {

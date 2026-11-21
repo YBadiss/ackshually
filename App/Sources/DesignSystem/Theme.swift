@@ -117,6 +117,8 @@ struct Theme: Sendable {
         var holdToTalkDelay: Duration = .milliseconds(280)
         var slideToCancelFraction: CGFloat = 0.18
         var pdfMoveDuration: TimeInterval = 0.35
+        /// Largest text size for the answer header: past this it would push the cards off the sheet.
+        var maxHeaderTypeSize: DynamicTypeSize = .accessibility2
         /// Evidence zoom: never more than this × the page-width scale.
         var maxEvidenceZoom: CGFloat = 3.2
     }
