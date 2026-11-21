@@ -74,6 +74,27 @@ enum Report {
         let judgeTokens = judged.map(\.usage).reduce(TokenUsage(), +)
         md += "| Total answer cost | $\(String(format: "%.3f", totalCost)) (judge extra: \(judgeTokens.inputTokens) in / \(judgeTokens.outputTokens) out tokens) |\n\n"
 
+        // Page selection
+        let rr = asked.filter { $0.retrieval != nil }
+        if !rr.isEmpty {
+            let ris = rr.compactMap(\.retrieval)
+            let recallKnown = ris.compactMap(\.recall)
+            let anyKnown = ris.compactMap(\.anyExpected)
+            let excerpts = ris.filter { !$0.fullDocument }
+            let fb = rr.filter { $0.retrieval?.fellBack == true }
+            let discardedCost = rr.compactMap { r in r.retrieval?.discardedUsage.map { ModelPricing.cost(model: r.model, usage: $0) ?? 0 } }.reduce(0, +)
+            let sentPages = ris.map { $0.fullDocument ? $0.pageCount : $0.pages.count }.reduce(0, +)
+            let allPages = ris.map(\.pageCount).reduce(0, +)
+            md += "## Page selection\n\n| Metric | Value |\n|---|---|\n"
+            md += "| Retrieval recall: every expected page sent | \(pct(recallKnown.filter { $0 }.count, recallKnown.count)) (at least one: \(pct(anyKnown.filter { $0 }.count, anyKnown.count))) |\n"
+            md += "| Pages sent (first attempt) | \(sentPages)/\(allPages) (\(allPages == 0 ? "–" : String(format: "%.0f%%", 100 * Double(sentPages) / Double(allPages)))); mean excerpt \(excerpts.isEmpty ? "–" : String(format: "%.1f", Double(excerpts.map(\.pages.count).reduce(0, +)) / Double(excerpts.count))) pages |\n"
+            md += "| Full PDF chosen up front | \(pct(ris.filter(\.fullDocument).count, ris.count)) \(Set(ris.compactMap(\.reason).map { $0.replacingOccurrences(of: #"\d+/\d+"#, with: "n/N", options: .regularExpression) }).sorted().joined(separator: "; ")) |\n"
+            md += "| Excerpt size (attached bytes, median) | \(excerpts.isEmpty ? "–" : String(format: "%.0f KB", (quantile(excerpts.map { Double($0.excerptBytes) }, 0.5) ?? 0) / 1024)) |\n"
+            md += "| Fallback to full PDF (excerpt said not_covered) | \(pct(fb.count, rr.count)): \(fb.map(\.id).joined(separator: ", ")); fallback started at median \(sec(quantile(fb.compactMap { $0.retrieval?.fallbackAfter }, 0.5))) s; discarded attempts cost $\(String(format: "%.3f", discardedCost)) |\n"
+            md += "| Evidence pages remapped (model cited an excerpt position) | \(ris.map(\.remappedPages).reduce(0, +)) |\n"
+            md += "| Local prepare time (rank + build excerpt), median / max | \(String(format: "%.0f / %.0f ms", (quantile(ris.map(\.prepareSeconds), 0.5) ?? 0) * 1000, (ris.map(\.prepareSeconds).max() ?? 0) * 1000)) |\n\n"
+        }
+
         // Latency & cost by position
         md += "## Latency by position (seconds, median / p90)\n\n"
         md += "cold = first question on a PDF (cache write) · warm = later new question on the same PDF (cache read) · followup = same session, with conversation context\n\n"
@@ -108,12 +129,19 @@ enum Report {
         }
 
         // Per question
-        md += "\n## Per question\n\n| Id | Pos | Status | Judge | Pages | Quotes matched | Verdict s | Step 1 s | Total s | Cost |\n|---|---|---|---|---|---|---|---|---|---|\n"
+        let sel = asked.contains { $0.retrieval != nil }
+        md += "\n## Per question\n\n| Id | Pos | Status | Judge | Pages | Quotes matched | Verdict s | Step 1 s | Total s | Cost |\(sel ? " Sent | Recall |" : "")\n|---|---|---|---|---|---|---|---|---|---|\(sel ? "---|---|" : "")\n"
         for r in asked {
             let q = r.highlights.filter { $0.quote != nil }
             let m = q.filter { $0.outcome == "matched" }.count
             let boxNote = r.highlights.contains { $0.box != nil } ? " +box" : ""
-            md += "| \(r.id) | \(r.position) | \(r.status) | \(r.judge?.label ?? "–") | \(r.evidencePageCorrect.map { $0 ? "✓" : "✗" } ?? "TODO") | \(m)/\(q.count)\(boxNote) | \(sec(r.tVerdict)) | \(sec(r.tFirstStep)) | \(sec(r.tTotal)) | \(r.costUSD.map { String(format: "$%.4f", $0) } ?? "–") |\n"
+            md += "| \(r.id) | \(r.position) | \(r.status) | \(r.judge?.label ?? "–") | \(r.evidencePageCorrect.map { $0 ? "✓" : "✗" } ?? "TODO") | \(m)/\(q.count)\(boxNote) | \(sec(r.tVerdict)) | \(sec(r.tFirstStep)) | \(sec(r.tTotal)) | \(r.costUSD.map { String(format: "$%.4f", $0) } ?? "–") |"
+            if sel {
+                let ri = r.retrieval
+                let sent = ri.map { $0.fullDocument ? "full" : $0.pages.map(String.init).joined(separator: ",") } ?? "–"
+                md += " \(sent)\(ri?.fellBack == true ? " → full" : "") | \(ri?.recall.map { $0 ? "✓" : "✗" } ?? "–") |"
+            }
+            md += "\n"
         }
 
         // Details worth reading

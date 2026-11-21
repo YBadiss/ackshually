@@ -55,12 +55,18 @@ model text, judge verdict, per-quote highlight outcome), `config.txt`.
 | `--no-schema` | | json mode without structured outputs (prompt-only JSON) |
 | `--no-fallbacks` | | drop the server-side refusal fallback (`fallbacks: "default"`) if the API rejects it |
 | `--base-url URL` | api.anthropic.com | proxy / mock server |
+| `--pages all\|auto` | `all` | `auto` = page selection: rank pages locally (BM25) and send only the best ones (see [docs/speed-report.md](../docs/speed-report.md)) |
+| `--k N` / `--neighbors N` / `--max-pages N` | `3` / `1` / none | page selection: top-ranked pages, pages either side of each, cap |
+| `--excerpt pdf\|text` | `pdf` | send a sub-PDF (text + page images) or only the extracted page text |
+| `--full-if-coverage X` / `--min-confidence X` | `0.75` / `0` | send the full PDF when the selection covers ≥ X of the book / scores are flat |
+| `--no-page-fallback` | | don't re-ask with the full PDF when the excerpt answers `not_covered` |
 
 Other subcommands:
 
 ```sh
 swift run bench report out/<dir>                          # rebuild report.md from results.jsonl
 swift run bench pages ../assets/rulebooks/azul.pdf         # which pages have a text layer (scans need OCR)
+swift run bench retrieve --k 3 --neighbors 0               # offline: pages page selection would send + recall (no API)
 swift run bench match ../assets/rulebooks/azul.pdf 6 "..."  # debug one quote → highlight
 swift run bench fixture                                    # regenerate fixtures/fake-rulebook.pdf
 ```

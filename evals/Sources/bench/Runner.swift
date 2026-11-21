@@ -16,6 +16,27 @@ struct HighlightResult: Codable {
     var boxCenterInExpected: Bool?
 }
 
+/// Page selection outcome for one question (nil when the run sent full PDFs).
+struct RetrievalRecord: Codable {
+    var pages: [Int]               // pages sent on the first attempt (original numbers)
+    var pageCount: Int
+    var fullDocument: Bool         // retrieval gave up and sent the whole PDF
+    var reason: String?
+    var confidence: Double
+    var ranked: [Int]              // top-ranked pages, best first
+    /// All expected pages were sent (nil = expected pages unknown).
+    var recall: Bool?
+    /// At least one expected page was sent.
+    var anyExpected: Bool?
+    var representation: String
+    var excerptBytes: Int
+    var prepareSeconds: Double
+    var fellBack: Bool
+    var fallbackAfter: Double?
+    var discardedUsage: TokenUsage?
+    var remappedPages: Int
+}
+
 struct Judgement: Codable {
     var label: String   // correct | partially_correct | incorrect
     var reason: String
@@ -50,6 +71,7 @@ struct Record: Codable {
     var highlights: [HighlightResult]
     var expectedVerdict: String
     var tags: [String]
+    var retrieval: RetrievalRecord?
 }
 
 struct RunOptions {
@@ -67,6 +89,7 @@ struct RunOptions {
     var onlyIDs: Set<String>
     var limit: Int?
     var resume: Bool
+    var pages: PageSelectionMode = .fullDocument
 }
 
 struct TimeoutError: Error {}
@@ -106,7 +129,8 @@ final class Runner {
         var count = 0
         for g in set.games where opts.onlyGames.isEmpty || opts.onlyGames.contains(g.id) {
             guard let pdfURL = Paths.findPDF(for: g, questionsFile: opts.questionsFile),
-                  let pdf = try? Data(contentsOf: pdfURL), let matcher = QuoteMatcher(url: pdfURL) else {
+                  let pdf = try? Data(contentsOf: pdfURL), let matcher = QuoteMatcher(url: pdfURL),
+                  let rulebook = RulebookIndex(data: pdf) else {
                 log("⚠️  \(g.name): PDF not found (\(g.pdf)) — skipping \(g.questions.count) questions")
                 for q in g.questions where !done.contains(q.id) {
                     try emit(Record(id: q.id, game: g.id, question: q.question, model: opts.model, mode: opts.mode.rawValue,
@@ -135,7 +159,8 @@ final class Runner {
                 let position = q.follows != nil ? "followup" : (first ? "cold" : "warm")
                 first = false
                 log("  → \(q.id) [\(position)] \(q.question.prefix(70))")
-                var rec = await ask(q: q, game: g, pdf: pdf, title: g.name, history: history, matcher: matcher, position: position)
+                var rec = await ask(q: q, game: g, pdf: pdf, title: g.name, history: history, matcher: matcher, position: position,
+                                    rulebook: rulebook)
                 if let a = rec.answer, let judge {
                     let cited = Set(a.steps.flatMap { $0.evidence.map(\.page) } + (q.expectedPages ?? []))
                     let texts = cited.sorted().filter { $0 >= 1 && $0 <= matcher.pageCount }
@@ -152,13 +177,14 @@ final class Runner {
     }
 
     private func ask(q: Question, game: GameQuestions, pdf: Data, title: String, history: [Turn],
-                     matcher: QuoteMatcher, position: String) async -> Record {
+                     matcher: QuoteMatcher, position: String, rulebook: RulebookIndex) async -> Record {
         var rec = Record(id: q.id, game: game.id, question: q.question, model: opts.model, mode: opts.mode.rawValue,
                          effort: opts.effort, position: position, status: "ok", highlights: [],
                          expectedVerdict: q.expectedVerdict, tags: q.tags ?? [])
         let start = Date()
         func t() -> Double { Date().timeIntervalSince(start) }
-        let stream = provider.answer(AnswerRequest(pdf: pdf, documentTitle: title, question: q.question, history: history))
+        let stream = provider.answer(AnswerRequest(pdf: pdf, documentTitle: title, question: q.question, history: history,
+                                                   pageSelection: opts.pages, rulebook: rulebook))
         let timeout = opts.timeout
         let box = RecordBox(rec)
         do {
@@ -180,6 +206,20 @@ final class Runner {
                                 $0.answer = r.answer
                                 $0.rawText = r.rawText
                                 if r.answer == nil { $0.status = "invalid_output" }
+                                if let ri = r.retrieval {
+                                    let exp = Set(q.expectedPages ?? [])
+                                    let sent = Set(ri.selection.pages)
+                                    $0.retrieval = RetrievalRecord(
+                                        pages: ri.selection.pages, pageCount: ri.selection.pageCount,
+                                        fullDocument: ri.selection.isFullDocument, reason: ri.selection.reason,
+                                        confidence: ri.selection.confidence, ranked: Array(ri.selection.ranked.prefix(8)),
+                                        recall: exp.isEmpty ? nil : exp.isSubset(of: sent),
+                                        anyExpected: exp.isEmpty ? nil : !exp.isDisjoint(with: sent),
+                                        representation: ri.representation.rawValue, excerptBytes: ri.excerptBytes,
+                                        prepareSeconds: ri.prepareSeconds, fellBack: ri.fellBackToFullDocument,
+                                        fallbackAfter: ri.fallbackAfterSeconds, discardedUsage: ri.discardedUsage,
+                                        remappedPages: ri.remappedPages)
+                                }
                                 $0.error = r.parseError
                             }
                         default: break
@@ -242,6 +282,10 @@ final class Runner {
         return "\(r.status) verdict@\(f(r.tVerdict)) step1@\(f(r.tFirstStep)) total@\(f(r.tTotal)) "
             + "judge=\(r.judge?.label ?? "–") pages=\(r.evidencePageCorrect.map { $0 ? "✓" : "✗" } ?? "TODO") "
             + "highlights \(ok)/\(hl.count) cost=\(r.costUSD.map { String(format: "$%.4f", $0) } ?? "–")"
+            + (r.retrieval.map { ri in
+                " sent=" + (ri.fullDocument ? "FULL" : "\(ri.pages)") + (ri.recall.map { $0 ? "✓" : "✗" } ?? "")
+                    + (ri.fellBack ? " FALLBACK@\(f(ri.fallbackAfter))" : "")
+            } ?? "")
             + (r.error.map { " err=\($0.prefix(160))" } ?? "")
     }
 }
