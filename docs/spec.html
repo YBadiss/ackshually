@@ -189,6 +189,16 @@
 
 <!-- ============================================================ -->
 <h2 id="style">3 · Visual style</h2>
+<p><b>Direction (2026-11-21): native iOS, warm.</b> Use standard components and let the warm palette tint them. Reference: <a href="design/native-ios.html">design/native-ios.html</a>. It overrides the visual treatment of the S-mockups above (which still define layout and interactions) until they are redrawn.</p>
+<ul>
+<li><b>System components first:</b> system sheet with detents and material, navigation bar, grouped lists (like Settings), SF Symbols, native page/scroll behavior, Liquid Glass where the SDK provides it. No custom pills, outlined chips or boxed web-style cards.</li>
+<li><b>Text hierarchy instead of decoration:</b> bold verdict, then one secondary line of proof ("✔ Stated in the rules · p.3, p.4"). The restated question shows only while waiting and in the expanded view.</li>
+<li><b>Step cards keep the peek</b>, styled as system cards (App Store / Music shelves): rounded, no borders or shadows; caption = step title + page.</li>
+<li><b>Branches, steps, feedback</b> are standard rows with chevrons / values.</li>
+<li><b>Warm, but restrained:</b> brick red as the app tint, warm-tinted bars, sheet and grouped backgrounds, warm highlighter on the PDF. Not plain white; not beige everywhere.</li>
+</ul>
+<h3>Tokens</h3>
+
 <div class="tbl"><table>
   <tr><th>Token</th><th>Value</th><th>Use</th></tr>
   <tr><td>background</td><td><span class="swatch" style="background:#efe4d0"></span><code>#efe4d0</code></td><td>App chrome, nav</td></tr>
@@ -285,6 +295,7 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>Spec is HTML with live mockups, not Markdown</td><td>Screens sit next to the text that describes them</td></tr>
   <tr><td>2026-11-21</td><td>Default model Sonnet 5.5, model-written quotes, effort low</td><td>M1: near-Opus accuracy, fastest, cleanest highlights, half the cost; native citations lost on every metric</td></tr>
   <tr><td>2026-11-21</td><td>Next speed lever is sending fewer pages, not a different model</td><td>First token ~4–5 s on a full rulebook for every model vs ~1.5 s on a 4-page PDF</td></tr>
+  <tr><td>2026-11-21</td><td>Native iOS look: standard components, warm tint, no web-style pills/cards; peek cards kept as system cards</td><td>First build looked like a chat web app, not iOS</td></tr>
   <tr><td>2026-11-21</td><td>Bench uses the owner's editions: Power Grid <i>Recharged</i>, Root <i>Learning to Play</i></td><td>Those are the PDFs at the table; answers verified against them</td></tr>
 </table></div>
 
