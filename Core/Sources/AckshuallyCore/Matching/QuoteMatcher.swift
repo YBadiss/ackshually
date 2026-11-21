@@ -136,6 +136,20 @@ public final class QuoteMatcher: @unchecked Sendable {
         return .notMatched(bestErrorRate: best, reason: best.map { String(format: "best error %.0f%%", $0 * 100) } ?? "no text")
     }
 
+    /// First page of `candidates` (in order) whose text contains `quote` within `maxErrorRate`.
+    /// Used to correct evidence pages on excerpt answers, where the model can mis-number pages.
+    public func locate(quote: String, candidates: [Int]) -> Int? {
+        let q = NormalizedText(quote).chars
+        guard q.count >= 4 else { return nil }
+        var seen = Set<Int>()
+        for p in candidates where p >= 1 && p <= pageCount && seen.insert(p).inserted {
+            guard let text = normalized(page: p), !text.chars.isEmpty,
+                  let (_, err) = Self.bestSubstring(q, in: text.chars) else { continue }
+            if err <= maxErrorRate { return p }
+        }
+        return nil
+    }
+
     private func buildMatch(page: Int, text: NormalizedText, range: Range<Int>, err: Double) -> QuoteMatch {
         let ns = text.originalRange(range)
         var rects: [NormalizedBox] = []

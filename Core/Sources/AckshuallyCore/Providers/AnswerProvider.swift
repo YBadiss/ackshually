@@ -45,14 +45,50 @@ public struct AnswerResult: Sendable {
     public var stopReason: String?
     /// Set when the output could not be turned into an `Answer`.
     public var parseError: String?
+    /// Which pages were sent (nil when the request used the full document, the default).
+    public var retrieval: RetrievalInfo?
 
-    public init(answer: Answer?, rawText: String, usage: TokenUsage, model: String, stopReason: String?, parseError: String?) {
+    public init(answer: Answer?, rawText: String, usage: TokenUsage, model: String, stopReason: String?, parseError: String?,
+                retrieval: RetrievalInfo? = nil) {
         self.answer = answer
         self.rawText = rawText
         self.usage = usage
         self.model = model
         self.stopReason = stopReason
         self.parseError = parseError
+        self.retrieval = retrieval
+    }
+}
+
+/// What page selection did for one answer. Evidence pages in the answer are already original pages.
+public struct RetrievalInfo: Sendable, Codable, Equatable {
+    /// Pages chosen for the first attempt (full document if retrieval gave up).
+    public var selection: PageSelection
+    public var representation: ExcerptRepresentation
+    /// Size of what was attached on the first attempt (PDF bytes, or UTF-8 bytes of the text excerpt).
+    public var excerptBytes: Int
+    /// Local time spent indexing (first use of a PDF only), ranking and building the excerpt.
+    public var prepareSeconds: Double
+    /// The excerpt answered not_covered and the question was re-asked with the full PDF.
+    public var fellBackToFullDocument: Bool
+    /// Seconds after the request started when the fallback began.
+    public var fallbackAfterSeconds: Double?
+    /// Tokens spent on the discarded excerpt attempt (included in `AnswerResult.usage`).
+    public var discardedUsage: TokenUsage?
+    /// Model page numbers that were excerpt positions and got mapped to original pages.
+    public var remappedPages: Int
+
+    public init(selection: PageSelection, representation: ExcerptRepresentation, excerptBytes: Int, prepareSeconds: Double,
+                fellBackToFullDocument: Bool = false, fallbackAfterSeconds: Double? = nil, discardedUsage: TokenUsage? = nil,
+                remappedPages: Int = 0) {
+        self.selection = selection
+        self.representation = representation
+        self.excerptBytes = excerptBytes
+        self.prepareSeconds = prepareSeconds
+        self.fellBackToFullDocument = fellBackToFullDocument
+        self.fallbackAfterSeconds = fallbackAfterSeconds
+        self.discardedUsage = discardedUsage
+        self.remappedPages = remappedPages
     }
 }
 
@@ -62,12 +98,21 @@ public struct AnswerRequest: Sendable {
     public var question: String
     /// Prior turns in this session, oldest first.
     public var history: [Turn]
+    /// Which pages to send. Default: the whole PDF (M1 behaviour). `.automatic` ranks pages locally
+    /// and sends only the relevant ones (faster; see docs/speed-report.md).
+    public var pageSelection: PageSelectionMode
+    /// Optional prebuilt index of `pdf` (saves parsing it on the first question). Built and cached
+    /// by the provider when nil.
+    public var rulebook: RulebookIndex?
 
-    public init(pdf: Data, documentTitle: String, question: String, history: [Turn] = []) {
+    public init(pdf: Data, documentTitle: String, question: String, history: [Turn] = [],
+                pageSelection: PageSelectionMode = .fullDocument, rulebook: RulebookIndex? = nil) {
         self.pdf = pdf
         self.documentTitle = documentTitle
         self.question = question
         self.history = history
+        self.pageSelection = pageSelection
+        self.rulebook = rulebook
     }
 }
 
