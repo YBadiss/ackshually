@@ -25,7 +25,7 @@ struct PDFViewer: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> PDFView {
-        let v = PDFView()
+        let v = FitPagePDFView()
         v.document = document
         v.displayMode = .singlePageContinuous
         v.displayDirection = .vertical
@@ -46,17 +46,19 @@ struct PDFViewer: UIViewRepresentable {
         v.backgroundColor = UIColor(theme.colors.bar)
         if v.document !== document {
             v.document = document
-            v.autoScales = true
             c.applied = nil
+            (v as? FitPagePDFView)?.fitWholePage = true
         }
         let obscuredChanged = abs(c.bottomObscured - bottomObscured) > 1
         c.bottomObscured = bottomObscured
         if focus == nil, c.applied != nil {
             c.clearHighlights()
             c.applied = nil
+            (v as? FitPagePDFView)?.fitWholePage = true
         }
         guard let focus else { return }
         if focus != c.applied {
+            (v as? FitPagePDFView)?.fitWholePage = false
             c.apply(focus, animated: c.applied != nil)
         } else if obscuredChanged {
             c.apply(focus, animated: true)
@@ -106,7 +108,10 @@ struct PDFViewer: UIViewRepresentable {
         }
 
         @objc func userGesture(_ g: UIGestureRecognizer) {
-            if g.state == .began { onUserMove() }
+            if g.state == .began {
+                (view as? FitPagePDFView)?.fitWholePage = false
+                onUserMove()
+            }
         }
 
         @objc func doubleTap(_ g: UITapGestureRecognizer) {
@@ -260,3 +265,36 @@ struct PDFViewer: UIViewRepresentable {
         .themed()
 }
 
+
+/// Shows the whole current page (fit width *and* height) while nothing is focused, so a rulebook
+/// opens fully visible. Stops refitting once an answer focuses evidence or the user zooms/pans.
+final class FitPagePDFView: PDFView {
+    var fitWholePage = true {
+        didSet {
+            if fitWholePage { setNeedsLayout() }
+            accessibilityValue = fitWholePage ? "Whole page" : "Zoomed"
+        }
+    }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        accessibilityIdentifier = "pdfView"
+        accessibilityValue = "Whole page"
+    }
+
+    required init?(coder: NSCoder) { super.init(coder: coder) }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard fitWholePage, let page = currentPage ?? document?.page(at: 0) else { return }
+        let pageRect = page.bounds(for: displayBox)
+        let height = bounds.height - safeAreaInsets.top - safeAreaInsets.bottom
+        guard pageRect.width > 0, pageRect.height > 0, bounds.width > 0, height > 0 else { return }
+        let scale = min(bounds.width / pageRect.width, height / pageRect.height)
+        guard abs(scaleFactor - scale) > 0.001 else { return }
+        autoScales = false
+        minScaleFactor = min(minScaleFactor, scale * 0.5)
+        scaleFactor = scale
+        go(to: page)
+    }
+}

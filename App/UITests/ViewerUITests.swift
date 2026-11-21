@@ -55,6 +55,8 @@ final class ViewerUITests: XCTestCase {
         shot("s5-step1")
         XCTAssertTrue(waitForCard("Card 1 of 4"))
         carousel.swipeLeft()
+        // A simulator swipe right after the stream settles occasionally doesn't register: retry once.
+        if !waitForCard("Card 2 of 4") { carousel.swipeLeft() }
         XCTAssertTrue(waitForCard("Card 2 of 4"))
         shot("s6-step2")
         // Tap the right peek → next card.
@@ -147,5 +149,53 @@ final class ViewerUITests: XCTestCase {
         shot("wide-landscape")
         XCTAssertTrue(verdict.isHittable)
         XCTAssertTrue(app.buttons["toggleAnswer"].exists)
+    }
+
+    // MARK: Regressions found by hand on 2026-11-21
+
+    /// A rulebook opens with the whole page visible, not zoomed to page width.
+    func testRulebookOpensOnWholePage() {
+        launch([])
+        let pdf = app.descendants(matching: .any)["pdfView"].firstMatch
+        XCTAssertTrue(pdf.waitForExistence(timeout: 5))
+        XCTAssertEqual(pdf.value as? String, "Whole page")
+        // Once an answer focuses evidence it zooms; closing the answer goes back to the whole page.
+        app.terminate()
+        launch(["-present", "YES"])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        XCTAssertEqual(pdf.value as? String, "Zoomed")
+        app.buttons["closeAnswer"].tap()
+        XCTAssertTrue(XCTWaiter().wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Whole page"), object: pdf)], timeout: 3) == .completed)
+    }
+
+    /// Collapsed sheet (S7): verdict and proof line fully on screen, nothing cut off below them.
+    func testCollapsedShowsWholeHeaderOnly() {
+        launch(["-present", "YES", "-detent", "collapsed"])
+        let proof = app.descendants(matching: .any)["proofLine"].firstMatch
+        XCTAssertTrue(proof.waitForExistence(timeout: 5))
+        sleep(1)
+        let window = app.windows.firstMatch.frame
+        XCTAssertTrue(verdict.isHittable)
+        XCTAssertLessThanOrEqual(proof.frame.maxY, window.maxY - 20, "proof line must not be clipped by the sheet edge")
+        XCTAssertFalse(app.descendants(matching: .any)["carousel"].firstMatch.isHittable)
+        XCTAssertFalse(app.buttons["branch-0"].isHittable)
+        shot("s7-collapsed-header-only")
+    }
+
+    /// Asking about a real rulebook without an API key opens Settings; never the scripted demo.
+    func testRealRulebookWithoutKeyAsksForKey() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("not-the-sample.pdf")
+        let pdf = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792)).pdfData { ctx in
+            ctx.beginPage()
+            ("Some other game. Players take turns." as NSString).draw(at: CGPoint(x: 72, y: 72), withAttributes: [.font: UIFont.systemFont(ofSize: 14)])
+        }
+        try pdf.write(to: url)
+        continueAfterFailure = false
+        app.launchArguments = ["-pdfPath", url.path, "-noKey", "YES", "-ask", "Can I pass?"]
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any)["apiKeyField"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(verdict.exists)
+        XCTAssertFalse(app.descendants(matching: .any)["demoNote"].firstMatch.exists)
     }
 }

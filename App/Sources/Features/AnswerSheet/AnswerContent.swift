@@ -29,10 +29,12 @@ struct AnswerContent: View {
                     }
                     if answered {
                         AnswerShelf(model: model, voice: voice, showsFollowUp: !placement.isExpanded)
+                            .hiddenWhenCollapsed(placement.isCollapsed)
                     }
                     if answered, !model.branchRows.isEmpty {
                         BranchRows(rows: model.branchRows, onSelect: selectBranch)
                             .padding(.horizontal, theme.spacing.l)
+                            .hiddenWhenCollapsed(placement.isCollapsed)
                     }
                     // The medium detent ends here; what follows shows when expanded.
                     Color.clear.frame(height: 0)
@@ -41,6 +43,7 @@ struct AnswerContent: View {
                         }
                     if answered {
                         FullAnswerSections(model: model, collapsesOnSelect: placement != .inspector)
+                            .hiddenWhenCollapsed(placement.isCollapsed)
                     }
                     if model.canFollowUp, placement.isExpanded {
                         FollowUpSection(model: model, voice: voice)
@@ -89,4 +92,15 @@ struct AnswerContent: View {
 #Preview("Expanded, dark") {
     AnswerContent(model: Fixtures.model(), voice: AskController(), placement: .sheet(.expanded))
         .themeBackground(\.sheet).themed().preferredColorScheme(.dark)
+}
+
+private extension View {
+    /// Keeps the layout (detent heights are measured from it) but hides content below the header
+    /// in the collapsed sheet, so the detent edge never cuts through a half-visible card.
+    func hiddenWhenCollapsed(_ collapsed: Bool) -> some View {
+        opacity(collapsed ? 0 : 1)
+            .allowsHitTesting(!collapsed)
+            .accessibilityHidden(collapsed)
+            .animation(.snappy, value: collapsed)
+    }
 }

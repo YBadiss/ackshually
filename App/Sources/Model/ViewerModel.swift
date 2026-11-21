@@ -59,8 +59,8 @@ final class ViewerModel {
         do { open(try Library.importPDF(from: url)) } catch { openError = "Import failed: \(error.localizedDescription)" }
     }
 
-    func openSample() {
-        do { open(try Library.sampleRulebook()) } catch { openError = "\(error)" }
+    func openSample(remember: Bool = true) {
+        do { open(try Library.sampleRulebook(), remember: remember) } catch { openError = "\(error)" }
     }
 
     // MARK: Asking
@@ -73,9 +73,18 @@ final class ViewerModel {
         return a.complete || a.stopped || { if case .failed = phase { true } else { false } }()
     }
 
+    /// Set when a real rulebook is asked about without an API key; the screen opens Settings.
+    var needsAPIKey = false
+
     func ask(_ raw: String) {
         let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, let rb = rulebook else { return }
+        // Never answer a real rulebook with the scripted demo: keep the question and ask for a key.
+        guard let (provider, demo) = Self.makeProvider(for: rb) else {
+            draft = q
+            needsAPIKey = true
+            return
+        }
         cancel()
         draft = ""
         answer = LiveAnswer(question: q)
@@ -89,7 +98,6 @@ final class ViewerModel {
         sheetVisible = false
         detent = .medium
 
-        let (provider, demo) = Self.makeProvider()
         isDemo = demo
         let request = AnswerRequest(pdf: rb.data, documentTitle: rb.title, question: q, history: turns)
         task = Task { [weak self] in
@@ -364,12 +372,15 @@ final class ViewerModel {
 
     // MARK: Provider
 
-    static func makeProvider() -> (AnswerProvider, demo: Bool) {
+    /// Claude when a key is set; the scripted demo only for the sample rulebook (or `-demo YES`);
+    /// nil for a real rulebook without a key.
+    static func makeProvider(for rulebook: LoadedRulebook) -> (AnswerProvider, demo: Bool)? {
         let d = UserDefaults.standard
         if !d.bool(forKey: "demo"), let key = APIKeyStore.current {
             let model = d.string(forKey: "model") ?? "claude-sonnet-5-5"
             return (ClaudeProvider(config: ClaudeConfig(apiKey: key, model: model, effort: "low", mode: .json)), false)
         }
+        guard rulebook.isSample || d.bool(forKey: "demo") else { return nil }
         let scripted = d.string(forKey: "demoAnswer").flatMap(DemoProvider.answer(fromFile:)) ?? DemoProvider.batteryAnswer
         return (DemoProvider(answer: scripted), true)
     }

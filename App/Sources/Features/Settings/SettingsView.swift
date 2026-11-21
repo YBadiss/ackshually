@@ -30,7 +30,7 @@ struct SettingsView: View {
                 Section {
                     Toggle("Demo Answers", isOn: $demo)
                 } footer: {
-                    Text("Streams a scripted answer for the sample rulebook, with no API calls. Used automatically when no key is set.")
+                    Text("Streams a scripted answer for the sample rulebook, with no API calls. Used for the sample when no key is set; your own rulebooks need an API key.")
                 }
                 .listRowBackground(theme.colors.card)
                 Section("Answer Engine") {

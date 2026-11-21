@@ -13,10 +13,13 @@ final class SpeechInput {
     private(set) var level: Float = 0
     var error: String?
 
-    private let engine = AVAudioEngine()
+    // Created on first use, not at launch: building the engine and the recognizer at startup slowed
+    // the first frame and made the system load speech/keyboard language assets before anyone asked.
+    @ObservationIgnored private lazy var engine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
-    private let recognizer = SFSpeechRecognizer(locale: Locale.current) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    @ObservationIgnored private lazy var recognizer: SFSpeechRecognizer? =
+        SFSpeechRecognizer(locale: Locale.current) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
 
     func start() async {
         guard !isRecording else { return }
@@ -44,7 +47,10 @@ final class SpeechInput {
             let input = engine.inputNode
             let format = input.outputFormat(forBus: 0)
             input.removeTap(onBus: 0)
-            input.installTap(onBus: 0, bufferSize: 1024, format: format, block: Self.tapBlock(request: req) { [weak self] lvl in
+            // iOS 27 replaces installTap(…block:) with a throwing variant. The SDK only exposes it as the raw
+            // `__installTap(…error:block:)`, imported as `throws` with a placeholder `error: ()` argument.
+            try input.__installTap(onBus: 0, bufferSize: 1024, format: format, error: (),
+                                   block: Self.tapBlock(request: req) { [weak self] lvl in
                 Task { @MainActor in self?.level = lvl }
             })
             engine.prepare()
