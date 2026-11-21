@@ -1,329 +1,227 @@
-# ackshually — Product & Build Spec (v0)
+# ackshually — Product Spec
 
-Settles a board-game rules dispute mid-game: ask a question about the rulebook PDF, get a ruling immediately, and step through the highlighted evidence on the page when someone pushes back.
+> Settle a board-game rules dispute mid-game. Ask about the rulebook PDF, get the ruling at once, and swipe through the highlighted evidence when someone pushes back.
 
-Source docs: [App concept](original/app-concept.md) · [Technical test plan](original/technical-test-plan.md). This spec records the decisions made on top of them (2026-11-21).
+**Visual reference:** [design/screens.html](design/screens.html) (open in a browser). Each screen below links to its mockup as `S1`–`S12`. When this text and the mockups disagree, update whichever is wrong; don't leave them out of sync.
+
+| | |
+|---|---|
+| Status | Pre-M1 run. M1 code is on branch `m1-tech-validation`, waiting on PDFs + API key. |
+| Platform | iOS (SwiftUI), also runs on Mac. Owner's iPhone is the only target device. |
+| Model | Claude, behind a provider interface. |
+| Origins | [App concept](original/app-concept.md) · [Technical test plan](original/technical-test-plan.md) |
 
 ---
 
-## 1. Product decisions
+## 1. Product
 
-| # | Topic | Decision |
+### The moment
+Mid-game, someone asks "wait, can I do that?" and the table is waiting. **Speed and trust beat depth.** The person asking may be anyone at the table, and the phone often gets handed to the skeptic.
+
+### Principles
+1. **Ruling first, proof on demand.** The verdict shows immediately; the evidence is one swipe away.
+2. **The source is the star.** The rulebook page stays on screen; the app never hides what the rule actually says.
+3. **Never confidently wrong.** Every answer is labeled *Stated*, *Inferred* or *Not covered*. External sources are always labeled.
+4. **Never block the table.** No waiting to upload, prepare, or confirm before asking.
+5. **Neutral referee.** Verdicts are plain and fair; the personality lives in the name, labels and empty states.
+
+### In scope now
+- One PDF per game, uploaded by the user.
+- Ask by typing or push-to-talk. Answers on screen, optional read-aloud.
+- Answers with branches when the outcome depends on something unstated.
+- Conversation context within a session; sessions saved per game, on device.
+- Web fallback (BGG / Reddit) when the rulebook doesn't settle it.
+- 👍/👎 per answer, export a game's data as JSON.
+
+### Not now (later, maybe)
+Multiple PDFs per game (expansions, FAQs; the data model already allows it) · asking clarifying questions · curated rulebook library · remembering past rulings as house rules · server / other users / Android · iCloud sync.
+
+---
+
+## 2. Screens
+
+Milestone in brackets. Gestures in **bold**.
+
+### S1 · My Games [M3] — [mockup](design/screens.html#s1)
+List of games (cover, name, sessions or preparation progress) + "Add a rulebook PDF" field.
+- **Tap a game** → viewer, resumes the last session.
+- **＋** → iOS file picker / share-sheet import → S2.
+- **Swipe left** → Export · Delete.
+- Before M3, the app opens straight into the last PDF.
+
+### S2 · New game, preparing [M2 / M3] — [mockup](design/screens.html#s2)
+- The PDF is **readable and askable immediately**.
+- A thin progress line appears only if pages need OCR (scans, outlined text), and disappears when done.
+- Until a page is prepared, highlights on it fall back to showing the whole page.
+
+### S3 · Asking [M2] — [mockup](design/screens.html#s3)
+- **Type** and send: always available, for private questions.
+- **Hold 🎙**: live transcript, **release** to send, **slide left** to cancel.
+- **Tap 🎙**: dictation; review and edit before sending.
+- The PDF can be browsed freely (pinch, scroll) at any time.
+
+### S4 · Answer arriving [M2] — [mockup](design/screens.html#s4)
+The sheet rises as soon as the first words arrive, filling in this order:
+1. **Restated question** ("3 energy + a Battery, at end of turn"). If it's wrong, **Stop** and rephrase without waiting.
+2. **Verdict + confidence label.**
+3. **Step 1** → the PDF jumps to the page, zooms, highlights. Later steps keep loading.
+
+### S5 · The answer sheet [M2] — [mockup](design/screens.html#s5)
+Two layers, no Back/Continue buttons:
+- **Answer header** (fixed while stepping): restated question · verdict · confidence label with pages (`✓ Stated · p.12, p.14`) · branch pills (`No Battery? Discard 3 ›`).
+- **Step cards**: a horizontal carousel; the next card peeks from the edge. Each card: number, title, page, one or two sentences.
+
+### S6 · Stepping [M2] — [mockup](design/screens.html#s6)
+- **Swipe left / tap the right peek** → next step. The PDF follows the card (page turn, zoom, highlight).
+- **Swipe right / tap the left peek** → previous step.
+- **Last card**: the result + 👍/👎, with the follow-up field under it.
+- A step can cite several passages (pager "1 of 2 ›" on the PDF) or a figure (box outline; if no usable box, the whole page + "see the diagram, lower half").
+
+### S7 · Show the skeptic [M2] — [mockup](design/screens.html#s7)
+- **Drag the sheet down** → page near full-screen, one-line verdict + page pinned at the bottom. **Drag up** to restore.
+
+### S8 · Inspect freely [M2] — [mockup](design/screens.html#s8)
+- **Pinch / pan** the PDF at any time to read surrounding qualifications. Tapping the PDF never changes steps.
+- A **⤺ Back to step N** pill re-centers on the highlight.
+- **Double-tap**: evidence zoom ↔ full page.
+
+### S9 · Full answer [M2] — [mockup](design/screens.html#s9)
+- **Drag the sheet up** → header, list of all steps (**tap** to jump), assumptions.
+- **Tap a branch pill** → the step cards switch to that branch; a "Main answer" pill returns.
+
+### S10 · Not covered → web [M4] — [mockup](design/screens.html#s10)
+- Triggered when the rulebook answer is *Inferred* or *Not covered*. The rulebook part shows first; a "Searching BGG & Reddit…" card fills in after.
+- Web findings are **bordered step cards**, never PDF highlights: site, date, author role (designer / publisher / community), quote, link.
+- If a source disagrees, the rulebook verdict stays in the header and the card says **⚠ Designer disagrees** (strong) or **⚠ Community disagrees** (soft).
+
+### S11 · Feedback [M3] — [mockup](design/screens.html#s11)
+- **👍** saved silently. **👎** → one-tap reason (wrong verdict, missed exception, wrong highlight, wrong page, too slow, other), optional step, optional note.
+- **⋯ → Export game**: one JSON with all sessions, questions, full model outputs, timings, tokens, ratings.
+
+### S12 · Sessions [M3] — [mockup](design/screens.html#s12)
+- **⋯ → Sessions**: past questions per game, grouped by night. **Tap** → reopens that answer.
+- **New** = new game night; clears conversation context.
+
+### Read-aloud [M4] (no mockup)
+Off by default, toggled in ⋯. Speaks the restated question + verdict only. Any tap stops it.
+
+---
+
+## 3. Visual style
+
+| Token | Value | Use |
 |---|---|---|
-| 1 | Primary moment | **Mid-game dispute.** The table is waiting; speed and trust beat depth. |
-| 2 | Answer presentation | **Verdict first, proof on demand.** Ruling + step 1 evidence shown immediately; Continue walks remaining steps. |
-| 3 | Rulebook source | **User uploads own PDF** for the prototype. Curated, pre-indexed library later once indexing exists. |
-| 4 | Not settled by rulebook | Rulebook first; **web fallback (BGG / Reddit)**, always labeled as external. |
-| 5a | When to search the web | **Fallback only** — when the rulebook answer is *Inferred* or *Not covered*. Designed so "always in parallel" is a config switch later. |
-| 5b | Sources disagree | **Rulebook verdict always leads.** Web finding shown as a flagged "⚠️ Community/designer disagrees" card; never silently overrides. Designer/official sources flagged more strongly than random comments. |
-| 6 | Input / output | **Text always** (private questions) **+ push-to-talk** on top. Output **always on screen + optional read-aloud**. Navigation by tap. |
-| 7 | Missing info | **Answer with branches** ("Discard all. Unless you have a storage item: keep up to 2"). Asking clarifying questions deferred. Conversation context carries across questions in a session (normal agent behaviour). |
-| 8 | Documents | **1 PDF per game in the UI**, but data model is `Game → [Document]` so expansions/FAQs are UI work later. |
-| 9 | Definition of "proven" | **(a) Benchmark passes**, then **(b) it gets used at your own table**. Strangers / business signal not goals now. |
-| 10–11 | Platform | **iOS-first SwiftUI**, runs on Mac via "Designed for iPad" / Simulator. Owner's iPhone is the only target device. Owner directs, Claude writes the code. |
-| 12 | Benchmark games | **Power Grid, Root (Law of Root), Azul, Dune Imperium.** Questions from BGG/forums + our own; built together. Plus a deliberately scanned/photographed variant of some pages (e.g. Azul). |
-| 13 | Answer screen | **Layout B: full-screen PDF + bottom sheet** (verdict, step text, Back/Continue). May evolve. |
-| 14 | Persistence | **Games + sessions saved per game, on-device only** (SwiftData). No sync. |
-| 15 | Model | **Provider-agnostic interface, Claude first.** App calls the API directly with the owner's key in Keychain. Backend later. Cost is measured, no hard ceiling yet. |
-| 16 | Visual evidence | **B: model returns an approximate box** for figures; fallback = whole page + pointer text. Upgrade path **B+**: Vision-detected candidate boxes, model picks one. |
-| — | Scans / outlined text | Per-page check for a usable text layer; if missing, **on-device OCR (Apple Vision)** gives word boxes. Fuzzy quote matching. |
-| 17 | Waiting | **Progressive streaming**: restated question → verdict → step 1 jumps to page → later steps fill in. **Background preparation**: PDF usable and askable immediately; OCR improves highlights when done. |
-| 18 | Feedback | **👍/👎 per answer** + optional note (can name a step). **Export a whole game** (all sessions, full outputs, timings, ratings) as JSON. |
-| 19 | Tone | **Neutral referee in verdicts**; personality lives in name, icon, empty states. |
+| background | `#efe4d0` | app chrome, nav |
+| sheet | `#f4e9d5` + 1px `#d8c6a8` top border | answer sheet, a shade darker than the page so app and rulebook never blend |
+| card | `#fffaf0` | step cards, list rows |
+| ink / muted | `#33261b` / `#8a735c` | text |
+| line | `#d8c6a8` | borders, dividers, inactive dots |
+| accent | `#a2412b` | primary actions, active dot, warnings |
+| highlight | `#f2b134` at ~40% fill, `#d39320` outline | evidence on the PDF |
+| stated | `#3f6b2a` on `#e3efd9` | "✓ Stated" label |
 
-### Experience principles (from concept, still binding)
-- Source and surrounding qualifications easy to inspect.
-- As many steps as the answer needs.
-- External sources always identified.
-- Navigation easy to pause or interrupt.
+- **One font:** SF (system) everywhere. The rulebook keeps its own fonts.
+- **Corners:** sheet 16, cards 11–12, buttons 9, labels 6.
+- **Voice:** short, precise, a little nerdy, never smug. Examples: "Well, according to p.14…", "✓ Stated · p.12, p.14", "? Not covered", "⚠ Designer disagrees", "Reading the rulebook…".
+- **Dark mode:** not designed yet.
 
 ---
 
-## 2. Screens & interactions
+## 4. Answer contract
 
-Visual wireframes: [design/wireframes.html](design/wireframes.html) (open in a browser). Text version below.
-
-Wireframes use the energy/Battery example. `[ ]` = button, `▔▔` = sheet grab handle, `▓▓` = highlight. Milestone tags show when each screen lands.
-
-### 2.1 My Games (home) — M3 (M2: opens straight to the last PDF)
-
-```
-┌──────────────────────────────┐
-│ ackshually              [＋] │
-│                              │
-│ ┌──────────────────────────┐ │
-│ │ ▣  Power Grid            │ │
-│ │    3 sessions · Nov 14   │ │
-│ └──────────────────────────┘ │
-│ ┌──────────────────────────┐ │
-│ │ ▣  Root — Law of Root    │ │
-│ │    Preparing… 62%        │ │
-│ └──────────────────────────┘ │
-│ ┌──────────────────────────┐ │
-│ │ ▣  Azul                  │ │
-│ │    1 session · Nov 2     │ │
-│ └──────────────────────────┘ │
-└──────────────────────────────┘
-```
-
-| Action | Result |
-|---|---|
-| Tap a game | Opens **Game viewer** (2.3), resuming the latest session. |
-| Tap **＋** | iOS file picker / share sheet import → **Add game** (2.2). |
-| Swipe left on a game | Delete · Export game (JSON, see 2.9). |
-| Empty state | Light personality allowed here: "Nobody's argued yet. Add a rulebook." |
-
-### 2.2 Add game / preparation — M2 (basic), M3 (background OCR)
-
-```
-┌──────────────────────────────┐
-│ ‹ Games      Azul            │
-│ ┌──────────────────────────┐ │
-│ │                          │ │
-│ │   (rulebook page 1,      │ │
-│ │    readable immediately) │ │
-│ │                          │ │
-│ └──────────────────────────┘ │
-│ ◔ Preparing scanned pages 3/8│
-│ ┌──────────────────────────┐ │
-│ │ Ask about the rules…   🎙│ │
-│ └──────────────────────────┘ │
-└──────────────────────────────┘
-```
-
-- PDF opens immediately; title taken from PDF metadata, editable.
-- A thin status line appears only if some pages need OCR; it disappears when done. Asking is never blocked.
-- Until a page is prepared, highlights on it fall back to whole-page view.
-
-### 2.3 Game viewer — idle — M2
-
-```
-┌──────────────────────────────┐
-│ ‹ Games   Power Grid    ⋯    │
-│ ┌──────────────────────────┐ │
-│ │                          │ │
-│ │     PDF, free browsing   │ │
-│ │     (pinch, scroll,      │ │
-│ │      page thumbnails)    │ │
-│ │                          │ │
-│ └──────────────────────────┘ │
-│ ┌──────────────────────────┐ │
-│ │ Ask about the rules…   🎙│ │
-│ └──────────────────────────┘ │
-└──────────────────────────────┘
-```
-
-| Action | Result |
-|---|---|
-| Type + return | Sends question → 2.4. Keyboard dismisses. |
-| **Hold 🎙** | Push-to-talk: live transcript fills the field; release sends. Slide away to cancel. |
-| Tap 🎙 (no hold) | Toggles dictation; tap again to stop, then review/edit before sending. |
-| ⋯ menu | Session history (2.8) · New session · Export game · Read-aloud on/off. |
-| Pinch / scroll PDF | Normal free browsing; never interrupted by the app. |
-
-### 2.4 Answer streaming — M2
-
-Content appears progressively, in contract order. The sheet rises as soon as the first token arrives.
-
-```
- t≈1s                          t≈3s                          t≈5s
-┌────────────────────────┐    ┌────────────────────────┐    ┌────────────────────────┐
-│  (PDF, unchanged)      │    │  (PDF, unchanged)      │    │ p.12                   │
-│                        │    │                        │    │ ▓▓ End of turn: discard│
-│                        │    │                        │    │ ▓▓ all unused energy.  │
-│                        │    │                        │    │                        │
-│ ▔▔                     │    │ ▔▔                     │    │ ▔▔                     │
-│ You have 3 energy and  │    │ You have 3 energy and  │    │ ✓ Stated in rules      │
-│ a Battery, end of turn.│    │ a Battery, end of turn.│    │ Keep 2 energy, discard │
-│ ···                    │    │ ✓ Stated in rules      │    │ 1.                     │
-│                        │    │ Keep 2 energy, disca▍  │    │ ↳ No Battery: discard 3│
-│ [■ Stop]               │    │ [■ Stop]               │    │ 1/3 General rule…      │
-└────────────────────────┘    └────────────────────────┘    │ [‹]  [Continue ›]  👍👎│
-                                                            └────────────────────────┘
-```
-
-- **Restated question** first: if it's wrong, the user taps **Stop** and rephrases without waiting.
-- **Verdict + confidence chip** (`✓ Stated` · `≈ Inferred` · `? Not covered`) next.
-- **Step 1** arrives → PDF animates to the page, zooms to the evidence, highlight fades in.
-- Later steps keep loading; Continue shows a small spinner if pressed before its step has arrived.
-
-### 2.5 Stepping through evidence (layout B) — M2
-
-```
- Sheet: medium (default)        Sheet: collapsed             Sheet: expanded
-┌────────────────────────┐    ┌────────────────────────┐    ┌────────────────────────┐
-│ p.14                   │    │ p.14                   │    │ ▔▔                     │
-│ ▓▓ Battery: at end of  │    │ ▓▓ Battery: at end of  │    │ ✓ Keep 2, discard 1.   │
-│ ▓▓ turn, keep up to 2  │    │ ▓▓ turn, keep up to 2  │    │ ↳ No Battery: discard 3│
-│ ▓▓ unused energy.      │    │ ▓▓ unused energy.      │    │                        │
-│                        │    │                        │    │ 1 General rule  p.12   │
-│ ▔▔                     │    │                        │    │ 2 Battery exc.  p.14 ● │
-│ ✓ Keep 2, discard 1.   │    │                        │    │ 3 Conclusion           │
-│ 2/3 The Battery is an  │    │                        │    │                        │
-│ exception to discard.  │    │                        │    │ Assumes the Battery is │
-│ [‹]  [Continue ›]  👍👎│    │ ▔▔ Keep 2, discard 1.  │    │ already in play.       │
-└────────────────────────┘    └────────────────────────┘    └────────────────────────┘
-```
-
-| Action | Result |
-|---|---|
-| **Continue ›** / swipe left on sheet | Next step: PDF animates (page turn if needed) → zoom → highlight. |
-| **‹** / swipe right on sheet | Previous step. |
-| Drag sheet down → collapsed | "Show the skeptic": PDF near full-screen, one-line verdict pinned at bottom. |
-| Drag sheet up → expanded | Full answer: verdict, branches, assumptions, step list. Tap any step to jump to it. |
-| Pinch / pan PDF during a step | Free inspection. A **⤺ Back to step** pill appears; tap to re-center the highlight. |
-| Double-tap PDF | Toggle zoomed-to-evidence ↔ full page. |
-| Step with several passages | Each passage highlighted; small "1 of 2 ›" pager on the PDF if they don't fit one view. |
-| Step with a figure box | Box outline instead of text highlight. If no usable box → whole page + "see the diagram, lower half". |
-| Last step | Continue becomes **Done** → sheet returns to medium, ask field focused for a follow-up. |
-
-### 2.6 Branches — M2
-
-- Branches show under the verdict as `↳ condition: verdict` rows.
-- Tapping a branch replaces the step path with that branch's steps (the main path stays one tap away via a `Main answer` chip).
-- If the user answers the branch in a follow-up ("I don't have a Battery"), the app treats it as normal conversation context.
-
-### 2.7 Not covered + web fallback — M4
-
-```
-┌──────────────────────────────┐
-│ p.21                         │
-│ ▓▓ closest passage           │
-│ ▔▔                           │
-│ ? Not covered by the rulebook│
-│ Closest rules: p.21, p.8     │
-│ ┌──────────────────────────┐ │
-│ │ 🌐 BoardGameGeek · 2021  │ │
-│ │ Designer reply: "Yes,    │ │
-│ │ you may…"   ↗ open thread│ │
-│ └──────────────────────────┘ │
-│ [‹]  [Continue ›]      👍👎  │
-└──────────────────────────────┘
-```
-
-- Triggered automatically when confidence is `inferred` or `not_covered`. A "Searching BGG & Reddit…" line shows while it runs; the rulebook part is already on screen.
-- Web results are cards, never PDF highlights; always show site, date, author role (designer / publisher / community) and a link.
-- Conflict case: rulebook verdict stays on top; card turns into **⚠️ Designer disagrees** (strong) or **⚠️ Community disagrees** (soft).
-
-### 2.8 Session history — M3
-
-- From ⋯ → Sessions: list per game, by date, each showing its first question.
-- Inside a session: scrolling list of Q → verdict rows; tap one to reopen it in the viewer at step 1.
-- **New session** clears conversation context (new game night).
-
-### 2.9 Feedback & export — M3
-
-| Action | Result |
-|---|---|
-| Tap 👍 | Saved silently, brief checkmark. |
-| Tap 👎 | Small sheet: chips *Wrong verdict · Missed exception · Wrong highlight · Wrong page · Too slow · Other*, optional step selector, optional note. One tap to send. |
-| ⋯ → Export game | Share sheet with one JSON: game, documents, all sessions, questions, full model outputs, timings, tokens, ratings, notes. |
-
-### 2.10 Read-aloud — M4
-
-- Off by default; toggle in ⋯. When on, the **restated question + verdict** are spoken once they're complete. Steps are not read.
-- Any tap on the sheet stops speech.
-
----
-
-## 3. Answer contract (model output)
-
-Field order matters: it is the streaming order.
+What the model returns. **Field order is streaming order.**
 
 ```jsonc
 {
   "restated_question": "You have 3 energy and a Battery at end of turn.",
   "verdict": "Keep 2 energy, discard 1.",
   "confidence": "stated | inferred | not_covered",
-  "branches": [                       // optional; alternatives that depend on unstated facts
-    { "condition": "Without a Battery", "verdict": "Discard all 3." }
-  ],
-  "assumptions": ["..."],             // optional
+  "branches": [{ "condition": "Without a Battery", "verdict": "Discard all 3." }],
+  "assumptions": ["The Battery is already in play."],
   "steps": [
     {
-      "text": "General rule: unused energy is discarded at end of turn.",
+      "title": "General rule",
+      "text": "Unused energy is discarded at end of turn.",
       "evidence": [
-        {
-          "page": 12,
-          "quote": "discard all unused energy",      // exact text → matched to word coordinates
-          "box": null                                 // or {x,y,w,h} normalized 0–1, for figures
-        }
+        { "page": 12, "quote": "discard all unused energy", "box": null }   // box: {x,y,w,h} normalized 0–1, for figures
       ]
     }
   ],
-  "needs_web": false                  // true when confidence != stated → triggers fallback
+  "needs_web": false
 }
 ```
 
-A step may reference several pages. Steps follow the logic of the question, not page order.
+**Placing a highlight**, in order:
+1. Match `quote` to the page's words (PDF text layer, or OCR words for scanned/outlined pages) → word-level highlight.
+2. Else draw `box` if it passes sanity checks.
+3. Else show the whole page; log a miss.
 
-Highlight resolution, in order:
-1. `quote` → fuzzy match against the page's words (PDFKit text layer, or Vision OCR words) → word-level highlight.
-2. `box` → draw the region (sanity-checked: inside page, not degenerate).
-3. Fallback → show the whole page, step text points at the area; **log a miss**.
-
----
-
-## 4. Architecture
-
-```
-ackshually/
-├─ Core/            Swift package — no UI
-│  ├─ Model         Game, Document, Session, Answer, Step, Evidence, Rating
-│  ├─ Providers     AnswerProvider protocol; ClaudeProvider (first impl)
-│  ├─ Prep          per-page text-layer check, Vision OCR, word boxes cache
-│  ├─ Matching      quote → word boxes (fuzzy), box sanity checks
-│  └─ Web           fallback search (later, M4)
-├─ App/             SwiftUI iOS app (runs on Mac) — PDFKit viewer, layout B
-└─ bench/           Swift CLI on Core — runs question sets, writes report
-```
-
-- Same `Core` code path for app and bench, so benchmark numbers reflect the app.
-- API key: Keychain in app, env var in bench.
-- Prompt caching on the PDF so follow-up questions are cheaper and faster.
+Two evidence modes are being compared in M1: quotes written by the model (`json`, supports figure boxes) vs. Claude's native PDF citations (`citations`, no boxes). The winner becomes the default.
 
 ---
 
-## 5. Milestones
+## 5. Architecture
 
-### M1 — Assumption check (short)
-Goal: verify quickly that the approach works, then move on. Not the full benchmark.
-- `Core` with Claude provider, answer contract, quote matcher.
-- `bench` CLI, ~20 questions across the 4 rulebooks (BGG/forum + ours), each with expected verdict + evidence pages/quotes.
-- Report: answer correct?, evidence correct?, highlight matched?, time to verdict / first step / full answer, tokens & cost, first vs follow-up question.
-- **Exit:** numbers look roughly viable (or we learn which assumption broke). Then go straight to M2.
+```
+Core/    Swift package, no UI (macOS + iOS)
+         models · AnswerProvider protocol + ClaudeProvider · streaming field parser
+         quote matcher (fuzzy) · box checks · [M3] Vision OCR prep · [M4] web fallback
+bench/   Swift CLI on Core: runs question sets, writes report + JSONL
+App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage
+```
 
-Assumptions to test:
-1. One call with the full PDF answers correctly with usable evidence.
-2. Verdict + step 1 arrive within ~5 s when streamed.
-3. Returned quotes match PDF word coordinates reliably.
-4. Model-proposed boxes for figures land roughly right (Azul).
+- The app and the bench share `Core`, so benchmark numbers reflect the app.
+- Whole PDF + question + conversation in one streamed request; PDF prompt-cached so follow-ups are cheap.
+- Data model: `Game → [Document]`, `Game → [Session] → [Answer]`. Everything on device.
+- API key: Keychain in the app, `ANTHROPIC_API_KEY` env var for the bench. App calls the API directly (no server yet).
+- Step carousel: horizontal `ScrollView` + `.scrollTargetBehavior(.viewAligned)`, side margins for the peek, `.scrollPosition(id:)` drives the PDF. Fallback: `TabView(.page)`.
+- Figures: v1 = model-proposed box. If boxes score badly → Vision-detected candidate regions, model picks one.
+
+---
+
+## 6. Milestones
+
+| | Goal | Contents | Exit |
+|---|---|---|---|
+| **M1** Assumption check | Prove the approach, quickly | `Core` + `bench`, 23 questions over Power Grid, Root (Law of Root), Azul, Dune Imperium | Numbers look viable, or we know what broke. Keep it short. |
+| **M2** iOS viewer | Something to use at the table | S3–S9: ask (text + push-to-talk), streaming, answer sheet, stepping, collapse/expand, inspect, follow-ups | Usable on the owner's iPhone |
+| **M3** Real tool | Game-night ready | S1, S2 (background OCR), S11, S12; full ~60-question bench incl. a scanned variant | Used unprompted at game night |
+| **M4** Fallbacks | Cover the gaps | S10 web fallback, read-aloud, better figure boxes if needed | — |
+
+**M1 tests five assumptions:**
+1. One call with the full PDF answers correctly with usable evidence (target ≥90%).
+2. Verdict + step 1 arrive fast when streamed (target median ≤5 s, 90% ≤10 s).
+3. Quotes land on the right words (target ≥90% of highlights).
+4. Model-proposed boxes land roughly right on figures (Azul).
 5. Cost per question is tolerable, and caching makes follow-ups cheap.
 
-### M2 — iOS viewer (the priority)
-- Open a PDF, ask by text or push-to-talk.
-- Layout B: PDF full-screen, bottom sheet with restated question, verdict, confidence chip, branches.
-- Streaming; Continue / Back across steps; page jump + zoom + highlight; inspect full page.
-- Follow-up questions with conversation context.
-
-### M3 — Real tool for game night
-- My Games list, sessions saved per game (SwiftData, on-device).
-- 👍/👎 per answer + note; export a game as JSON.
-- Background preparation + OCR for scanned/outlined pages.
-- Expand bench to the full ~60 questions incl. the scanned variant.
-
-### M4 — Fallbacks & upgrades
-- Web fallback (BGG/Reddit) with external-source labeling and "⚠️ disagrees" card.
-- Read-aloud of verdict.
-- B+ figure candidates if diagram highlights score badly.
-
-### Later
-Multiple PDFs per game (expansions, FAQ), clarifying questions, curated library, table precedent / house rules memory, server proxy, sharing beyond owner's phone.
+Results go in [m1-report.md](m1-report.md).
 
 ---
 
-## 6. Open items
-- Get the 4 rulebook PDFs into `assets/rulebooks/` (owner) — Root: *The Law of Root*.
-- Create a scanned/photographed variant of a few Azul pages.
-- Draft the first ~20 benchmark questions together.
-- Cost ceiling per question: none set; revisit after M1 numbers.
+## 7. Decisions log
+
+Append new decisions here; change the sections above to match.
+
+| Date | Decision | Why |
+|---|---|---|
+| 2026-11-21 | Mid-game dispute is the primary use | Drives speed, verdict-first, voice input |
+| 2026-11-21 | Verdict first, proof on demand | Tables want the ruling; proof is for the skeptic |
+| 2026-11-21 | User-uploaded PDFs; curated library later | No rights issues; validates on own games |
+| 2026-11-21 | Web fallback only when rulebook isn't enough; rulebook always leads | Fast path stays fast; never silently overridden |
+| 2026-11-21 | Branches instead of clarifying questions | Simpler agent; no round-trip while the table waits |
+| 2026-11-21 | iOS-first SwiftUI, Claude behind an interface, direct API calls | Owner's iPhone; native PDFKit; no server yet |
+| 2026-11-21 | Figures: model box first, Vision candidates if needed | Cheapest thing that produces a measurement |
+| 2026-11-21 | Layout B: full PDF + bottom sheet | Keeps the source central |
+| 2026-11-21 | Sheet v2: fixed header + peeking step cards, no buttons | Buttons + swipe were redundant; old sheet mixed answer and step |
+| 2026-11-21 | Warm palette, one font (SF), precise nerdy wording | Owner's pick from three directions |
+
+---
+
+## 8. Open items
+- [ ] Owner: add the 4 rulebook PDFs to `assets/rulebooks/` (Root: *The Law of Root*).
+- [ ] Owner: provide the API key for the M1 run.
+- [ ] Fill in expected pages / Azul boxes in `bench/questions/m1.json` once PDFs are in.
+- [ ] Photograph a few Azul pages for the scanned variant (M3).
+- [ ] Design dark mode and app icon.
+- [ ] Set a cost ceiling per question after M1 numbers.

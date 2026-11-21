@@ -1,0 +1,99 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ackshually answer sheet v2</title>
+<style>
+  body{font-family:var(--font-sans,-apple-system,system-ui,sans-serif);color:var(--foreground,#e5e5e5)}
+  .intro{font-size:12px;color:var(--muted-foreground,#999);margin:0 0 12px}
+  .phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+  .cap{text-align:center;font-size:10.5px;color:var(--muted-foreground,#999);margin-top:6px}
+  .cap b{color:var(--foreground,#eee)}
+
+  .phone{--bg:#efe4d0;--paper:#fbf5e9;--ink:#33261b;--muted:#8a735c;--line:#d8c6a8;--sheet:#f4e9d5;--card:#fffaf0;--accent:#a2412b;--hl:rgba(242,177,52,.42);--hlb:#d39320;--ok-bg:#e3efd9;--ok:#3f6b2a;
+    width:206px;height:420px;margin:0 auto;border:7px solid #1c1c1e;border-radius:32px;overflow:hidden;position:relative;background:var(--bg);color:var(--ink);font-family:-apple-system,'SF Pro Text',system-ui,sans-serif;font-size:10px;line-height:1.38}
+  .notch{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:58px;height:15px;border-radius:9px;background:#1c1c1e;z-index:9}
+  .status{position:absolute;top:6px;left:14px;right:14px;display:flex;justify-content:space-between;font-size:8.5px;font-weight:600;z-index:8}
+  .nav{position:absolute;top:26px;left:0;right:0;height:26px;padding:0 10px;display:flex;justify-content:space-between;align-items:center;z-index:4;background:var(--bg)}
+  .nav b{font-size:11.5px}.nav .a{color:var(--accent)}
+  .page{position:absolute;inset:52px 0 0;padding:12px 13px;background:var(--paper);color:#2a2a2a;font-family:Georgia,serif;font-size:8.5px}
+  .page h5{margin:0 0 6px;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#5a4a3a}
+  .page p{margin:0 0 6px;color:#555}
+  .hl{background:var(--hl);box-shadow:0 0 0 1.5px var(--hlb);border-radius:3px;padding:2px 3px;color:#1a1a1a}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--sheet);border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:7px 0 10px;box-shadow:0 -6px 20px rgba(0,0,0,.18);z-index:5}
+  .grab{width:32px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 7px}
+  .head{padding:0 11px}
+  .rq{font-size:9px;color:var(--muted);margin-bottom:3px}
+  .verdict{font-weight:700;font-size:15px;line-height:1.15;letter-spacing:-.02em}
+  .meta{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 8px}
+  .chip{font-size:8px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--ok-bg);color:var(--ok)}
+  .chip.alt{background:transparent;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
+  .rail{display:flex;gap:7px;padding-left:11px;overflow:hidden}
+  .card{flex:0 0 160px;background:var(--card);border-radius:11px;padding:8px 9px;box-shadow:0 1px 0 var(--line);min-height:62px}
+  .card.peek{opacity:.6}
+  .card .h{display:flex;justify-content:space-between;font-size:8.5px;color:var(--muted);margin-bottom:3px}
+  .card .h b{color:var(--ink)}
+  .dots{display:flex;gap:4px;justify-content:center;margin-top:8px}.dots i{width:5px;height:5px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--accent);width:12px;border-radius:3px}
+  .fb{display:flex;gap:6px;margin-top:6px}.fb span{flex:1;text-align:center;padding:4px 0;border-radius:7px;box-shadow:inset 0 0 0 1px var(--line);font-size:11px}
+  .follow{margin-top:6px;padding:5px 8px;border-radius:14px;background:var(--bg);color:var(--muted);font-size:9px;display:flex;justify-content:space-between}
+  .gest{position:absolute;font-size:8.5px;padding:2px 7px;border-radius:8px;background:#3b82f6;color:#fff;z-index:8;white-space:nowrap}
+</style></head><body>
+<p class="intro">Answer sheet v2: a fixed answer header with swipeable step cards below. No Back/Continue buttons, and the peeking next card signals that you can swipe. <span style="color:#3b82f6">Blue tags</span> mark the gestures.</p>
+<div class="phones">
+
+<!-- Step 1 -->
+<div><div class="phone"><div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="nav"><span class="a">‹ Games</span><b>Power Grid</b><span class="a">⋯</span></div>
+  <div class="page"><h5>5 · Bureaucracy</h5><p>Players earn money for each city they power this round.</p>
+    <p><span class="hl"><b>End of turn:</b> discard all unused energy</span> back to the supply.</p><p>Resources stored on plants are not affected.</p></div>
+  <div class="sheet"><div class="grab"></div>
+    <div class="head"><div class="rq">3 energy + a Battery, at end of turn</div>
+      <div class="verdict">Keep 2 energy, discard 1.</div>
+      <div class="meta"><span class="chip">✓ Stated · p.12, p.14</span><span class="chip alt">No Battery? Discard 3 ›</span></div></div>
+    <div class="rail">
+      <div class="card"><div class="h"><b>1 · General rule</b><span>p.12</span></div>Unused energy is discarded at end of turn.</div>
+      <div class="card peek"><div class="h"><b>2 · Exception</b><span>p.14</span></div>The Battery keeps up to 2.</div>
+    </div>
+    <div class="dots"><i class="on"></i><i></i><i></i></div>
+  </div>
+  <div class="gest" style="bottom:52px;right:6px">← swipe or tap</div>
+</div><div class="cap"><b>Step 1</b> · answer on top, step card below</div></div>
+
+<!-- Step 2 -->
+<div><div class="phone"><div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="nav"><span class="a">‹ Games</span><b>Power Grid</b><span class="a">⋯</span></div>
+  <div class="page"><h5>7 · Items</h5><p>Items are bought during phase 3 and stay in front of you.</p>
+    <p><span class="hl"><b>Battery:</b> at end of turn, you may keep up to 2 unused energy.</span></p><p>Only one Battery per player.</p></div>
+  <div class="sheet"><div class="grab"></div>
+    <div class="head"><div class="rq">3 energy + a Battery, at end of turn</div>
+      <div class="verdict">Keep 2 energy, discard 1.</div>
+      <div class="meta"><span class="chip">✓ Stated · p.12, p.14</span><span class="chip alt">No Battery? Discard 3 ›</span></div></div>
+    <div class="rail" style="padding-left:0;margin-left:-156px">
+      <div class="card peek"><div class="h"><b>1 · General rule</b><span>p.12</span></div>Unused energy is discarded.</div>
+      <div class="card"><div class="h"><b>2 · Exception</b><span>p.14</span></div>The Battery keeps up to 2 unused energy, overriding the discard.</div>
+      <div class="card peek"><div class="h"><b>3 · Result</b></div>…</div>
+    </div>
+    <div class="dots"><i></i><i class="on"></i><i></i></div>
+  </div>
+  <div class="gest" style="top:168px;left:50%;transform:translateX(-50%)">page follows the card</div>
+</div><div class="cap"><b>Step 2</b> · header unchanged, page jumps</div></div>
+
+<!-- Last step -->
+<div><div class="phone"><div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div>
+  <div class="nav"><span class="a">‹ Games</span><b>Power Grid</b><span class="a">⋯</span></div>
+  <div class="page"><h5>7 · Items</h5><p>Items are bought during phase 3 and stay in front of you.</p>
+    <p><span class="hl"><b>Battery:</b> at end of turn, you may keep up to 2 unused energy.</span></p><p>Only one Battery per player.</p></div>
+  <div class="sheet"><div class="grab"></div>
+    <div class="head"><div class="rq">3 energy + a Battery, at end of turn</div>
+      <div class="verdict">Keep 2 energy, discard 1.</div>
+      <div class="meta"><span class="chip">✓ Stated · p.12, p.14</span><span class="chip alt">No Battery? Discard 3 ›</span></div></div>
+    <div class="rail" style="padding-left:0;margin-left:-156px">
+      <div class="card peek"><div class="h"><b>2 · Exception</b><span>p.14</span></div>The Battery keeps 2.</div>
+      <div class="card"><div class="h"><b>3 · Result</b></div>2 stay on the Battery, 1 goes back.
+        <div class="fb"><span>👍</span><span>👎</span></div></div>
+    </div>
+    <div class="head"><div class="follow"><span>Ask a follow-up…</span><span>🎙</span></div></div>
+  </div>
+</div><div class="cap"><b>Last step</b> · feedback + follow-up</div></div>
+
+</div>
+</body></html>

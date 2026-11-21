@@ -1,0 +1,121 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ackshually hybrid style</title>
+<style>
+  body{font-family:var(--font-sans,-apple-system,system-ui,sans-serif);color:var(--foreground,#e5e5e5)}
+  section{margin-bottom:34px}
+  section>h2{margin:0;font-size:17px}
+  section>p{margin:3px 0 8px;font-size:12px;color:var(--muted-foreground,#999);max-width:640px}
+  .sw{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .sw span{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted-foreground,#999)}
+  .sw i{width:14px;height:14px;border-radius:4px;border:1px solid rgba(128,128,128,.4);display:inline-block}
+  .phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+  .cap{text-align:center;font-size:10.5px;color:var(--muted-foreground,#999);margin-top:6px}
+
+  /* ---------- phone shell, all colors from direction tokens ---------- */
+  .phone{width:206px;height:420px;margin:0 auto;border:7px solid #1c1c1e;border-radius:32px;overflow:hidden;position:relative;background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:10px;line-height:1.38}
+  .notch{position:absolute;top:5px;left:50%;transform:translateX(-50%);width:58px;height:15px;border-radius:9px;background:#1c1c1e;z-index:9}
+  .status{position:absolute;top:6px;left:14px;right:14px;display:flex;justify-content:space-between;font-size:8.5px;font-weight:600;z-index:8;color:var(--chrome-ink,var(--ink))}
+  .nav{position:absolute;top:26px;left:0;right:0;height:26px;padding:0 10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;z-index:4;background:var(--navbg);color:var(--chrome-ink,var(--ink))}
+  .nav b{font-family:var(--fv);font-size:11.5px}
+  .nav .a{color:var(--accent)}
+  .page{position:absolute;inset:52px 0 0;padding:12px 13px;background:var(--paper);color:#2a2a2a;font-family:Georgia,serif;font-size:8.5px}
+  .page h5{margin:0 0 6px;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#5a4a3a}
+  .page p{margin:0 0 6px;color:#555}
+  .hl{background:var(--hl);box-shadow:0 0 0 1.5px var(--hlb);border-radius:3px;padding:2px 3px;color:#1a1a1a}
+  .fig{height:46px;border-radius:4px;background:repeating-linear-gradient(45deg,#ddd 0 6px,#e8e8e8 6px 12px);margin:6px 0}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--sheet);color:var(--sheet-ink,var(--ink));border-radius:var(--sr) var(--sr) 0 0;padding:7px 11px 12px;box-shadow:0 -6px 20px rgba(0,0,0,.18);z-index:5;border-top:var(--sheet-border,none)}
+  .grab{width:32px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 7px}
+  .rq{font-size:9px;color:var(--muted);margin-bottom:5px}
+  .chip{display:inline-flex;align-items:center;gap:3px;font-family:var(--fc,var(--fb));font-size:8px;font-weight:600;padding:2px 7px;border-radius:var(--cr);background:var(--chipbg);color:var(--chipink);margin-bottom:4px;letter-spacing:var(--cls,0)}
+  .verdict{font-family:var(--fv);font-weight:700;font-size:var(--vs,15px);line-height:1.15;margin-bottom:5px;letter-spacing:var(--vls,0)}
+  .branch{font-size:9px;color:var(--muted);border-left:2px solid var(--line);padding-left:6px;margin-bottom:6px}
+  .branch b{color:var(--sheet-ink,var(--ink))}
+  .step{font-size:9.5px;margin-bottom:8px}
+  .step .n{font-family:var(--fc,var(--fb));color:var(--muted);margin-right:4px}
+  .ctl{display:flex;align-items:center;gap:6px}
+  .btn{font-size:9.5px;font-weight:600;padding:5px 12px;border-radius:var(--br);background:var(--accent);color:var(--accent-ink);font-family:var(--fb)}
+  .btn.g{background:transparent;color:var(--sheet-ink,var(--ink));box-shadow:inset 0 0 0 1px var(--line);padding:5px 9px}
+  .thumbs{margin-left:auto;display:flex;gap:7px;color:var(--muted);font-size:11px}
+  .dots{display:flex;gap:3px;margin-left:4px}.dots i{width:5px;height:5px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--accent)}
+  .web{border-radius:var(--cardr);background:var(--webbg);padding:7px 8px;margin:6px 0 8px;border:1px solid var(--webb)}
+  .web .src{font-size:8px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:3px}
+  .warn{font-family:var(--fc,var(--fb));font-size:8.5px;font-weight:700;color:var(--warn);margin-bottom:3px}
+  /* home */
+  .home{position:absolute;inset:26px 0 0;padding:6px 12px;background:var(--bg)}
+  .logo{font-family:var(--fv);font-weight:700;font-size:21px;letter-spacing:var(--logols,0);margin:6px 0 2px}
+  .tag{font-size:9px;color:var(--muted);margin-bottom:10px}
+  .game{display:flex;gap:8px;align-items:center;padding:7px;border-radius:var(--cardr);background:var(--card);margin-bottom:7px;box-shadow:var(--cardsh,none);border:var(--cardb,none)}
+  .cover{width:30px;height:38px;border-radius:5px;flex:none}
+  .game b{font-family:var(--fv);font-size:11px;display:block}
+  .game span{font-size:8.5px;color:var(--muted)}
+  .prog{height:3px;border-radius:2px;background:var(--line);margin-top:3px;overflow:hidden}.prog i{display:block;height:100%;width:62%;background:var(--accent)}
+  .ask{position:absolute;left:10px;right:10px;bottom:12px;display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:var(--askr);background:var(--card);border:var(--cardb,1px solid var(--line));color:var(--muted);font-size:9.5px}
+  .mic{margin-left:auto;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:10px}
+
+  /* ---------- direction tokens ---------- */
+  .hybrid{--bg:#efe4d0;--navbg:#efe4d0;--paper:#fbf5e9;--ink:#33261b;--muted:#8a735c;--line:#d8c6a8;--sheet:#f4e9d5;--sheet-border:1px solid #d8c6a8;--card:#f8f0e1;--cardsh:0 1px 0 #d8c6a8;
+    --accent:#a2412b;--accent-ink:#fff7ec;--hl:rgba(242,177,52,.42);--hlb:#d39320;--chipbg:#e3efd9;--chipink:#3f6b2a;--warn:#a2412b;--webbg:#fffaf0;--webb:#e5d3b3;
+    --fv:-apple-system,'SF Pro Display',system-ui,sans-serif;--fb:-apple-system,'SF Pro Text',system-ui,sans-serif;--fc:-apple-system,'SF Pro Text',system-ui,sans-serif;--cls:0;
+    --sr:16px;--cr:6px;--br:9px;--cardr:12px;--askr:20px;--vs:17px;--vls:-.02em;--logols:-.03em}
+</style></head><body>
+
+<div id="root"></div>
+
+<script>
+const D = [
+  {cls:'hybrid', name:'Hybrid · warm colors, one font, nerd wording',
+   desc:'Tabletop palette, a single font (SF, the iOS system font) everywhere, and the precise, slightly nerdy voice of option 3. The answer sheet is a shade darker than the page with a hairline border, so app vs rulebook stays distinct.',
+   sw:[['#efe4d0','bg'],['#f4e9d5','sheet'],['#fbf5e9','page'],['#33261b','ink'],['#a2412b','accent'],['#f2b134','highlight'],['#3f6b2a','stated']],
+   logo:'ackshually', tag:'Well, according to p.14…', ok:'✓ Stated · p.12, p.14', inf:'? Not covered',
+   web:'bgg.com · 2021', warn:'⚠ Designer disagrees'}
+];
+const status = `<div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div>`;
+const covers = ['#3a6ea5','#c9572b','#2f8f83','#b8892b'];
+function home(d){
+  const g=[['Power Grid','3 sessions · Nov 14'],['Root — Law of Root','Preparing…'],['Azul','1 session · Nov 2'],['Dune Imperium','No sessions yet']];
+  return `<div class="phone">${status}<div class="home">
+    <div class="logo">${d.logo}</div><div class="tag">${d.tag}</div>
+    ${g.map((x,i)=>`<div class="game"><div class="cover" style="background:${covers[i]}"></div><div style="flex:1"><b>${x[0]}</b><span>${x[1]}</span>${i==1?'<div class="prog"><i></i></div>':''}</div></div>`).join('')}
+    </div><div class="ask">＋ Add a rulebook PDF<span class="mic">＋</span></div></div>`;
+}
+function verdict(d){
+  return `<div class="phone">${status}
+    <div class="nav"><span class="a">‹ Games</span><b>Power Grid</b><span class="a">⋯</span></div>
+    <div class="page"><h5>5 · Bureaucracy</h5><p>Players earn money for each city they power this round, as shown on the payment table.</p>
+      <p><span class="hl"><b>End of turn:</b> discard all unused energy</span> back to the supply.</p>
+      <p>Resources stored on power plants are not affected by this rule.</p><div class="fig"></div></div>
+    <div class="sheet"><div class="grab"></div>
+      <div class="rq">3 energy + a Battery, at end of turn</div>
+      <span class="chip">${d.ok}</span>
+      <div class="verdict">Keep 2 energy,<br>discard 1.</div>
+      <div class="branch">No Battery? <b>Discard all 3.</b></div>
+      <div class="step"><span class="n">1/3</span>The general rule: unused energy is discarded at end of turn.</div>
+      <div class="ctl"><span class="btn g">‹</span><span class="btn">Continue ›</span><div class="dots"><i class="on"></i><i></i><i></i></div><span class="thumbs">👍 👎</span></div>
+    </div></div>`;
+}
+function web(d){
+  return `<div class="phone">${status}
+    <div class="nav"><span class="a">‹ Games</span><b>Root</b><span class="a">⋯</span></div>
+    <div class="page"><h5>4.2 · Battle</h5><p>The attacker chooses a clearing where they have warriors or pieces.</p>
+      <p><span class="hl">4.2.1 The defender may ambush…</span></p><p>Rolls are resolved with the higher die going to the attacker.</p></div>
+    <div class="sheet"><div class="grab"></div>
+      <div class="rq">Can I move after battling with the Vagabond?</div>
+      <span class="chip" style="background:transparent;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)">${d.inf}</span>
+      <div class="verdict" style="font-size:13px">Probably yes; the Law doesn't say.</div>
+      <div class="web"><div class="warn">${d.warn}</div><div class="src"><span>${d.web}</span><span>Designer ↗</span></div>
+        <div>"Yes, the Vagabond may move after battling, as long as he has boots."</div></div>
+      <div class="ctl"><span class="btn g">‹</span><span class="btn">Continue ›</span><span class="thumbs">👍 👎</span></div>
+    </div></div>`;
+}
+document.getElementById('root').innerHTML = D.map(d=>`
+  <section class="${d.cls}"><h2>${d.name}</h2><p>${d.desc}</p>
+  <div class="sw">${d.sw.map(s=>`<span><i style="background:${s[0]}"></i>${s[1]}</span>`).join('')}</div>
+  <div class="phones">
+    <div>${home(d)}<div class="cap">Home</div></div>
+    <div>${verdict(d)}<div class="cap">Verdict + step 1</div></div>
+    <div>${web(d)}<div class="cap">Not covered → web, conflict</div></div>
+  </div></section>`).join('');
+</script>
+</body></html>
