@@ -125,15 +125,20 @@ public struct PageIndex: Sendable {
     public var k1 = 1.2
     public var b = 0.75
 
-    public init(pageTexts: [String]) {
+    /// `headings`: per-page heading text (optional); its terms count `headingBoost` extra times,
+    /// so the page that *defines* a rule ("Moving Around the Map") beats pages that only mention it.
+    public init(pageTexts: [String], headings: [String] = [], headingBoost: Int = 3) {
         pageCount = pageTexts.count
         var tfs: [[String: Int]] = []
         var lens: [Int] = []
         var df: [String: Int] = [:]
-        for t in pageTexts {
+        for (i, t) in pageTexts.enumerated() {
             let terms = RetrievalText.indexTerms(t)
             var tf: [String: Int] = [:]
             for x in terms { tf[x, default: 0] += 1 }
+            if i < headings.count {
+                for x in RetrievalText.terms(headings[i]) { tf[x, default: 0] += headingBoost }
+            }
             for x in tf.keys { df[x, default: 0] += 1 }
             tfs.append(tf)
             lens.append(terms.count)
@@ -215,7 +220,7 @@ public struct PageSelectionOptions: Sendable, Equatable, Codable {
     /// How the pages are sent.
     public var representation: ExcerptRepresentation
 
-    public init(topK: Int = 3, neighbors: Int = 1, maxPages: Int? = nil, fullIfCoverage: Double = 0.75,
+    public init(topK: Int = 4, neighbors: Int = 0, maxPages: Int? = nil, fullIfCoverage: Double = 0.75,
                 minConfidence: Double = 0, fallbackOnNotCovered: Bool = true, representation: ExcerptRepresentation = .pdf) {
         self.topK = topK
         self.neighbors = neighbors
@@ -310,7 +315,9 @@ public struct PageSelection: Sendable, Equatable, Codable {
         pages most relevant to the question were sent. It contains rulebook pages \(pages.map(String.init).joined(separator: ", ")) \
         (\(list)). In evidence, cite the RULEBOOK page number (the physical page index in the full rulebook file, \
         i.e. one of \(pages.map(String.init).joined(separator: ", "))), never the position inside the excerpt. \
-        If these pages do not contain the rules needed to settle the question, set confidence to "not_covered".
+        Use "inferred" only when the ruling follows from rules that ARE on these pages. If a rule you need is not \
+        on these pages (for example the general rule for the action asked about), set confidence to "not_covered" \
+        instead of guessing: the full rulebook will then be checked.
         """
     }
 }

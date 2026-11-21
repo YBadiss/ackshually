@@ -50,6 +50,15 @@ final class PageIndexTests: XCTestCase {
         XCTAssertEqual(idx.scores(question: "zebra unicorn").filter { $0 > 0 }.count, 0)
     }
 
+    func testHeadingTermsBoostTheDefiningPage() {
+        let texts = ["Combat: when you move warriors into a clearing, battle may start.",
+                     "Warriors move along paths. To move you must rule the origin or destination."]
+        let q = "when can my warriors move"
+        let plain = PageIndex(pageTexts: texts).scores(question: q)
+        let boosted = PageIndex(pageTexts: texts, headings: ["Combat", "Moving Around the Map"]).scores(question: q)
+        XCTAssertGreaterThan(boosted[1] - boosted[0], plain[1] - plain[0])
+    }
+
     func testSelectTopKNeighboursAndPins() {
         let idx = PageIndex(pageTexts: pages)
         let o = PageSelectionOptions(topK: 1, neighbors: 1, fullIfCoverage: 1.1)
