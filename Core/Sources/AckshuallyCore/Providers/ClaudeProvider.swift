@@ -277,12 +277,16 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
             return p
         }
         func remap(_ st: Step) -> Step {
-            Step(text: st.text, evidence: st.evidence.map { var x = $0; x.page = page(x); return x })
+            st.mapEvidence { var x = $0; x.page = page(x); return x }
+        }
+        func remap(_ b: Branch) -> Branch {
+            var x = b; x.steps = b.steps.map(remap); return x
         }
         func remap(_ e: AnswerEvent) -> AnswerEvent {
             switch e {
             case .evidence(let s, let i, var ev): ev.page = page(ev); return .evidence(step: s, index: i, ev)
             case .step(let i, let st): return .step(index: i, remap(st))
+            case .branch(let b): return .branch(remap(b))
             default: return e
             }
         }
@@ -298,6 +302,7 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
                     info.remappedPages = a.steps.flatMap(\.evidence).filter { page($0) != $0.page }.count
                     var m = a
                     m.steps = a.steps.map(remap)
+                    m.branches = a.branches.map(remap)
                     res.answer = m
                 }
                 if res.answer?.confidence == .notCovered && fallback && !decided { notCovered = true; return false }

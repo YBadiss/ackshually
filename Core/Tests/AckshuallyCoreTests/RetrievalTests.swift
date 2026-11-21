@@ -106,8 +106,12 @@ final class PageMappingTests: XCTestCase {
         XCTAssertEqual(sel.resolveModelPage(11), 11) // neither: leave it to the matcher
         XCTAssertEqual(PageSelection.full(pageCount: 12).resolveModelPage(2), 2)
         let a = Answer(restatedQuestion: "", verdict: "", confidence: .stated,
-                       steps: [Step(text: "", evidence: [Evidence(page: 1, quote: "x"), Evidence(page: 9, quote: "y")])])
-        XCTAssertEqual(sel.remap(a).steps[0].evidence.map(\.page), [3, 9])
+                       branches: [Branch(condition: "c", verdict: "v", steps: [Step(text: "", evidence: [Evidence(page: 2, quote: "z")])])],
+                       steps: [Step(title: "Rule", text: "", evidence: [Evidence(page: 1, quote: "x"), Evidence(page: 9, quote: "y")])])
+        let m = sel.remap(a)
+        XCTAssertEqual(m.steps[0].evidence.map(\.page), [3, 9])
+        XCTAssertEqual(m.steps[0].title, "Rule")
+        XCTAssertEqual(m.branches[0].steps[0].evidence.map(\.page), [4])
     }
 
     func testNoteListsOriginalPages() {

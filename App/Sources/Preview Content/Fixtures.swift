@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 import PDFKit
 import AckshuallyCore
 
@@ -23,44 +23,53 @@ enum Fixtures {
         return PDFFocus(token: 1, highlight: h, zoom: zoom)
     }
 
+    /// Something page-like behind floating glass controls in previews.
+    static var pageBackdrop: some View {
+        LinearGradient(colors: [Color(white: 0.98), Color(red: 0.95, green: 0.9, blue: 0.8)], startPoint: .top, endPoint: .bottom)
+            .ignoresSafeArea()
+    }
+
     // MARK: Header states
 
     static let headerArriving = HeaderContent(state: .arriving, question: answer.restatedQuestion, isBusy: true)
     static let headerStreaming = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: answer.verdict,
-                                               confidence: .stated, pages: [3], branches: answer.branches, isBusy: true)
+                                               confidence: .stated, pages: [3], isBusy: true)
     static let headerStated = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: answer.verdict,
-                                            confidence: .stated, pages: [3, 4], branches: answer.branches)
+                                            confidence: .stated, pages: [3, 4])
     static let headerInferred = HeaderContent(state: .answered, question: "Can I trade energy for coins with another player?",
                                               verdict: "No: energy can't be traded at all, so not for coins either.",
                                               confidence: .inferred, pages: [3])
     static let headerNotCovered = HeaderContent(state: .answered, question: "Can a Windmill be sold back?",
                                                 verdict: "Probably not; the rules don't mention selling plants.",
                                                 confidence: .notCovered, pages: [])
-    static let headerBranchActive = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: answer.verdict,
-                                                  confidence: .stated, pages: [3, 4], branches: branches, activeBranch: 0, demo: true)
+    static let headerBranchActive = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: "Discard all 3.",
+                                                  confidence: .stated, pages: [3], condition: "Without a Battery")
     static let headerFailed = HeaderContent(state: .failed("The API key was rejected. Check it in Settings."),
                                             question: "Can I keep energy?")
 
     // MARK: Cards
 
     static let cardStates: [StepCardContent] = [
-        .step(number: 1, title: "Rule", pages: [3], text: answer.steps[0].text, figure: false),
-        .step(number: 2, title: "Step", pages: [4], text: "The scoring track shows 1 point per 3 energy spent.", figure: true),
+        .step(number: 1, title: "General rule", pages: [3], text: answer.steps[0].text, figure: false),
+        .step(number: 2, title: "Scoring track", pages: [4], text: "The scoring track shows 1 point per 3 energy spent.", figure: true),
         .loading(number: 3),
         .result(number: 4, text: answer.verdict, rating: nil),
         .result(number: 4, text: answer.verdict, rating: true),
         .branch(condition: "No Battery", verdict: "Discard all 3."),
         .web(number: 2, WebFinding(site: "bgg.com", date: "2021", role: "Designer",
-                                   quote: "Yes, as long as he has boots.", warning: "⚠ Designer disagrees")),
+                                   quote: "Yes, as long as he has boots.", warning: "Designer disagrees")),
     ]
 
     static let cardItems: [CardItem] = answer.steps.enumerated().map { i, s in
-        CardItem(id: .step(i), content: .step(number: i + 1, title: ViewerModel.stepTitle(i, of: answer.steps.count),
-                                             pages: s.evidence.map(\.page).uniqued(), text: s.text, figure: false))
+        CardItem(id: .step(i), content: ViewerModel.card(s, number: i + 1))
     } + [CardItem(id: .result, content: .result(number: answer.steps.count + 1, text: answer.verdict, rating: nil))]
 
     static let stepRows: [StepRow] = answer.steps.enumerated().map {
-        StepRow(index: $0, text: $1.text, pages: $1.evidence.map(\.page).uniqued())
+        StepRow(index: $0, title: ViewerModel.stepTitle($1, number: $0 + 1), text: $1.text, pages: $1.evidence.map(\.page).uniqued())
+    }
+
+    static func branchRows(active: Int?) -> [BranchRow] {
+        branches.enumerated().map { BranchRow(index: $0, condition: $1.condition, verdict: $1.verdict, isActive: active == $0) }
     }
 
     // MARK: Model

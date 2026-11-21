@@ -298,12 +298,13 @@ public struct PageSelection: Sendable, Equatable, Codable {
     }
 
     public func remap(_ s: Step) -> Step {
-        Step(text: s.text, evidence: s.evidence.map(remap))
+        s.mapEvidence(remap)
     }
 
     public func remap(_ a: Answer) -> Answer {
         var a = a
         a.steps = a.steps.map(remap)
+        a.branches = a.branches.map { var b = $0; b.steps = b.steps.map(remap); return b }
         return a
     }
 

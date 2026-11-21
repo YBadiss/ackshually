@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Chrome drawn over the PDF for the current evidence (S6): the "1 of 2 ›" pager when a step
-/// cites several passages, and a note when there is no word highlight ("See the diagram, lower half").
+/// Chrome over the PDF for the current evidence (S6): the "1 of 2 ›" pager when a step cites
+/// several passages, and a note when there is no word highlight ("See the diagram, lower half").
+/// Glass, as floating controls over content.
 struct HighlightOverlay: View {
     var evidenceIndex: Int
     var evidenceCount: Int
@@ -10,27 +11,25 @@ struct HighlightOverlay: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        HStack(spacing: theme.spacing.s) {
-            if let note {
-                Text(note)
-                    .font(theme.font.chip)
-                    .padding(.horizontal, theme.spacing.m).padding(.vertical, theme.spacing.xs)
-                    .foregroundStyle(theme.colors.ink)
-                    .background(theme.colors.card.opacity(0.95), in: Capsule())
-                    .overlay(Capsule().strokeBorder(theme.colors.line))
-            }
-            Spacer(minLength: 0)
-            if evidenceCount > 1 {
-                Button(action: onNext) {
-                    Text("\(evidenceIndex + 1) of \(evidenceCount) ›")
-                        .font(theme.font.pill)
-                        .padding(.horizontal, theme.spacing.m).padding(.vertical, theme.spacing.xs)
-                        .foregroundStyle(theme.colors.paper)
-                        .background(theme.colors.ink.opacity(0.85), in: Capsule())
+        GlassEffectContainer {
+            HStack(spacing: theme.spacing.s) {
+                if let note {
+                    Label(note, systemImage: "doc.text.magnifyingglass")
+                        .font(theme.font.footnote)
+                        .padding(.horizontal, theme.spacing.l).padding(.vertical, theme.spacing.s)
+                        .glassEffect(.regular, in: .capsule)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Passage \(evidenceIndex + 1) of \(evidenceCount). Next passage")
-                .accessibilityIdentifier("evidencePager")
+                Spacer(minLength: 0)
+                if evidenceCount > 1 {
+                    Button(action: onNext) {
+                        Label("\(evidenceIndex + 1) of \(evidenceCount)", systemImage: "chevron.forward")
+                            .labelStyle(TrailingIconLabelStyle())
+                            .monospacedDigit()
+                    }
+                    .buttonStyle(.glass)
+                    .accessibilityLabel("Passage \(evidenceIndex + 1) of \(evidenceCount). Next passage")
+                    .accessibilityIdentifier("evidencePager")
+                }
             }
         }
         .padding(.horizontal, theme.spacing.l)
@@ -44,6 +43,16 @@ struct HighlightOverlay: View {
         HighlightOverlay(evidenceIndex: 1, evidenceCount: 2, note: "Showing the whole page") {}
     }
     .padding(.vertical)
-    .themeBackground(\.paper)
+    .frame(maxHeight: .infinity)
+    .background(Fixtures.pageBackdrop)
     .themed()
+}
+
+#Preview("AX5, dark") {
+    HighlightOverlay(evidenceIndex: 1, evidenceCount: 2, note: "Showing the whole page") {}
+        .frame(maxHeight: .infinity)
+        .background(Fixtures.pageBackdrop)
+        .themed()
+        .dynamicTypeSize(.accessibility5)
+        .preferredColorScheme(.dark)
 }

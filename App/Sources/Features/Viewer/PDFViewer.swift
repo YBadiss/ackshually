@@ -31,7 +31,7 @@ struct PDFViewer: UIViewRepresentable {
         v.displayDirection = .vertical
         v.displaysPageBreaks = true
         v.pageShadowsEnabled = true
-        v.backgroundColor = UIColor(theme.colors.background)
+        v.backgroundColor = UIColor(theme.colors.bar)
         v.autoScales = true
         v.maxScaleFactor = 8
         context.coordinator.attach(to: v)
@@ -43,7 +43,7 @@ struct PDFViewer: UIViewRepresentable {
         c.onUserMove = onUserMove
         c.onDoubleTap = onDoubleTap
         c.style = style
-        v.backgroundColor = UIColor(theme.colors.background)
+        v.backgroundColor = UIColor(theme.colors.bar)
         if v.document !== document {
             v.document = document
             v.autoScales = true

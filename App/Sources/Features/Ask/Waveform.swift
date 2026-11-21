@@ -9,7 +9,7 @@ struct Waveform: View {
     var body: some View {
         HStack(spacing: theme.spacing.xxs) {
             ForEach(shape.indices, id: \.self) { i in
-                Capsule().fill(theme.colors.accent)
+                Capsule().fill(theme.colors.tint)
                     .frame(width: theme.size.waveBar,
                            height: max(theme.size.waveBar, theme.size.waveHeight * shape[i] * CGFloat(max(level, 0.12))))
             }

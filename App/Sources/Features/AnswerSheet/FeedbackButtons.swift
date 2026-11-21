@@ -1,35 +1,37 @@
 import SwiftUI
 
-/// 👍/👎 on the last card (S6). Tapping the selected one clears it.
+/// Thumbs up / down (S6, S9). Tapping the selected one clears it.
 struct FeedbackButtons: View {
     var rating: Bool?
     var onRate: (Bool) -> Void
     @Environment(\.theme) private var theme
 
     var body: some View {
-        HStack(spacing: theme.spacing.m) {
-            button("👍", up: true, label: "Good answer")
-            button("👎", up: false, label: "Bad answer")
+        HStack(spacing: theme.spacing.xxl) {
+            button(up: true)
+            button(up: false)
         }
+        .font(theme.font.feedback)
+        .buttonStyle(.borderless)
     }
 
-    private func button(_ emoji: String, up: Bool, label: String) -> some View {
+    private func button(up: Bool) -> some View {
         let on = rating == up
+        let symbol = up ? "hand.thumbsup" : "hand.thumbsdown"
         return Button { onRate(up) } label: {
-            Text(emoji).font(theme.font.emoji)
-                .frame(maxWidth: .infinity).padding(.vertical, theme.spacing.xs)
-                .background(on ? theme.colors.warningBG : .clear, in: RoundedRectangle(cornerRadius: theme.radius.button))
-                .overlay(RoundedRectangle(cornerRadius: theme.radius.button)
-                    .strokeBorder(on ? theme.colors.accent : theme.colors.line, lineWidth: on ? theme.size.focusRing : theme.size.hairline))
+            Label(up ? "Good answer" : "Bad answer", systemImage: on ? symbol + ".fill" : symbol)
+                .labelStyle(.iconOnly)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(minWidth: theme.size.minTapTarget, minHeight: theme.size.minTapTarget)
+                .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
         .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityIdentifier(up ? "thumbsUp" : "thumbsDown")
     }
 }
 
 #Preview {
-    VStack {
+    VStack(spacing: 16) {
         FeedbackButtons(rating: nil) { _ in }
         FeedbackButtons(rating: true) { _ in }
         FeedbackButtons(rating: false) { _ in }

@@ -4,7 +4,7 @@ name: Ackshually
 options:
   bundleIdPrefix: app.ackshually
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "27.0"
   createIntermediateGroups: true
 packages:
   AckshuallyCore:
@@ -12,7 +12,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MARKETING_VERSION: "0.2.0"
+    MARKETING_VERSION: "0.3.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
   Ackshually:

@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// The 🎙 button (S3). Pure: reports press / horizontal drag / release; the caller decides
-/// whether that was a hold (live transcript) or a tap (dictation).
+/// The mic in the ask field (S3). Pure: reports press / horizontal drag / release; the caller
+/// decides whether that was a hold (live transcript) or a tap (dictation).
 struct PushToTalkButton: View {
     var isDictating: Bool
     var isHolding: Bool
-    var compact = false
     var onPress: () -> Void
     var onDrag: (CGFloat) -> Void
     var onRelease: () -> Void
@@ -14,15 +13,15 @@ struct PushToTalkButton: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        let d = compact ? theme.size.micButtonCompact : theme.size.micButton
-        Image(systemName: isDictating ? "stop.fill" : "mic.fill")
-            .font(theme.font.icon)
-            .frame(width: d, height: d)
-            .background(theme.colors.accent, in: Circle())
-            .foregroundStyle(theme.colors.accentInk)
-            .scaleEffect(isHolding ? 1.2 : 1)
+        Image(systemName: isDictating ? "stop.circle.fill" : (isHolding ? "mic.fill" : "mic"))
+            .font(.title3)
+            .foregroundStyle(isDictating || isHolding ? theme.colors.tint : theme.colors.secondaryLabel)
+            .symbolEffect(.pulse, isActive: isHolding)
+            .contentTransition(.symbolEffect(.replace))
+            .scaleEffect(isHolding ? 1.25 : 1)
             .animation(.snappy, value: isHolding)
-            .contentShape(Circle().inset(by: -theme.spacing.m))
+            .frame(minWidth: theme.size.minTapTarget, minHeight: theme.size.minTapTarget)
+            .contentShape(.rect)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { v in
@@ -41,11 +40,10 @@ struct PushToTalkButton: View {
 }
 
 #Preview {
-    HStack(spacing: 20) {
+    HStack(spacing: 24) {
         PushToTalkButton(isDictating: false, isHolding: false, onPress: {}, onDrag: { _ in }, onRelease: {}, onActivate: {})
         PushToTalkButton(isDictating: true, isHolding: false, onPress: {}, onDrag: { _ in }, onRelease: {}, onActivate: {})
         PushToTalkButton(isDictating: false, isHolding: true, onPress: {}, onDrag: { _ in }, onRelease: {}, onActivate: {})
-        PushToTalkButton(isDictating: false, isHolding: false, compact: true, onPress: {}, onDrag: { _ in }, onRelease: {}, onActivate: {})
     }
     .padding()
     .themed()

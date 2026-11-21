@@ -4,7 +4,7 @@ import AckshuallyCore
 // Plain values the leaf views render. Built by `ViewerModel` (see ViewerModel+Content.swift) or
 // by preview fixtures; views never reach into the model themselves.
 
-/// Answer header (S4/S5): fixed while stepping.
+/// Answer header (S4/S5): verdict + one proof line, fixed while stepping.
 struct HeaderContent: Equatable {
     enum State: Equatable {
         /// S4: nothing but the (restated) question yet.
@@ -18,11 +18,10 @@ struct HeaderContent: Equatable {
     var verdict: String?
     var confidence: Confidence?
     var pages: [Int] = []
-    var branches: [Branch] = []
-    var activeBranch: Int?
+    /// Set while a branch is shown: "If no Battery".
+    var condition: String?
     var isBusy = false
     var stopped = false
-    var demo = false
 }
 
 /// A web finding (S10, M4). Rendered by StepCard already so the card family is designed together.
@@ -31,7 +30,7 @@ struct WebFinding: Equatable {
     var date: String
     var role: String
     var quote: String
-    /// "⚠ Designer disagrees" (strong) / "⚠ Community disagrees" (soft).
+    /// "Designer disagrees" (strong) / "Community disagrees" (soft).
     var warning: String?
 }
 
@@ -53,6 +52,16 @@ struct CardItem: Identifiable, Equatable {
 struct StepRow: Identifiable, Equatable {
     var id: Int { index }
     var index: Int
+    var title: String
     var text: String
     var pages: [Int]
+}
+
+/// A branch row ("Without a Battery … Discard all 3 ›").
+struct BranchRow: Identifiable, Equatable {
+    var id: Int { index }
+    var index: Int
+    var condition: String
+    var verdict: String
+    var isActive: Bool
 }

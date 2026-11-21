@@ -25,8 +25,10 @@ struct LiveAnswer: Identifiable {
     var complete = false
     var stopped = false
 
-    /// Cited pages, ascending ("✓ Stated · p.12, p.14").
-    var pages: [Int] { Array(Set(steps.flatMap { $0.evidence.map(\.page) })).sorted() }
+    /// Cited pages, ascending ("Stated in the rules · p.12, p.14").
+    var pages: [Int] { Self.pages(of: steps) }
+
+    static func pages(of steps: [Step]) -> [Int] { Array(Set(steps.flatMap { $0.evidence.map(\.page) })).sorted() }
 
     init(question: String) { self.question = question }
 
@@ -47,10 +49,12 @@ enum CardID: Hashable {
     case step(Int)
     /// Placeholder peeking while later steps stream.
     case loading
-    /// Last card: result + 👍/👎 + follow-up.
+    /// Last card: result + thumbs up/down + follow-up.
     case result
-    /// A branch's own card (contract has no per-branch steps yet, see docs/m2-notes.md).
+    /// A branch without steps of its own (answers from before `branches[].steps`): one card.
     case branch(Int)
+    /// Step `step` of branch `branch` (contract v2: a branch carries its own steps).
+    case branchStep(branch: Int, step: Int)
 }
 
 enum ZoomMode { case evidence, page }

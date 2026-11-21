@@ -2,103 +2,129 @@ import SwiftUI
 import PDFKit
 
 /// The one place that decides the viewer's layout:
-/// - compact / portrait: PDF full-bleed with the answer as a bottom sheet (S4–S9)
-/// - wide (iPad, Mac, phone landscape): answer panel beside the PDF, no detents
+/// - compact / portrait: PDF full-bleed, the answer in a system sheet with detents (S4–S9)
+/// - wide (iPad, Mac): the answer in the standard inspector column beside the PDF; phone landscape
+///   (compact width) gets the same content as a trailing column
+/// Also owns the floating chrome over the PDF (ask field, "Back to Step N") and tells the PDF
+/// how much of it the sheet / field covers, once the sheet has settled.
 struct AdaptiveViewerLayout: View {
     @Bindable var model: ViewerModel
     var voice: AskController
     var document: PDFDocument
+    var presentation: ViewerPresentation
+    /// The whole window (measured outside the inspector, so opening it can't flip the layout).
+    var windowSize: CGSize
     @Environment(\.theme) private var theme
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var sheetHeight: CGFloat = 0
-    @State private var barHeight: CGFloat = 0
+    @Environment(\.displayScale) private var displayScale
+    @State private var container = Container()
+    @State private var sheetTop: CGFloat?
+    @State private var askHeight: CGFloat = 0
+    @State private var covered: CGFloat = 0
+
+    struct Container: Equatable {
+        var size: CGSize = .zero
+        /// Global y of the window's bottom edge (below the home indicator).
+        var bottom: CGFloat = 0
+        var safeBottom: CGFloat = 0
+    }
+
+    private struct Settle: Equatable {
+        var covered: CGFloat
+        var size: CGSize
+    }
+
+    private var wide: Bool {
+        let s = windowSize
+        return s.width >= theme.layout.sideBySideMinWidth && (s.width > s.height || sizeClass == .regular)
+    }
+
+    /// Nothing is presented until the first layout pass says which layout this is.
+    private var measured: Bool { windowSize != .zero && container.size != .zero }
+    private var sheetPresented: Bool { measured && model.sheetVisible && !wide }
+    private var showsAskField: Bool { !model.sheetVisible }
+
+    /// What covers the bottom of the PDF right now (may move while the sheet is dragged).
+    private var liveCovered: CGFloat {
+        if sheetPresented, let top = sheetTop { return max(container.bottom - top, 0) }
+        if showsAskField { return askHeight + container.safeBottom }
+        return 0
+    }
 
     var body: some View {
-        GeometryReader { g in
-            if isWide(g.size) {
-                wide(g)
-            } else {
-                compact(g)
-            }
-        }
-    }
-
-    private func isWide(_ size: CGSize) -> Bool {
-        let wideEnough = size.width >= theme.layout.sideBySideMinWidth
-        return wideEnough && (size.width > size.height || sizeClass == .regular)
-    }
-
-    // MARK: Compact: bottom sheet
-
-    private func compact(_ g: GeometryProxy) -> some View {
-        let covered = (model.sheetVisible ? sheetHeight : barHeight) + g.safeAreaInsets.bottom
-        return ZStack(alignment: .bottom) {
-            pdf(bottomObscured: covered)
-                .ignoresSafeArea(.container, edges: .bottom)
-                .ignoresSafeArea(.keyboard)
-            VStack(spacing: theme.spacing.m) {
-                pdfChrome
-                bottomControls(g)
-            }
-            .frame(maxWidth: theme.layout.sheetMaxWidth)
-        }
-        .onChange(of: covered) { _, _ in model.visibleAreaChanged() }
-    }
-
-    @ViewBuilder private func bottomControls(_ g: GeometryProxy) -> some View {
-        if model.sheetVisible {
-            BottomSheet(detent: $model.detent, availableHeight: g.size.height,
-                        onDismiss: { model.dismissSheet() }, onRestingHeight: { sheetHeight = $0 }) {
-                AnswerCollapsedContent(model: model)
-            } medium: {
-                AnswerMediumContent(model: model, voice: voice)
-            } expanded: {
-                AnswerExpandedContent(model: model, voice: voice)
-            }
-            .transition(.move(edge: .bottom))
-        } else {
-            askArea
-                .padding(.horizontal, theme.spacing.m)
-                .padding(.bottom, theme.spacing.s)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 + theme.spacing.s }
-        }
-    }
-
-    // MARK: Wide: side panel
-
-    private func wide(_ g: GeometryProxy) -> some View {
-        let r = theme.layout.sidePanelWidthRange
-        let panelWidth = min(max(g.size.width * theme.layout.sidePanelFraction, r.lowerBound), r.upperBound)
-        let showPanel = model.sheetVisible
-        return HStack(spacing: 0) {
+        HStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                pdf(bottomObscured: showPanel ? 0 : barHeight + g.safeAreaInsets.bottom)
+                pdf
                     .ignoresSafeArea(.container, edges: .bottom)
                     .ignoresSafeArea(.keyboard)
-                VStack(spacing: theme.spacing.m) {
-                    pdfChrome
-                    if !showPanel {
-                        askArea
-                            .frame(maxWidth: theme.layout.sheetMaxWidth)
-                            .padding(.horizontal, theme.spacing.l).padding(.bottom, theme.spacing.s)
-                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 + theme.spacing.s }
-                    }
-                }
+                floatingControls
             }
-            if showPanel {
-                Rectangle().fill(theme.colors.line).frame(width: theme.size.hairline).ignoresSafeArea()
-                AnswerSidePanel(model: model, voice: voice)
-                    .frame(width: panelWidth)
+            .onGeometryChange(for: Container.self) {
+                Container(size: $0.size, bottom: $0.frame(in: .global).maxY + $0.safeAreaInsets.bottom, safeBottom: $0.safeAreaInsets.bottom)
+            } action: { container = $0 }
+            if columnPresented {
+                Rectangle().fill(theme.colors.separator).frame(width: 1 / displayScale).ignoresSafeArea()
+                AnswerInspector(model: model, voice: voice, idealWidth: inspectorIdealWidth)
+                    .frame(width: inspectorIdealWidth)
                     .transition(.move(edge: .trailing))
             }
         }
-        .animation(theme.sheetAnimation, value: showPanel)
+        .animation(theme.sheetAnimation, value: columnPresented)
+        // Re-center only once the sheet (or the inspector, a rotation) stops moving.
+        .task(id: Settle(covered: liveCovered, size: container.size)) {
+            try? await Task.sleep(for: theme.layout.sheetSettleDelay)
+            guard !Task.isCancelled else { return }
+            covered = liveCovered
+            model.visibleAreaChanged()
+        }
+        .onChange(of: sheetPresented, initial: true) { _, p in
+            presentation.answerSheetPresented = p
+            if !p { sheetTop = nil }
+        }
+        .sheet(isPresented: sheetBinding) {
+            AnswerSheet(model: model, voice: voice, presentation: presentation,
+                        containerHeight: container.size.height + container.safeBottom) { sheetTop = $0 }
+                .themed()
+        }
+        .inspector(isPresented: inspectorBinding) {
+            AnswerInspector(model: model, voice: voice, idealWidth: inspectorIdealWidth)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(model.sheetVisible ? "Hide Answer" : "Show Answer", systemImage: "sidebar.trailing", action: toggleAnswer)
+                    .accessibilityIdentifier("toggleAnswer")
+            }
+            .hidden(!(wide && model.answer != nil))
+        }
     }
 
-    // MARK: Shared pieces
+    private func toggleAnswer() {
+        withAnimation(theme.sheetAnimation) { model.sheetVisible ? model.dismissSheet() : model.showSheet() }
+    }
 
-    private func pdf(bottomObscured: CGFloat) -> some View {
-        PDFViewer(document: document, focus: model.focus, bottomObscured: bottomObscured,
+    private var inspectorIdealWidth: CGFloat {
+        let r = theme.layout.inspectorWidthRange
+        return min(max(windowSize.width * theme.layout.inspectorFraction, r.lowerBound), r.upperBound)
+    }
+
+    // Read-only: neither can be dismissed by a gesture (the header's Close button closes the
+    // answer), so SwiftUI only writes `false` when a rotation moves the answer from one to the other.
+    private var sheetBinding: Binding<Bool> {
+        Binding { sheetPresented } set: { _ in }
+    }
+
+    private var inspectorBinding: Binding<Bool> {
+        Binding { measured && model.sheetVisible && wide && sizeClass == .regular } set: { _ in }
+    }
+
+    /// Phone landscape: wide enough for a column, but compact width, where `.inspector` would
+    /// become a sheet. Same content, laid out as a trailing column.
+    private var columnPresented: Bool { measured && model.sheetVisible && wide && sizeClass != .regular }
+
+    // MARK: PDF
+
+    private var pdf: some View {
+        PDFViewer(document: document, focus: model.focus, bottomObscured: covered,
                   onUserMove: { model.userMovedPDF = true },
                   onDoubleTap: { model.toggleZoom() })
             .overlay(alignment: .top) {
@@ -111,24 +137,39 @@ struct AdaptiveViewerLayout: View {
             }
     }
 
-    /// Floating PDF chrome just above the sheet / ask bar.
-    @ViewBuilder private var pdfChrome: some View {
-        if model.userMovedPDF, model.sheetVisible, let n = model.focusedStepNumber {
-            BackToStepPill(step: n) { model.backToStep() }
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+    // MARK: Floating chrome
+
+    private var floatingControls: some View {
+        VStack(spacing: theme.spacing.m) {
+            if model.userMovedPDF, model.sheetVisible, let n = model.focusedStepNumber {
+                BackToStepPill(step: n) { model.backToStep() }
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+            }
+            if showsAskField {
+                askArea
+                    .frame(maxWidth: theme.layout.askFieldMaxWidth)
+                    .padding(.horizontal, theme.spacing.xl)
+                    .padding(.bottom, theme.spacing.s)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { askHeight = $0 + theme.spacing.s }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        // Above the sheet's top edge (the sheet is a separate presentation, not in this stack).
+        .padding(.bottom, sheetPresented ? max(covered - container.safeBottom, 0) + theme.spacing.m : 0)
+        .animation(theme.sheetAnimation, value: showsAskField)
+        .animation(.snappy, value: model.userMovedPDF)
     }
 
     @ViewBuilder private var askArea: some View {
         if model.phase == .waiting, let q = model.answer?.question {
             WaitingBar(question: q) { model.stop() }
         } else {
-            AskBar(text: $model.draft, voice: voice) { model.ask($0) }
+            AskField(text: $model.draft, voice: voice) { model.ask($0) }
         }
     }
 }
 
-#Preview("iPhone 16 Pro") { ViewerPreview().themed() }
+#Preview("iPhone 18 Pro") { ViewerPreview().themed() }
 #Preview("iPhone SE", traits: .fixedLayout(width: 375, height: 667)) { ViewerPreview().themed() }
 #Preview("Pro Max", traits: .fixedLayout(width: 440, height: 956)) { ViewerPreview().themed() }
 #Preview("Landscape", traits: .landscapeLeft) { ViewerPreview().themed() }
@@ -138,21 +179,8 @@ struct AdaptiveViewerLayout: View {
 #Preview("AX5") { ViewerPreview().themed().dynamicTypeSize(.accessibility5) }
 #Preview("Dark") { ViewerPreview().themed().preferredColorScheme(.dark) }
 #Preview("Streaming") { ViewerPreview(state: .streaming).themed() }
+#Preview("Branch") { ViewerPreview(state: .branch).themed() }
+#Preview("Collapsed") { ViewerPreview(detent: .collapsed).themed() }
+#Preview("Expanded") { ViewerPreview(detent: .expanded).themed() }
 #Preview("Idle") { ViewerPreview(state: .idle).themed() }
 
-/// Previews the whole viewer from fixtures (no API key).
-struct ViewerPreview: View {
-    var state: Fixtures.ModelState = .answered
-    @State private var model: ViewerModel?
-    @State private var voice = AskController()
-
-    var body: some View {
-        NavigationStack {
-            if let model, let rb = model.rulebook {
-                AdaptiveViewerLayout(model: model, voice: voice, document: rb.pdf)
-                    .navigationTitle(rb.title).navigationBarTitleDisplayMode(.inline)
-            }
-        }
-        .onAppear { model = Fixtures.model(state) }
-    }
-}

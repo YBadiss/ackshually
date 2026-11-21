@@ -1,12 +1,16 @@
 import SwiftUI
 
-/// S3 ask field: type and send (always available), hold 🎙 = live transcript (release sends,
-/// slide left cancels), tap 🎙 = dictation into the field. `compact` = follow-up field in the sheet.
-struct AskBar: View {
+/// S3 ask field: type and send (always available), hold the mic = live transcript (release
+/// sends, slide left cancels), tap the mic = dictation into the field.
+/// - `.floating`: the bottom field over the PDF, Liquid Glass (like the iOS 26 bottom search field).
+/// - `.inline`: the follow-up field on the answer sheet (filled, no glass on the sheet).
+struct AskField: View {
+    enum Style { case floating, inline }
+
     @Binding var text: String
     var voice: AskController
-    var placeholder = "Ask about the rules…"
-    var compact = false
+    var placeholder = "Ask about the rules"
+    var style: Style = .floating
     var onSend: (String) -> Void
     @Environment(\.theme) private var theme
     @FocusState private var focused: Bool
@@ -19,26 +23,28 @@ struct AskBar: View {
         VStack(alignment: .leading, spacing: theme.spacing.s) {
             if holding { HoldToTalkPanel(transcript: voice.transcript, cancelArmed: voice.cancelArmed) }
             // The mic keeps one identity across modes so a hold gesture isn't interrupted.
-            HStack(spacing: theme.spacing.m) {
+            HStack(alignment: .center, spacing: theme.spacing.m) {
                 if holding {
                     SlideToCancelHint(cancelArmed: voice.cancelArmed)
                     Spacer()
                     Waveform(level: voice.level)
                 } else {
+                    Image(systemName: style == .floating ? "magnifyingglass" : "text.bubble")
+                        .foregroundStyle(theme.colors.secondaryLabel)
+                        .accessibilityHidden(true)
                     field
                     if voice.mode == .dictating { Waveform(level: voice.level) }
                 }
                 if hasText, voice.mode == .idle { sendButton } else { mic }
             }
             if let e = voice.error {
-                Text(e).font(theme.font.meta).foregroundStyle(theme.colors.warning)
+                Text(e).font(theme.font.footnote).foregroundStyle(theme.colors.warning)
             }
         }
-        .padding(.leading, theme.spacing.l).padding(.trailing, theme.spacing.s)
-        .padding(.vertical, compact ? theme.spacing.xs : theme.spacing.s)
-        .background(compact ? theme.colors.background : theme.colors.card,
-                    in: RoundedRectangle(cornerRadius: holding ? theme.radius.sheet : theme.radius.field))
-        .shadow(color: theme.colors.line, radius: 0, y: compact ? 0 : theme.size.hairline)
+        .font(theme.font.field)
+        .padding(.leading, theme.spacing.l).padding(.trailing, theme.spacing.xs)
+        .padding(.vertical, theme.spacing.xxs)
+        .modifier(AskFieldBackground(style: style, expanded: holding))
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .onChange(of: text) { _, t in
             // Vertical text fields insert Return as a newline instead of submitting.
@@ -51,18 +57,16 @@ struct AskBar: View {
     private var field: some View {
         TextField(placeholder, text: $text, axis: .vertical)
             .lineLimit(1...4)
-            .font(compact ? theme.font.fieldCompact : theme.font.field)
-            .foregroundStyle(theme.colors.ink)
-            .tint(theme.colors.accent)
+            .foregroundStyle(theme.colors.label)
             .focused($focused)
             .submitLabel(.send)
             .onSubmit(send)
-            .accessibilityIdentifier(compact ? "followUpField" : "askField")
+            .accessibilityIdentifier(style == .inline ? "followUpField" : "askField")
     }
 
     private var mic: some View {
         PushToTalkButton(
-            isDictating: voice.mode == .dictating, isHolding: holding, compact: compact,
+            isDictating: voice.mode == .dictating, isHolding: holding,
             onPress: {
                 if voice.mode == .idle { focused = false }
                 voice.pressBegan(holdDelay: theme.layout.holdToTalkDelay)
@@ -76,15 +80,15 @@ struct AskBar: View {
     }
 
     private var sendButton: some View {
-        let d = compact ? theme.size.micButtonCompact : theme.size.micButton
-        return Button(action: send) {
-            Image(systemName: "arrow.up")
-                .font(theme.font.icon)
-                .frame(width: d, height: d)
-                .background(theme.colors.accent, in: Circle())
-                .foregroundStyle(theme.colors.accentInk)
+        Button(action: send) {
+            Label("Send", systemImage: "arrow.up.circle.fill")
+                .labelStyle(.iconOnly)
+                .font(.title2)
+                .symbolRenderingMode(.hierarchical)
+                .frame(minWidth: theme.size.minTapTarget, minHeight: theme.size.minTapTarget)
+                .contentShape(.rect)
         }
-        .accessibilityLabel("Send")
+        .buttonStyle(.borderless)
         .accessibilityIdentifier("send")
     }
 
@@ -97,30 +101,46 @@ struct AskBar: View {
     }
 }
 
-private struct AskBarPreview: View {
+private struct AskFieldPreview: View {
     @State var text: String
-    var compact = false
-    @State var voice = AskController()
+    var style: AskField.Style = .floating
+    @State private var voice = AskController()
     var body: some View {
-        AskBar(text: $text, voice: voice, compact: compact) { _ in }
+        AskField(text: $text, voice: voice, style: style) { _ in }
     }
 }
 
-#Preview("States") {
+#Preview("Floating") {
     VStack(spacing: 16) {
-        AskBarPreview(text: "")
-        AskBarPreview(text: "Can I keep unused energy with a Battery?")
-        AskBarPreview(text: "", compact: true)
+        AskFieldPreview(text: "")
+        AskFieldPreview(text: "Can I keep unused energy with a Battery?")
     }
     .padding()
-    .themeBackground(\.background)
+    .frame(maxHeight: .infinity, alignment: .bottom)
+    .background(Fixtures.pageBackdrop)
     .themed()
 }
 
-#Preview("AX5") {
-    AskBarPreview(text: "Can I keep unused energy with a Battery?")
+#Preview("Inline") {
+    AskFieldPreview(text: "", style: .inline)
         .padding()
-        .themeBackground(\.background)
+        .themeBackground(\.sheet)
+        .themed()
+}
+
+#Preview("AX5") {
+    AskFieldPreview(text: "Can I keep unused energy with a Battery?")
+        .padding()
+        .background(Fixtures.pageBackdrop)
         .themed()
         .dynamicTypeSize(.accessibility5)
+}
+
+#Preview("Dark") {
+    AskFieldPreview(text: "")
+        .padding()
+        .frame(maxHeight: .infinity, alignment: .bottom)
+        .background(Fixtures.pageBackdrop)
+        .themed()
+        .preferredColorScheme(.dark)
 }

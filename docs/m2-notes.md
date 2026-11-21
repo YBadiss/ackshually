@@ -1,21 +1,87 @@
 # M2 notes: iOS viewer
 
-**Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch). Built on `Core/` (unchanged).
+**Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch). Built on `Core/`.
+**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. The first-build notes further down still describe behaviour; their screenshots show the old look.
 
 ## Run it
 
 ```sh
-cd App && xcodegen            # optional: regenerate from project.yml (XcodeGen 2.42+); the .xcodeproj is checked in
-open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 17+, iPhone first; runs on iPad and on Mac ("Designed for iPad")
+cd App && xcodegen            # optional: regenerate from project.yml (XcodeGen 2.48); the .xcodeproj is checked in
+open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; runs on iPad and on Mac ("Designed for iPad")
 ```
 
-- **API key.** Use ⋯ → Settings → paste the key; it's stored in the Keychain. On the simulator you can also pass it at launch: `SIMCTL_CHILD_ANTHROPIC_API_KEY=sk-ant-… xcrun simctl launch booted app.ackshually.viewer`. Without a key, the app streams a scripted **demo answer** and labels it "Demo answer".
+- **API key.** Use ⋯ (the toolbar overflow menu) → Settings → paste the key; it's stored in the Keychain. On the simulator you can also pass it at launch: `SIMCTL_CHILD_ANTHROPIC_API_KEY=sk-ant-… xcrun simctl launch booted app.ackshually.viewer`. Without a key, the app streams a scripted **demo answer**; the ⋯ menu says "Demo answers: no API key set" and the expanded answer ends with a "Demo answer" footnote.
 - **Rulebook.** ⋯ → Open a rulebook PDF… (file importer; the PDF is copied into Application Support and reopened on the next launch), or ⋯ → Sample rulebook (Core's fake "Power Plant Rush").
 - **Device.** Pick your team under Signing & Capabilities, then run on the iPhone. Push-to-talk needs a real device; the simulator has no live mic input in automation.
 - **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf`, `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`. Details are in `App/Sources/App/LaunchOptions.swift`.
-- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 16 Pro'`. Four tests run on the sample with demo answers: streaming → stepping (swipe and peek tap), inspect → Back to step → tap PDF → double-tap, branch pill + detents, and a follow-up. Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
+- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. Five tests run on the sample with demo answers: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
 
-## What was verified
+
+## Restyle (native iOS)
+
+The owner's verdict on the first build: "it looks like a typical Claude/web chat app, not an iOS app, with lots of pills, text etc." The restyle follows spec §3 ("native iOS, warm") and [design/native-ios.html](design/native-ios.html). Behaviour and the S2–S9 interactions are unchanged.
+
+| | Before (first build) | After |
+|---|---|---|
+| Answer sheet | Custom overlay (`BottomSheet`): own drag gesture, grabber, shadow, 1 px top border | System `.sheet`: detents measured from the content (collapsed = verdict + proof line, medium = + cards and branch rows, large), `presentationBackgroundInteraction(.enabled(upThrough: medium))` so the PDF stays pinchable/pannable, no swipe-to-dismiss (Close button) |
+| Header | "You asked" + restated question, verdict, `FlowRow` of chips: `✓ Stated · p.3, p.4`, branch pills, "Demo answer" flag | Bold verdict (title3) + **one** proof line: `checkmark.seal.fill Stated in the rules · p.3, p.4`. Restated question only while waiting and when expanded. Close / Stop as glass circle buttons |
+| While waiting / arriving | Outlined "■ Stop" button, custom pulsing skeleton bars | Glass ask field turns into "Reading the rulebook…" + `stop.circle.fill`; native `.redacted(.placeholder)` for the verdict and the loading card |
+| Step cards | Card with 1 px shadow, dimmed when not current, caption "1 · Rule" | Borderless shelf cards (App Store / Music), caption = **step title** + page ("Battery exception · p.4"), page dots like `UIPageControl` |
+| Branches | Outlined pills in the header, "‹ Main answer" pill; one branch card with "The rulebook steps are on the main answer" | Inset-grouped rows under the cards ("Without a Battery … Discard all 3. ›"); tapping one swaps the header to the branch verdict and the cards to the **branch's own steps**; a "Main Answer" row returns |
+| Expanded | Custom bordered step rows, uppercase labels, plain text | Grouped sections like Settings: Steps (number, title, text, page; current in tint), If…, Assumes, Was this right? (thumbs), Follow-up |
+| Feedback | 👍/👎 emoji in outlined boxes | `hand.thumbsup` / `hand.thumbsdown` (filled when chosen), 44 pt targets |
+| Ask field | Card-colored rounded field, filled brick mic circle | Liquid Glass bottom field (`magnifyingglass` + text field + `mic`), placed like the iOS 26 bottom search field; inline filled field on the sheet for follow-ups |
+| PDF chrome | "⤺ Back to step 2" ink capsule, "1 of 2 ›" ink capsule, outlined note | Glass button "Back to Step 2" (`arrow.uturn.backward`), glass pager "1 of 2 ›", glass note |
+| Nav bar | Opaque beige bar, `ellipsis.circle` custom `Menu` | Warm-tinted bar, system `ToolbarOverflowMenu` (⋯); on wide screens a `sidebar.trailing` toggle |
+| Wide screens | Custom side panel with a hairline and an xmark | iPad/Mac: standard `.inspector` column. Phone landscape: same content as a trailing column (see below) |
+| Empty state | Large title + custom buttons | `ContentUnavailableView` with a glass prominent button |
+| Palette | Beige everywhere (`#efe4d0` chrome, `#f4e9d5` sheet, brown ink), provisional dark | Restrained: brick tint, warm bars / sheet / grouped backgrounds, system label colors, white cards; every token has a dark variant |
+
+### Screenshots (sample rulebook, demo answers; `m2-screenshots/restyle/`)
+
+Idle · waiting · arriving · streaming · verdict + step 1 · step 2 · two passages · last card + follow-up
+<p>
+<img src="m2-screenshots/restyle/01-idle.png" width="140"> <img src="m2-screenshots/restyle/02-waiting.png" width="140"> <img src="m2-screenshots/restyle/03-arriving.png" width="140"> <img src="m2-screenshots/restyle/04-streaming.png" width="140"> <img src="m2-screenshots/restyle/05-verdict-step1.png" width="140"> <img src="m2-screenshots/restyle/06-step2.png" width="140"> <img src="m2-screenshots/restyle/07-step3-two-passages.png" width="140"> <img src="m2-screenshots/restyle/08-last-card-follow-up.png" width="140">
+</p>
+
+Collapsed · expanded · branch · Back to Step · double-tap → page
+<p>
+<img src="m2-screenshots/restyle/09-collapsed.png" width="140"> <img src="m2-screenshots/restyle/10-expanded.png" width="140"> <img src="m2-screenshots/restyle/11-branch.png" width="140"> <img src="m2-screenshots/restyle/19-inspect-back-to-step.png" width="140"> <img src="m2-screenshots/restyle/20-double-tap-full-page.png" width="140">
+</p>
+
+iPad inspector · phone landscape column
+<p>
+<img src="m2-screenshots/restyle/12-ipad-inspector.png" width="260"> <img src="m2-screenshots/restyle/18-landscape-column.png" width="320">
+</p>
+
+Dark (medium, expanded, idle) · AX5 Dynamic Type (medium, expanded)
+<p>
+<img src="m2-screenshots/restyle/13-dark-medium.png" width="140"> <img src="m2-screenshots/restyle/14-dark-expanded.png" width="140"> <img src="m2-screenshots/restyle/15-dark-idle.png" width="140"> <img src="m2-screenshots/restyle/16-ax5-medium.png" width="140"> <img src="m2-screenshots/restyle/17-ax5-expanded.png" width="140">
+</p>
+
+### What isn't a stock component, and why
+
+1. **The ask field is not `.searchable`.** A search field can't host hold-to-talk (press-and-hold for a live transcript, slide to cancel). It's a `TextField` + mic in a `.glassEffect` capsule placed where the iOS 26+ bottom search field sits.
+2. **Phone landscape uses a trailing column, not `.inspector`.** iPhone landscape is compact width, where `.inspector` turns into a sheet (and fought the outgoing answer sheet on rotation, closing the answer). iPad and Mac use the real inspector. Both show the same `AnswerInspector` content.
+3. **Grouped rows are `GroupedSection` in a `ScrollView`, not a `List`.** The sheet sizes its collapsed and medium detents from where the header and the branch rows end, which needs one coordinate space; and the shelf's peeking cards must span the sheet's full width, which inset-grouped `List` rows can't. `GroupedSection` mimics inset-grouped styling (rounded group, inset hairline separators, uppercase footnote headers).
+4. **Detent heights are measured.** `.height(_)` detents come from the content (capped at 30% / 70% of the window), so the medium detent covers no more of the page than the cards need.
+5. **Sheet presentation bindings are read-only.** Nothing can dismiss the sheet or inspector except Close, so the bindings ignore SwiftUI's writes (which only happen when a rotation moves the answer from sheet to column).
+6. **The PDF is still PDFKit in a `UIViewRepresentable`** (no SwiftUI PDF view), and the theme's dynamic colors use `UIColor` providers so the same token also works inside PDFKit.
+
+### Contract changes (proposals 1 and 2 below, done)
+
+`Step.title` and `Branch.steps` were added to Core's model, schema, prompt and streaming assembler (both required in the schema, optional when decoding; excerpt-mode page remapping keeps titles and remaps branch evidence). Old answers decode: no title → "Step N", no branch steps → one branch card. **To check in the next bench run:** branch steps stream before the main steps, a few dozen tokens per branch before step 1.
+
+### swiftui-pro review (fixed before the PR)
+
+- Toolbar: the custom ellipsis `Menu` → `ToolbarOverflowMenu` (needs iOS 27, hence the target); the conditional inspector toggle → `.hidden()`.
+- One type per file: split `ValueRow`, `StepListRows`, `AssumptionRows`, `CardCaption`, `TrailingIconLabelStyle`, `ViewerMenu`, `ViewerChrome`, `AskFieldBackground`, `SettingsSheet`, `ViewerPresentation`, `AnswerMetrics`, `AnswerPlacement`, `ViewerPreview`, `SlideToCancelHint`, `Confidence+Display`.
+- `AnswerContent`'s `some View` helper properties → `AnswerShelf`, `FullAnswerSections`, `FollowUpSection`, `DemoNote`; button actions moved out of `body`.
+- 44 pt minimum tap areas for the mic, send, stop, thumbs; close/stop glass buttons at `.large` control size.
+- Redundant `.continuous` corner styles removed.
+- Kept on purpose: `Binding(get:set:)` for the detent selection (maps the model's detent to measured detents) and the read-only presentation bindings; the peek tap on cards is an `onTapGesture` with an accessibility action (a `Button` would nest the result card's thumbs buttons); the floating field is an overlay rather than `safeAreaBar()` because the PDF must extend under the glass and gets the covered height explicitly.
+
+## What was verified (first build)
 
 | | How | Result |
 |---|---|---|
@@ -30,7 +96,7 @@ open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 17+, iPhone first; run
 | Push-to-talk / dictation | — | ⚠️ builds, but not exercised (needs a device mic). Hold ≥0.28 s = live transcript, release sends, slide left past ~18% of the bar's width cancels, tap = dictation |
 | iPad side panel, dark (provisional), AX5 Dynamic Type | simctl | ✅ see the screenshots |
 
-## Screenshots (sample rulebook, demo answers)
+## Screenshots of the first build (old look)
 
 S3 waiting · S4 arriving · S5 verdict + step 1 · S6 step 2 · S6 step with two passages · S6 last card
 <p>
@@ -52,7 +118,7 @@ The real-rulebook check (Power Grid) is not in these screenshots because the PDF
 ## Calls I made (where the spec was silent or impractical)
 
 1. **Before the first token** (~4–5 s on a real rulebook), the ask bar turns into "Reading the rulebook… ■ Stop". The sheet still rises on the first token, as S4 says, so the table sees progress straight away.
-2. **Custom sheet, not `.sheet`.** It keeps the PDF interactive and tells the viewer exactly how much page is covered, so evidence centers in the visible part. Detents: collapsed is content-sized; medium is content-sized up to 62% of the height (it scrolls beyond that, e.g. at AX sizes); expanded is 94%. A flick down from collapsed dismisses the answer and brings back the ask bar. *Decision-log row added.*
+2. ~~**Custom sheet, not `.sheet`.**~~ *Superseded by the restyle: the system sheet now does this.* It keeps the PDF interactive and tells the viewer exactly how much page is covered, so evidence centers in the visible part. Detents: collapsed is content-sized; medium is content-sized up to 62% of the height (it scrolls beyond that, e.g. at AX sizes); expanded is 94%. A flick down from collapsed dismisses the answer and brings back the ask bar. *Decision-log row added.*
 3. **Wide screens get a side panel.** On iPad, on Mac, and in phone landscape at ≥640 pt wide, the answer sits in a column beside the PDF (38% of the width, 320–460 pt) with the header, cards, follow-up and step list. `AdaptiveViewerLayout` is the one place that decides this. *Decision-log row added.*
 4. **Highlight fallback** (spec §4, M2 subset): quote → word rects from `QuoteMatcher`; otherwise a sane box gets an outline; otherwise the whole page, with a note ("Showing the whole page" / "See the diagram, lower half"). No layout-tolerant matching or repair call, as instructed.
 5. **Evidence zoom** fits the passage (with context) in the visible area. It never zooms below page width or above 3.2× page width. On a big, dense page (Power Grid) the passage's lines are as wide as the page, so "zoom to evidence" stays at page width and the print is small. Pinch is the workaround for now (see proposal 4).
@@ -61,46 +127,46 @@ The real-rulebook check (Power Grid) is not in these screenshots because the PDF
 
 ## Proposed spec changes
 
-1. **Give each step a `title`** in the answer contract (§4 already shows one in its example, but `Core`'s schema and `Step` don't have it). The mockups' "1 · General rule / 2 · Exception" needs it; the app labels cards "1 · Rule", "2 · Step" for now. This is a small schema + `Step` change in Core, best done after the page-selection experiment lands, so that agent's work isn't disturbed.
-2. **Branches need their own steps** (or at least one evidence item each). S9 says "the step cards switch to that branch", but a branch is only `{condition, verdict}`, so today the branch view is one card plus Result. Proposal: `branches[].steps` (optional, usually 1 step).
+1. ✅ *Done in the restyle.* **Give each step a `title`** in the answer contract (§4 already shows one in its example, but `Core`'s schema and `Step` don't have it). The mockups' "1 · General rule / 2 · Exception" needs it; the app labels cards "1 · Rule", "2 · Step" for now. This is a small schema + `Step` change in Core, best done after the page-selection experiment lands, so that agent's work isn't disturbed.
+2. ✅ *Done in the restyle.* **Branches need their own steps** (or at least one evidence item each). S9 says "the step cards switch to that branch", but a branch is only `{condition, verdict}`, so today the branch view is one card plus Result. Proposal: `branches[].steps` (optional, usually 1 step).
 3. **Spell out S4 timing:** "between send and the first token the ask bar shows *Reading the rulebook… / Stop*; the sheet rises on the first token" (what's built).
 4. **Minimum-legibility zoom:** on large pages, zoom until body text reaches ~15 pt on screen even if the passage's lines overflow horizontally, centered on the passage start. Needs a quick check on the owner's phone first.
 5. Add **wide-screen layout** (side panel) to §2 next to S5/S9 (decision rows added in §7).
 
 ## Component map (App/Sources)
 
-Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `StepRow`, Core models) and closures. State lives in two injected `@Observable` models: `ViewerModel` (document, streaming, current card, detent, branch, PDF focus, feedback) and `AskController` (push-to-talk state over `SpeechInput`). Design tokens live in `Theme`, injected as `@Environment(\.theme)` by `.themed()`, which picks the light/dark palette and scales spacing and sizes with Dynamic Type. Previews use `Preview Content/Fixtures.swift`, built on Core's `FixtureRulebook`, so no API key is needed.
+Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `StepRow`, `BranchRow`, Core models) and closures. State lives in injected `@Observable` models: `ViewerModel` (document, streaming, current card, detent, branch, PDF focus, feedback), `AskController` (push-to-talk over `SpeechInput`) and `ViewerPresentation` (importer / settings, attached to whichever view is frontmost). Design tokens live in `Theme` (dynamic light/dark colors, Dynamic Type-scaled spacing and sizes), injected as `@Environment(\.theme)` by `.themed()`, which also sets the app tint. Previews use `Preview Content/Fixtures.swift`, built on Core's `FixtureRulebook`, so no API key is needed.
 
 | Component | Screen | Preview states |
 |---|---|---|
 | **DesignSystem/** `Theme`, `ThemeEnvironment` (`.themed()`, `.themeBackground`) | all | — |
-| `SkeletonLine`, `FlowRow`, `OutlinePill`, `OutlineButton` / `PrimaryButton` | S4, S5 | default |
-| **Features/Ask/** `AskBar` | S3, follow-up | empty, typed, compact, AX5 |
-| `PushToTalkButton` | S3 | idle, dictating, holding, compact |
-| `HoldToTalkPanel` + `SlideToCancelHint`, `Waveform` | S3 | listening, transcript, cancel armed; levels |
-| `WaitingBar` | S3→S4 | default |
-| **Features/AnswerSheet/** `AnswerHeader` (+ `FailureHeader`) | S4, S5 | arriving/skeleton, streaming, stated, inferred, not covered, branch active, failed, AX5, dark |
-| `ConfidenceChip` | S5, S7 | stated, inferred, not covered, short, AX5 |
-| `BranchPills` | S5, S9 | none active, active |
-| `StepCard` (+ `CardTitle`) | S5, S6, S10 | step, figure, loading, result, result rated, branch, web ⚠, not current, AX5, dark |
-| `FeedbackButtons` | S6 | none, 👍, 👎 |
-| `StepCarousel`, `CardDots` | S5, S6 | iPhone, SE width, AX5 |
-| `CollapsedVerdictBar` | S7 | stated, not covered, AX5 |
-| `FullAnswerList` (+ `SectionLabel`) | S9 | default, AX5 |
-| `BottomSheet` (detents, drag) | S5, S7, S9 | medium, collapsed, expanded, medium AX5 |
-| `AnswerSections` (`BoundAnswerHeader`, `BoundStepCards`, `AnswerMedium/Collapsed/ExpandedContent`, `AnswerSidePanel`): model-bound composites | S4–S9, wide | medium, streaming, expanded, side panel |
+| `GroupedSection`, `ValueRow` (inset-grouped rows), `TrailingIconLabelStyle`, `String+LowercasedFirst` | S5, S9 | rows, checkmark, footer, AX5 dark |
+| **Features/Ask/** `AskField` (+ `AskFieldBackground`: glass / inline) | S3, follow-up | floating empty/typed, inline, AX5, dark |
+| `PushToTalkButton` | S3 | idle, dictating, holding |
+| `HoldToTalkPanel`, `SlideToCancelHint`, `Waveform` | S3 | listening, transcript, cancel armed; levels |
+| `WaitingBar` (glass) | S3→S4 | default, AX5 dark |
+| **Features/AnswerSheet/** `AnswerHeader` (+ `FailureHeader`) | S4, S5, S9 | arriving (redacted), streaming, stated, with question, inferred, not covered, branch, failed, AX5, dark |
+| `ProofLine` (+ `Confidence+Display`) | S5, S7 | stated, inferred, not covered, AX5 dark |
+| `StepCard`, `CardCaption` | S5, S6, S10 | step, figure, loading, result, rated, branch without steps, web, AX5, dark |
+| `StepCarousel`, `CardDots` | S5, S6 | iPhone, SE width, AX5, dark |
+| `FeedbackButtons` | S6, S9 | none, up, down |
+| `BranchRows`, `StepListRows`, `AssumptionRows` | S5, S9 | none active, active, AX5, dark |
+| `AnswerShelf`, `FullAnswerSections`, `FollowUpSection`, `DemoNote` (model-bound pieces) | S5–S9 | step 1, AX5 dark |
+| `AnswerContent` (+ `AnswerPlacement`, `AnswerMetrics`): the whole answer column | S4–S9, wide | medium, streaming, expanded, branch, inspector AX5, expanded dark |
+| `AnswerSheet` (system sheet, measured detents, background interaction) | S5, S7, S9 | via `ViewerPreview` |
+| `AnswerInspector` (inspector column / landscape column) | wide | iPad landscape |
 | **Features/Viewer/** `PDFViewer` (PDFKit, highlights, zoom, gestures) | S5, S6, S8 | evidence zoom, whole page |
-| `HighlightOverlay` (pager, notes) | S6 | 2 passages, figure note, whole page |
-| `BackToStepPill` | S8 | default, AX3 |
-| `AdaptiveViewerLayout` (sheet vs side panel, the only layout decision) | S3–S9 | iPhone 16 Pro, SE, Pro Max, landscape, iPad, AX5, dark, streaming, idle |
-| `ViewerScreen` (nav, importer, settings), `EmptyLibraryView` | S2 | answered, empty, error AX5 |
-| **Features/Settings/** `SettingsView` | dev | default |
-| **Model/** `ViewerModel` (+`Content`), `AnswerState`, `ViewContent`, `HighlightPlacer`, `AskController` | — | — |
-| **Services/** `DemoProvider`, `Keychain`/`APIKeyStore`, `Library`, `SpeechInput` | — | — |
+| `HighlightOverlay` (glass pager, notes), `BackToStepPill` (glass) | S6, S8 | 2 passages, figure note, whole page, AX3/AX5, dark |
+| `AdaptiveViewerLayout` (sheet vs inspector vs landscape column; covered height for the PDF) | S3–S9 | iPhone 18 Pro, SE, Pro Max, landscape, iPad, AX5, dark, streaming, branch, collapsed, expanded, idle |
+| `ViewerScreen`, `ViewerMenu` (`ToolbarOverflowMenu`), `ViewerChrome`, `ViewerDialogs`, `EmptyLibraryView` (`ContentUnavailableView`), `ViewerPreview` | S2 | answered, empty, empty dark, error AX5 |
+| **Features/Settings/** `SettingsView`, `SettingsSheet` | dev | default, dark AX5 |
+| **Model/** `ViewerModel` (+`Content`), `AnswerState`, `ViewContent`, `ViewerPresentation`, `HighlightPlacer`, `AskController` | — | — |
+| **Services/** `DemoProvider` (now with step titles and a branch step), `Keychain`/`APIKeyStore`, `Library`, `SpeechInput` | — | — |
 
 ## Known gaps / next
 
 - Run a real question on the owner's iPhone with a key (time to first token, verdict and step 1, against the M1 numbers).
 - Push-to-talk on a device: check the hold threshold and the slide-to-cancel distance at the table.
+- Restyle: check the sheet's detent heights and the glass field on the owner's iPhone (simulator only so far), and the step-1 latency with the v2 contract on a real rulebook.
 - `scrollPosition(id:)` ignores its initial value, so the carousel scrolls to it on appear (`ScrollViewReader`). It works, but watch for it on iOS 18 changes.
 - Evidence on a page that `QuoteMatcher` scrambles (Root multi-column) falls back to the whole page until the layout-tolerant matcher lands in Core.

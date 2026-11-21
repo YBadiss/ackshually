@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Horizontal step cards (S5/S6): `.viewAligned` paging, next card peeking from the edge,
+/// Horizontal step cards (S5/S6), a system shelf: `.viewAligned` paging, next card peeking from the edge,
 /// `.scrollPosition(id:)` bound to the current card (which drives the PDF). Card width is
 /// relative to the carousel: each side keeps `layout.cardPeekFraction` for the neighbours.
 struct StepCarousel: View {
@@ -24,7 +24,7 @@ struct StepCarousel: View {
         ScrollView(.horizontal) {
             LazyHStack(alignment: .top, spacing: theme.spacing.m) {
                 ForEach(items) { item in
-                    StepCard(content: item.content, isCurrent: item.id == current, onRate: onRate)
+                    StepCard(content: item.content, onRate: onRate)
                         .containerRelativeFrame(.horizontal)
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -32,6 +32,7 @@ struct StepCarousel: View {
                             if item.id != current { withAnimation(.snappy) { selection = item.id } }
                         }
                         .accessibilityAction(named: "Show") { selection = item.id }
+                        .accessibilityLabel(Self.accessibilityLabel(item, of: items.count))
                         .id(item.id)
                 }
             }
@@ -47,6 +48,19 @@ struct StepCarousel: View {
     }
 }
 
+extension StepCarousel {
+    static func accessibilityLabel(_ item: CardItem, of count: Int) -> String {
+        switch item.content {
+        case let .step(n, title, pages, text, _):
+            "Step \(n), \(title)\(pages.isEmpty ? "" : ", page \(pages.map(String.init).joined(separator: ", "))"). \(text)"
+        case .loading: "Next step loading"
+        case let .result(_, text, _): "Result. \(text)"
+        case let .branch(c, v): "If \(c): \(v)"
+        case let .web(_, w): "\(w.site), \(w.role): \(w.quote)"
+        }
+    }
+}
+
 private struct CarouselPreview: View {
     @State var selection: CardID? = .step(0)
     var body: some View {
@@ -55,6 +69,7 @@ private struct CarouselPreview: View {
             CardDots(count: Fixtures.cardItems.count, index: Fixtures.cardItems.firstIndex { $0.id == selection } ?? 0)
         }
         .padding(.vertical)
+        .frame(maxHeight: .infinity)
         .themeBackground(\.sheet)
     }
 }
@@ -62,3 +77,4 @@ private struct CarouselPreview: View {
 #Preview("iPhone") { CarouselPreview().themed() }
 #Preview("iPhone SE", traits: .fixedLayout(width: 375, height: 300)) { CarouselPreview().themed() }
 #Preview("AX5") { CarouselPreview().themed().dynamicTypeSize(.accessibility5) }
+#Preview("Dark") { CarouselPreview().themed().preferredColorScheme(.dark) }
