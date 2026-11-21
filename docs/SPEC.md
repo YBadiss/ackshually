@@ -41,6 +41,8 @@ Source docs: [App concept](original/app-concept.md) · [Technical test plan](ori
 
 ## 2. Screens & interactions
 
+Visual wireframes: [design/wireframes.html](design/wireframes.html) (open in a browser). Text version below.
+
 Wireframes use the energy/Battery example. `[ ]` = button, `▔▔` = sheet grab handle, `▓▓` = highlight. Milestone tags show when each screen lands.
 
 ### 2.1 My Games (home) — M3 (M2: opens straight to the last PDF)

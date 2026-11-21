@@ -1,0 +1,232 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ackshually wireframes</title>
+<style>
+  /* Wireframe only: interactions & concepts, no visual design. Colors use host theme vars with fallbacks. */
+  body{font-family:var(--font-sans,-apple-system,system-ui,sans-serif);color:var(--foreground,#e5e5e5)}
+  .intro{font-size:12.5px;color:var(--muted-foreground,#999);margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px 18px;align-items:start}
+  .card h3{margin:0 0 2px;font-size:13.5px}
+  .card .ms{font-size:10px;color:var(--muted-foreground,#999);margin-bottom:8px}
+  .card ul{margin:8px 0 0;padding-left:16px;font-size:11px;color:var(--muted-foreground,#aaa)}
+  .card li{margin:2px 0}
+  .card li b{color:var(--foreground,#eee);font-weight:600}
+  .phone{width:196px;height:312px;margin:0 auto;border:6px solid var(--border,#333);border-radius:28px;overflow:hidden;position:relative;background:var(--background,#111);font-size:9.5px;line-height:1.35}
+  .notch{position:absolute;top:4px;left:50%;transform:translateX(-50%);width:54px;height:13px;border-radius:8px;background:var(--border,#333);z-index:9}
+  .nav{position:absolute;top:22px;left:0;right:0;padding:0 10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;z-index:4}
+  .nav b{font-size:11px}
+  .paper{position:absolute;inset:0;padding:40px 12px 0;background:var(--popover,#1b1b1b)}
+  .line{height:4px;border-radius:2px;background:var(--muted-foreground,#888);opacity:.3;margin:5px 0}
+  .hl{background:color-mix(in srgb,var(--warning,#eab308) 22%,transparent);outline:1.5px solid var(--warning,#eab308);border-radius:3px;padding:3px 4px;margin:5px 0}
+  .pg{font-size:8px;color:var(--muted-foreground,#999)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card,#222);border-top:1px solid var(--border,#333);border-radius:14px 14px 0 0;padding:6px 10px 40px;box-shadow:0 -4px 14px rgba(0,0,0,.25);z-index:5}
+  .grab{width:28px;height:4px;border-radius:2px;background:var(--border,#444);margin:0 auto 6px}
+  .ask{position:absolute;left:8px;right:8px;bottom:8px;border:1px solid var(--border,#333);border-radius:13px;padding:5px 8px;background:var(--card,#222);display:flex;justify-content:space-between;align-items:center;z-index:6}
+  .muted{color:var(--muted-foreground,#999)}
+  .v{font-weight:700;font-size:11px}
+  .chip{display:inline-block;font-size:8px;padding:1px 6px;border-radius:9px;border:1px solid var(--border,#444);margin:0 0 3px}
+  .btns{display:flex;gap:5px;align-items:center;margin-top:5px}
+  .b{font-size:8.5px;padding:3px 7px;border-radius:6px;border:1px solid var(--border,#444)}
+  .b.p{background:var(--foreground,#eee);color:var(--background,#111);border-color:transparent}
+  .br{border-left:2px solid var(--border,#555);padding-left:5px;margin-top:3px}
+  .row{border:1px solid var(--border,#333);border-radius:8px;padding:6px 8px;margin:6px 8px;display:flex;gap:7px;align-items:center}
+  .thumb{width:22px;height:28px;border-radius:3px;background:var(--secondary,#2a2a2a);flex:none}
+  .tap{position:absolute;width:26px;height:26px;border-radius:50%;border:2px dashed var(--info,#3b82f6);z-index:8}
+  .gest{position:absolute;font-size:8.5px;padding:2px 6px;border-radius:8px;background:var(--info,#3b82f6);color:#fff;z-index:8;white-space:nowrap}
+  .pill{position:absolute;left:50%;transform:translateX(-50%);font-size:8.5px;padding:3px 9px;border-radius:10px;background:var(--card,#222);border:1px solid var(--border,#444);z-index:6}
+  .webcard{border:1px solid var(--border,#444);border-radius:7px;padding:5px 6px;margin-top:5px}
+  .dim{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:6}
+  .modal{position:absolute;left:0;right:0;bottom:0;background:var(--card,#222);border-radius:14px 14px 0 0;padding:8px 10px 14px;z-index:7}
+  .chips span{display:inline-block;font-size:8px;padding:2px 6px;border-radius:9px;border:1px solid var(--border,#444);margin:2px 2px 0 0}
+  .chips span.on{background:var(--foreground,#eee);color:var(--background,#111)}
+  .wave{display:flex;gap:2px;align-items:center;height:12px}
+  .wave i{display:block;width:2px;background:var(--foreground,#ddd);border-radius:1px}
+</style></head><body>
+<p class="intro">Wireframes only: layout, states and gestures. Grey on purpose, with no colors or style yet. <span style="color:var(--info,#3b82f6)">Blue dashed circles / tags</span> mark the interaction being described. Example question throughout: 3 energy + a Battery at end of turn.</p>
+<div class="grid">
+
+<!-- 1 My Games -->
+<div class="card"><h3>1 · My Games</h3><div class="ms">Home · M3 (M2 opens last PDF)</div>
+<div class="phone"><div class="notch"></div>
+  <div class="nav"><b>ackshually</b><span style="font-size:14px">＋</span></div>
+  <div style="padding-top:44px">
+    <div class="row"><div class="thumb"></div><div><b>Power Grid</b><div class="muted">3 sessions · Nov 14</div></div></div>
+    <div class="row"><div class="thumb"></div><div><b>Root — Law of Root</b><div class="muted">Preparing… 62%</div></div></div>
+    <div class="row" style="position:relative;overflow:hidden;padding-right:96px"><div class="thumb"></div><div><b>Azul</b><div class="muted">1 session · Nov 2</div></div><div style="position:absolute;right:0;top:0;bottom:0;display:flex"><div class="b" style="border-radius:0;display:flex;align-items:center">Export</div><div class="b" style="border-radius:0;display:flex;align-items:center;color:var(--destructive,#ef4444)">Delete</div></div></div><div class="gest" style="position:relative;display:inline-block;margin-left:60px">← swipe</div>
+    <div class="row"><div class="thumb"></div><div><b>Dune Imperium</b><div class="muted">No sessions yet</div></div></div>
+  </div>
+  <div class="tap" style="top:16px;right:3px"></div>
+</div>
+<ul><li><b>Tap game</b> → viewer, resumes last session</li><li><b>＋</b> → file picker / share-sheet import</li><li><b>Swipe left</b> → Export · Delete</li></ul></div>
+
+<!-- 2 Preparing -->
+<div class="card"><h3>2 · New game, preparing</h3><div class="ms">M2 basic · M3 background OCR</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper">
+    <div class="pg">p.1</div>
+    <div class="line" style="width:55%;height:8px;opacity:.5"></div><div class="line"></div><div class="line" style="width:80%"></div><div class="line"></div><div class="line" style="width:60%"></div>
+    <div style="height:70px;border-radius:4px;background:var(--secondary,#2a2a2a);margin:8px 0"></div>
+    <div class="line"></div><div class="line" style="width:75%"></div>
+  </div>
+  <div class="nav"><span>‹ Games</span><b>Azul</b><span>⋯</span></div>
+  <div style="position:absolute;left:8px;right:8px;bottom:42px;font-size:8.5px;z-index:6" class="muted">◔ Preparing scanned pages 3/8</div>
+  <div class="ask"><span class="muted">Ask about the rules…</span><span>🎙</span></div>
+</div>
+<ul><li>PDF is <b>readable instantly</b></li><li>Asking <b>never blocked</b>; status line only if pages need OCR</li><li>Unprepared pages → whole-page highlight fallback</li></ul></div>
+
+<!-- 3 Push to talk -->
+<div class="card"><h3>3 · Ask: hold to talk</h3><div class="ms">Viewer idle · M2</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"><div class="line"></div><div class="line" style="width:80%"></div><div class="line"></div><div class="line" style="width:50%"></div><div class="line"></div><div class="line" style="width:70%"></div><div class="line"></div></div>
+  <div class="nav"><span>‹ Games</span><b>Power Grid</b><span>⋯</span></div>
+  <div class="ask" style="flex-direction:column;align-items:stretch;gap:4px;padding:7px 8px">
+    <div>“what happens to my energy at the end of the turn if I have the batt…”</div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="muted">← slide to cancel</span><div class="wave"><i style="height:4px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:6px"></i><i style="height:10px"></i><i style="height:5px"></i></div><span style="font-size:12px">🎙</span></div>
+  </div>
+  <div class="tap" style="bottom:8px;right:4px;width:30px;height:30px"></div>
+  <div class="gest" style="bottom:46px;right:6px">hold</div>
+</div>
+<ul><li><b>Hold 🎙</b>: live transcript, <b>release</b> sends</li><li><b>Slide away</b> cancels</li><li><b>Tap 🎙</b>: dictation toggle, edit before sending</li><li>Typing always available (private questions)</li></ul></div>
+
+<!-- 4 Streaming early -->
+<div class="card"><h3>4 · Answer streaming (t≈1s)</h3><div class="ms">M2</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"><div class="line"></div><div class="line" style="width:80%"></div><div class="line"></div><div class="line" style="width:50%"></div><div class="line"></div></div>
+  <div class="nav"><span>‹ Games</span><b>Power Grid</b><span>⋯</span></div>
+  <div class="sheet" style="padding-bottom:12px"><div class="grab"></div>
+    <div class="muted">You asked:</div>
+    <div>You have <b>3 energy and a Battery</b> at end of turn.</div>
+    <div class="muted" style="margin:6px 0">● ● ●</div>
+    <div class="btns"><span class="b">■ Stop</span></div>
+  </div>
+  <div class="tap" style="bottom:4px;left:4px"></div>
+</div>
+<ul><li><b>Restated question</b> shows first</li><li>Misunderstood? <b>Stop</b> → rephrase without waiting</li></ul></div>
+
+<!-- 5 Streaming verdict + step 1 -->
+<div class="card"><h3>5 · Verdict + step 1 (t≈5s)</h3><div class="ms">M2</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"><div class="pg">p.12</div><div class="line"></div><div class="line" style="width:70%"></div>
+    <div class="hl"><b>End of turn:</b> discard all unused energy.</div>
+    <div class="line"></div><div class="line" style="width:85%"></div></div>
+  <div class="nav"><span>‹ Games</span><b>Power Grid</b><span>⋯</span></div>
+  <div class="sheet" style="padding-bottom:12px"><div class="grab"></div>
+    <span class="chip">✓ Stated in rules</span>
+    <div class="v">Keep 2 energy, discard 1.</div>
+    <div class="br muted">No Battery: discard all 3</div>
+    <div style="margin-top:4px"><span class="muted">1/3</span> General rule: unused energy is discarded…</div>
+    <div class="btns"><span class="b">‹</span><span class="b p">Continue ›</span><span class="muted" style="margin-left:auto">👍 👎</span></div>
+  </div>
+</div>
+<ul><li>Verdict + <b>confidence chip</b> (Stated / Inferred / Not covered)</li><li>PDF <b>jumps, zooms, highlights</b> step 1</li><li>Later steps keep loading behind</li></ul></div>
+
+<!-- 6 Step 2 -->
+<div class="card"><h3>6 · Continue → step 2</h3><div class="ms">Sheet medium · M2</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"><div class="pg">p.14</div><div class="line" style="width:70%"></div><div class="line"></div>
+    <div class="hl"><b>Battery:</b> at end of turn, you may keep up to 2 unused energy.</div>
+    <div class="line"></div><div class="line" style="width:60%"></div></div>
+  <div class="nav"><span>‹ Games</span><b>Power Grid</b><span>⋯</span></div>
+  <div class="sheet" style="padding-bottom:12px"><div class="grab"></div>
+    <div class="v">Keep 2 energy, discard 1.</div>
+    <div style="margin-top:4px"><span class="muted">2/3</span> The Battery is an exception to the discard rule.</div>
+    <div class="btns"><span class="b">‹</span><span class="b p">Continue ›</span><span class="muted" style="margin-left:auto">👍 👎</span></div>
+  </div>
+  <div class="tap" style="bottom:7px;left:36px"></div>
+  <div class="gest" style="bottom:82px;left:60px">← swipe sheet →</div>
+</div>
+<ul><li><b>Continue</b> / swipe left: next step, page turns + zooms</li><li><b>‹</b> / swipe right: previous</li><li>Last step: Continue → <b>Done</b>, ask field focused</li></ul></div>
+
+<!-- 7 Collapsed -->
+<div class="card"><h3>7 · Show the skeptic</h3><div class="ms">Sheet collapsed · M2</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"><div class="pg">p.14</div><div class="line"></div><div class="line" style="width:70%"></div><div class="line"></div>
+    <div class="hl" style="font-size:11px"><b>Battery:</b> at end of turn, you may keep up to 2 unused energy.</div>
+    <div class="line"></div><div class="line" style="width:60%"></div><div class="line"></div><div class="line" style="width:80%"></div><div class="line"></div><div class="line" style="width:40%"></div></div>
+  <div class="nav"><span>‹ Games</span><b>Power Grid</b><span>⋯</span></div>
+  <div class="sheet" style="padding:6px 10px 10px"><div class="grab"></div><div class="v">Keep 2 energy, discard 1.</div></div>
+  <div class="gest" style="bottom:46px;left:50%;transform:translateX(-50%)">drag down ↓</div>
+</div>
+<ul><li><b>Drag sheet down</b>: page near full-screen, one-line verdict pinned</li><li>Hand the phone over; drag up to restore</li></ul></div>
+
+<!-- 8 Panned away -->
+<div class="card"><h3>8 · Inspect freely</h3><div class="ms">M2</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper" style="padding-top:36px"><div class="pg">p.14 (scrolled up)</div><div class="line" style="width:50%;height:7px;opacity:.5"></div><div class="line"></div><div class="line" style="width:80%"></div><div class="line"></div><div class="line" style="width:65%"></div><div class="line"></div><div class="line" style="width:70%"></div>
+    <div class="hl" style="opacity:.6">Battery: at end of turn…</div></div>
+  <div class="nav"><span>‹ Games</span><b>Power Grid</b><span>⋯</span></div>
+  <div class="pill" style="bottom:112px">⤺ Back to step 2</div>
+  <div class="sheet" style="padding-bottom:12px"><div class="grab"></div>
+    <div class="v">Keep 2 energy, discard 1.</div>
+    <div class="btns"><span class="b">‹</span><span class="b p">Continue ›</span></div>
+  </div>
+  <div class="gest" style="top:140px;left:30px">pinch / pan</div>
+</div>
+<ul><li><b>Pinch / pan</b> anytime: surrounding qualifications</li><li><b>⤺ pill</b> re-centers on the highlight</li><li><b>Double-tap</b>: evidence zoom ↔ full page</li></ul></div>
+
+<!-- 9 Expanded -->
+<div class="card"><h3>9 · Full answer</h3><div class="ms">Sheet expanded · M2</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"></div>
+  <div class="sheet" style="top:44px;padding-bottom:10px"><div class="grab"></div>
+    <span class="chip">✓ Stated in rules</span>
+    <div class="v">Keep 2 energy, discard 1.</div>
+    <div class="br" style="margin-top:5px"><b>Branch</b> · No Battery: discard all 3 ›</div>
+    <div class="muted" style="margin:8px 0 3px">Steps</div>
+    <div class="row" style="margin:3px 0"><span class="muted">1</span> General rule <span class="muted" style="margin-left:auto">p.12</span></div>
+    <div class="row" style="margin:3px 0;border-color:var(--foreground,#ddd)"><span class="muted">2</span> Battery exception <span class="muted" style="margin-left:auto">p.14 ●</span></div>
+    <div class="row" style="margin:3px 0"><span class="muted">3</span> Conclusion</div>
+    <div class="muted" style="margin-top:8px">Assumes the Battery is already in play.</div>
+  </div>
+  <div class="gest" style="top:28px;left:12px">drag up ↑</div>
+  <div class="tap" style="top:160px;right:10px"></div>
+</div>
+<ul><li><b>Drag up</b>: verdict, branches, assumptions, all steps</li><li><b>Tap a step</b> → jump to it</li><li><b>Tap a branch</b> → its own step path, "Main answer" chip to return</li></ul></div>
+
+<!-- 10 Not covered + web -->
+<div class="card"><h3>10 · Not covered → web</h3><div class="ms">M4</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"><div class="pg">p.21 · closest rule</div><div class="line"></div><div class="hl">Closest passage on the topic…</div><div class="line" style="width:70%"></div></div>
+  <div class="nav"><span>‹ Games</span><b>Root</b><span>⋯</span></div>
+  <div class="sheet" style="padding-bottom:12px"><div class="grab"></div>
+    <span class="chip">? Not covered by the rulebook</span>
+    <div class="muted">Closest rules: p.21, p.8</div>
+    <div class="webcard"><div class="muted">🌐 BoardGameGeek · 2021 · <b style="color:var(--foreground,#eee)">Designer</b></div><div>“Yes, you may move after battling…”</div><div class="muted" style="text-align:right">open thread ↗</div></div>
+    <div class="btns"><span class="b">‹</span><span class="b p">Continue ›</span><span class="muted" style="margin-left:auto">👍 👎</span></div>
+  </div>
+</div>
+<ul><li>Auto when <b>Inferred / Not covered</b></li><li>Web = <b>cards</b>, never PDF highlights; site · date · role</li><li>Conflict: rulebook stays on top, <b>⚠️ Designer / Community disagrees</b></li></ul></div>
+
+<!-- 11 Feedback -->
+<div class="card"><h3>11 · 👎 feedback</h3><div class="ms">Per answer · M3</div>
+<div class="phone"><div class="notch"></div>
+  <div class="paper"><div class="line"></div><div class="hl">Battery: at end of turn…</div><div class="line"></div></div>
+  <div class="dim"></div>
+  <div class="modal"><div class="grab"></div>
+    <b>What was wrong?</b>
+    <div class="chips" style="margin:5px 0"><span>Wrong verdict</span><span>Missed exception</span><span class="on">Wrong highlight</span><span>Wrong page</span><span>Too slow</span><span>Other</span></div>
+    <div class="muted">Which step? <span class="chip" style="margin:0">1</span> <span class="chip" style="margin:0;background:var(--foreground,#eee);color:var(--background,#111)">2</span> <span class="chip" style="margin:0">3</span></div>
+    <div style="border:1px solid var(--border,#444);border-radius:6px;padding:5px;margin-top:6px" class="muted">Note (optional)…</div>
+    <div class="btns" style="justify-content:flex-end"><span class="b p">Send</span></div>
+  </div>
+</div>
+<ul><li><b>👍</b>: saved silently</li><li><b>👎</b>: one-tap reason, optional step + note</li><li>⋯ → <b>Export game</b>: all sessions as JSON</li></ul></div>
+
+<!-- 12 Sessions -->
+<div class="card"><h3>12 · Sessions</h3><div class="ms">⋯ → Sessions · M3</div>
+<div class="phone"><div class="notch"></div>
+  <div class="nav"><span>‹ Power Grid</span><b>Sessions</b><span>＋ New</span></div>
+  <div style="padding-top:44px">
+    <div class="muted" style="padding:0 10px">Tonight</div>
+    <div class="row" style="flex-direction:column;align-items:flex-start;gap:2px"><div>Energy with a Battery at end of turn?</div><div class="muted">Keep 2, discard 1 · 👍</div></div>
+    <div class="row" style="flex-direction:column;align-items:flex-start;gap:2px"><div>Can I buy a plant I can't power?</div><div class="muted">Yes, but… · 👎</div></div>
+    <div class="muted" style="padding:6px 10px 0">Nov 14</div>
+    <div class="row" style="flex-direction:column;align-items:flex-start;gap:2px"><div>When does step 3 start?</div><div class="muted">When the Step 3 card is drawn</div></div>
+  </div>
+  <div class="tap" style="top:16px;right:2px"></div>
+</div>
+<ul><li><b>Tap a Q</b> → reopens it in the viewer at step 1</li><li><b>＋ New</b> = new game night: clears conversation context</li></ul></div>
+
+</div>
+</body></html>
