@@ -1,0 +1,62 @@
+{
+  "description": "Smoke-test set against the generated fake rulebook (bench/fixtures/fake-rulebook.pdf). Use it to check the pipeline end-to-end before the real rulebooks are in assets/rulebooks/.",
+  "games": [
+    {
+      "id": "fixture",
+      "name": "Power Plant Rush (fake test rulebook)",
+      "pdf": "bench/fixtures/fake-rulebook.pdf",
+      "questions": [
+        {
+          "id": "fx-01",
+          "question": "I have 3 energy left and a Battery at the end of my turn. What happens to my energy?",
+          "expected_verdict": "Keep 2 energy (Battery), discard the third.",
+          "expected_confidence": "stated",
+          "tags": ["exception", "spec-example"],
+          "source": "own (SPEC example)",
+          "expected_pages": [3, 4],
+          "expected_quote": "keeps up to 2 unused energy instead of discarding them"
+        },
+        {
+          "id": "fx-02",
+          "question": "and if I don't have one?",
+          "follows": "fx-01",
+          "expected_verdict": "Discard all 3 unused energy.",
+          "expected_confidence": "stated",
+          "tags": ["follow-up", "approximate-wording"],
+          "source": "own",
+          "expected_pages": [3],
+          "expected_quote": "you must discard all unused energy"
+        },
+        {
+          "id": "fx-03",
+          "question": "Can I give 2 of my energy to my partner?",
+          "expected_verdict": "No: energy may not be traded between players unless a card explicitly says so.",
+          "expected_confidence": "stated",
+          "tags": ["exception"],
+          "source": "own",
+          "expected_pages": [3],
+          "expected_quote": "Energy may not be traded between players at any time"
+        },
+        {
+          "id": "fx-04",
+          "question": "Where is the scoring track shown?",
+          "expected_verdict": "In Figure 1 on the Special plants page (lower half of the page).",
+          "expected_confidence": "stated",
+          "tags": ["figure"],
+          "source": "own",
+          "expected_pages": [4],
+          "expected_box": {"x": 0.15, "y": 0.55, "w": 0.7, "h": 0.3}
+        },
+        {
+          "id": "fx-05",
+          "question": "Is the Windmill affected by weather cards?",
+          "expected_verdict": "Not covered: the rulebook has no weather cards.",
+          "expected_confidence": "not_covered",
+          "tags": ["unanswerable"],
+          "source": "own",
+          "expected_pages": []
+        }
+      ]
+    }
+  ]
+}
