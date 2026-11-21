@@ -39,5 +39,10 @@ enum APIKeyStore {
         let k = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]?.trimmingCharacters(in: .whitespacesAndNewlines)
         return (k?.isEmpty ?? true) ? nil : k
     }
-    static var current: String? { keychainKey ?? environmentKey }
+    /// `-noKey YES` (UI tests) ignores any stored key, so the no-key paths are testable on a
+    /// simulator where a key was saved in Settings.
+    static var current: String? {
+        if UserDefaults.standard.bool(forKey: "noKey") { return nil }
+        return keychainKey ?? environmentKey
+    }
 }

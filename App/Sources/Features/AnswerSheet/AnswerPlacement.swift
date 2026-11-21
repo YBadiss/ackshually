@@ -8,4 +8,6 @@ enum AnswerPlacement: Equatable {
     case inspector
 
     var isExpanded: Bool { self == .inspector || self == .sheet(.expanded) }
+    /// Collapsed sheet (S7): only the verdict and proof line are shown.
+    var isCollapsed: Bool { self == .sheet(.collapsed) }
 }

@@ -10,6 +10,8 @@ final class LoadedRulebook: @unchecked Sendable {
     let data: Data
     let pdf: PDFDocument
     let matcher: QuoteMatcher
+    /// The generated "Power Plant Rush" fixture: the only document the scripted demo answer fits.
+    var isSample: Bool { url.lastPathComponent == Library.sampleFileName }
 
     init?(url: URL) {
         guard let data = try? Data(contentsOf: url),
@@ -36,6 +38,7 @@ final class LoadedRulebook: @unchecked Sendable {
 /// Imported PDFs are copied into Application Support so they survive relaunch.
 enum Library {
     private static let lastKey = "lastRulebookPath"
+    static let sampleFileName = "power-plant-rush.pdf"
 
     static var folder: URL {
         let u = URL.applicationSupportDirectory.appending(path: "Rulebooks", directoryHint: .isDirectory)
@@ -54,7 +57,7 @@ enum Library {
     }
 
     static func sampleRulebook() throws -> URL {
-        let u = folder.appending(path: "power-plant-rush.pdf")
+        let u = folder.appending(path: sampleFileName)
         if !FileManager.default.fileExists(atPath: u.path) { try FixtureRulebook.write(to: u) }
         return u
     }

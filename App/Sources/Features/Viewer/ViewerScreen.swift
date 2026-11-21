@@ -31,6 +31,11 @@ struct ViewerScreen: View {
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { windowSize = $0 }
         .viewerDialogs(presentation, model: model, active: !presentation.answerSheetPresented)
+        .onChange(of: model.needsAPIKey) { _, needs in
+            guard needs else { return }
+            model.needsAPIKey = false
+            presentation.settings = true
+        }
     }
 }
 

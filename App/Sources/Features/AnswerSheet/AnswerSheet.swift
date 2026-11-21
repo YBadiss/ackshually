@@ -14,6 +14,9 @@ struct AnswerSheet: View {
     var onTopChange: (CGFloat) -> Void
     @Environment(\.theme) private var theme
     @State private var metrics = AnswerMetrics()
+    /// Home-indicator inset at the bottom of the sheet: content heights don't include it, so the
+    /// collapsed detent cut off the proof line without it.
+    @State private var bottomInset: CGFloat = 0
 
     var body: some View {
         AnswerContent(model: model, voice: voice, placement: .sheet(model.detent)) { m in
@@ -21,6 +24,7 @@ struct AnswerSheet: View {
             if model.detent != .expanded { metrics = m }
         }
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { onTopChange($0) }
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
         .presentationDetents(Set(detents), selection: selection)
         .presentationBackgroundInteraction(.enabled(upThrough: medium))
         .presentationBackground(theme.colors.sheet)
@@ -32,13 +36,14 @@ struct AnswerSheet: View {
 
     private var collapsed: PresentationDetent {
         guard metrics.collapsed > 0 else { return .fraction(0.22) }
-        return .height(min(metrics.collapsed, containerHeight * theme.layout.sheetCollapsedMaxFraction))
+        let h = metrics.collapsed + theme.spacing.s + bottomInset
+        return .height(min(h, containerHeight * theme.layout.sheetCollapsedMaxFraction))
     }
 
     /// Same as collapsed until there is more than the header (S4: before the cards arrive).
     private var medium: PresentationDetent {
         guard metrics.medium > metrics.collapsed + theme.spacing.xl else { return collapsed }
-        return .height(min(metrics.medium, containerHeight * theme.layout.sheetMediumMaxFraction))
+        return .height(min(metrics.medium + bottomInset, containerHeight * theme.layout.sheetMediumMaxFraction))
     }
 
     private var detents: [PresentationDetent] { [collapsed, medium, .large] }
