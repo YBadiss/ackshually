@@ -102,29 +102,54 @@ public struct Answer: Codable, Sendable, Equatable {
     }
 }
 
+/// An alternative outcome when the verdict depends on something the player didn't say.
+/// `steps` (usually one) carry the evidence for that case; answers from before the field
+/// existed decode with none.
 public struct Branch: Codable, Sendable, Equatable {
     public var condition: String
     public var verdict: String
+    public var steps: [Step]
 
-    public init(condition: String, verdict: String) {
+    public init(condition: String, verdict: String, steps: [Step] = []) {
         self.condition = condition
         self.verdict = verdict
+        self.steps = steps
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        condition = try c.decode(String.self, forKey: .condition)
+        verdict = try c.decode(String.self, forKey: .verdict)
+        steps = try c.decodeIfPresent([Step].self, forKey: .steps) ?? []
     }
 }
 
 public struct Step: Codable, Sendable, Equatable {
+    /// Short label for the card caption ("General rule", "Battery exception"). Optional: older
+    /// answers and the citations mode have none.
+    public var title: String?
     public var text: String
     public var evidence: [Evidence]
 
-    public init(text: String, evidence: [Evidence]) {
+    public init(title: String? = nil, text: String, evidence: [Evidence]) {
+        self.title = title
         self.text = text
         self.evidence = evidence
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        let t = try c.decodeIfPresent(String.self, forKey: .title)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        title = (t?.isEmpty ?? true) ? nil : t
         text = try c.decode(String.self, forKey: .text)
         evidence = try c.decodeIfPresent([Evidence].self, forKey: .evidence) ?? []
+    }
+
+    /// Same step with every evidence item transformed (page remapping, normalization).
+    public func mapEvidence(_ f: (Evidence) -> Evidence) -> Step {
+        var s = self
+        s.evidence = evidence.map(f)
+        return s
     }
 }
 

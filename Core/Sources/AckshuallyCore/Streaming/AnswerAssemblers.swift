@@ -23,7 +23,10 @@ public struct JSONAnswerAssembler: Sendable {
             case [.key("confidence")]:
                 if let s = try? dec.decode(Confidence.self, from: d) { events.append(.confidence(s)) }
             case let p where p.count == 2 && p[0] == .key("branches"):
-                if let b = try? dec.decode(Branch.self, from: d) { events.append(.branch(b)) }
+                if var b = try? dec.decode(Branch.self, from: d) {
+                    b.steps = b.steps.map { $0.mapEvidence { $0.normalized() } }
+                    events.append(.branch(b))
+                }
             case let p where p.count == 4 && p[0] == .key("steps") && p[2] == .key("evidence"):
                 if case .index(let si) = p[1], case .index(let ei) = p[3],
                    let e = try? dec.decode(Evidence.self, from: d) {
@@ -37,7 +40,8 @@ public struct JSONAnswerAssembler: Sendable {
             case []:
                 do {
                     var a = try dec.decode(Answer.self, from: d)
-                    a.steps = a.steps.map { var s = $0; s.evidence = s.evidence.map { $0.normalized() }; return s }
+                    a.steps = a.steps.map { $0.mapEvidence { $0.normalized() } }
+                    a.branches = a.branches.map { var b = $0; b.steps = b.steps.map { $0.mapEvidence { $0.normalized() } }; return b }
                     final = a
                 } catch {
                     decodeError = "decode: \(error)"

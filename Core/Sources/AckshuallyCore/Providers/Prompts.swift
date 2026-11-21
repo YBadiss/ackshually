@@ -32,6 +32,9 @@ enum Prompts {
 
     static let jsonSystem = common + """
 
+    - Each step has a title: 2–4 words naming what it establishes ("General rule", "Battery exception", \
+    "Result"), no page numbers.
+    - Each branch has its own steps (usually one) citing the evidence for that case, in the same format.
     - Each step cites evidence: the page and a quote copied verbatim from that page's text — one \
     contiguous span of 5–30 words, no ellipses, no paraphrase, no added punctuation.
     - If the evidence is a figure, diagram or illustration rather than text, set quote to "" (or a \
@@ -76,14 +79,14 @@ enum Prompts {
         ]
         let step: JSONValue = [
             "type": "object",
-            "properties": ["text": ["type": "string"], "evidence": ["type": "array", "items": evidence]],
-            "required": ["text", "evidence"],
+            "properties": ["title": ["type": "string"], "text": ["type": "string"], "evidence": ["type": "array", "items": evidence]],
+            "required": ["title", "text", "evidence"],
             "additionalProperties": false,
         ]
         let branch: JSONValue = [
             "type": "object",
-            "properties": ["condition": ["type": "string"], "verdict": ["type": "string"]],
-            "required": ["condition", "verdict"],
+            "properties": ["condition": ["type": "string"], "verdict": ["type": "string"], "steps": ["type": "array", "items": step]],
+            "required": ["condition", "verdict", "steps"],
             "additionalProperties": false,
         ]
         return [

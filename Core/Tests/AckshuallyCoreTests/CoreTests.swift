@@ -35,6 +35,48 @@ final class IncrementalJSONTests: XCTestCase {
         XCTAssertFalse(ans.needsWeb)
     }
 
+    /// Step titles and per-branch steps (contract v2) stream and decode; old answers still decode.
+    func testStepTitlesAndBranchSteps() throws {
+        let v2 = """
+        {"restated_question":"q","verdict":"Keep 2.","confidence":"stated",\
+        "branches":[{"condition":"No Battery","verdict":"Discard all 3.","steps":[{"title":"General rule","text":"All goes.",\
+        "evidence":[{"page":3,"quote":"discard all unused energy","box":null}]}]}],"assumptions":[],\
+        "steps":[{"title":"Battery exception","text":"Keeps 2.","evidence":[{"page":4,"quote":"  ","box":null}]}],"needs_web":false}
+        """
+        var a = JSONAnswerAssembler()
+        var branch: Branch?
+        var step: Step?
+        for ch in v2 {
+            for e in a.feed(String(ch)) {
+                if case .branch(let b) = e { branch = b }
+                if case .step(_, let s) = e { step = s }
+            }
+        }
+        XCTAssertEqual(branch?.steps.first?.title, "General rule")
+        XCTAssertEqual(branch?.steps.first?.evidence.first?.page, 3)
+        XCTAssertEqual(step?.title, "Battery exception")
+        XCTAssertNil(step?.evidence.first?.quote, "blank quotes are normalized to nil")
+        let ans = try a.finish().get()
+        XCTAssertEqual(ans.branches.first?.steps.count, 1)
+        XCTAssertEqual(ans.steps.first?.title, "Battery exception")
+
+        // v1 (no titles, no branch steps) still decodes, and an empty title reads as none.
+        var old = JSONAnswerAssembler()
+        _ = old.feed(sample)
+        let o = try old.finish().get()
+        XCTAssertNil(o.steps.first?.title)
+        XCTAssertEqual(o.branches.first?.steps, [])
+        let blank = try JSONDecoder().decode(Step.self, from: Data(#"{"title":" ","text":"t"}"#.utf8))
+        XCTAssertNil(blank.title)
+    }
+
+    func testSchemaHasTitlesAndBranchSteps() {
+        let body = ClaudeProvider(config: ClaudeConfig(apiKey: "x"))
+            .requestBody(for: AnswerRequest(pdf: Data([1]), documentTitle: "T", question: "Q")).serialized()
+        XCTAssertTrue(body.contains(#""required":["title","text","evidence"]"#))
+        XCTAssertTrue(body.contains(#""required":["condition","verdict","steps"]"#))
+    }
+
     func testEscapesAndFenceNoise() {
         var a = JSONAnswerAssembler()
         _ = a.feed("```json\n{\"restated_question\":\"He said \\\"no\\\" {really}\",\"verdict\":\"x\",\"confidence\":\"inferred\",")
