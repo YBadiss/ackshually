@@ -1,0 +1,65 @@
+# Generate the Xcode project: `cd App && xcodegen` (XcodeGen 2.42+). The generated
+# Ackshually.xcodeproj is checked in so the app also builds without XcodeGen.
+name: Ackshually
+options:
+  bundleIdPrefix: app.ackshually
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+packages:
+  AckshuallyCore:
+    path: ../Core
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Ackshually:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: AckshuallyCore
+    info:
+      path: Sources/App/Info.plist
+      properties:
+        CFBundleDisplayName: ackshually
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSMicrophoneUsageDescription: Hold the mic to ask a rules question out loud.
+        NSSpeechRecognitionUsageDescription: Your spoken question is transcribed so it can be sent to the rules referee.
+        LSSupportsOpeningDocumentsInPlace: true
+        UIFileSharingEnabled: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ackshually.viewer
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: YES
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_PREVIEWS: YES
+  AckshuallyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Ackshually
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ackshually.viewer.uitests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Ackshually
+schemes:
+  Ackshually:
+    build:
+      targets:
+        Ackshually: all
+        AckshuallyUITests: [test]
+    test:
+      targets: [AckshuallyUITests]
