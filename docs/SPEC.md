@@ -325,3 +325,19 @@ Multiple PDFs per game (expansions, FAQ), clarifying questions, curated library,
 - Create a scanned/photographed variant of a few Azul pages.
 - Draft the first ~20 benchmark questions together.
 - Cost ceiling per question: none set; revisit after M1 numbers.
+
+---
+
+## 7. M1 findings
+
+**Status: pending run** (2026-11-21). `Core` + `bench` are built and unit-tested. Waiting on the 4 rulebook PDFs in `assets/rulebooks/` and `ANTHROPIC_API_KEY`. Details, the run procedure and the recommendation are in [m1-report.md](m1-report.md).
+
+| # | Assumption | Result |
+|---|---|---|
+| 1 | Full-PDF single call answers correctly with usable evidence | pending |
+| 2 | Verdict + step 1 within ~5 s streamed | pending (streaming surfaces verdict/step 1 before the full answer — verified offline) |
+| 3 | Quotes match PDF word coordinates | matcher verified on a generated PDF; model quote fidelity pending |
+| 4 | Figure boxes land roughly right (Azul) | pending |
+| 5 | Cost tolerable, caching makes follow-ups cheap | pending (estimate: ~$0.25 cold, ~$0.03 warm on Opus 5.5) |
+
+Open choice to settle from the run: model-written JSON quotes vs Claude's native PDF citations for evidence (both implemented, `--mode json|citations`).
