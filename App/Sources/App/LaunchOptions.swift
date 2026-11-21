@@ -14,9 +14,11 @@ enum LaunchOptions {
     static func apply(to model: ViewerModel) {
         let d = UserDefaults.standard
         if let p = d.string(forKey: "pdfPath") {
-            model.open(URL(fileURLWithPath: p))
+            // Launch-argument documents (UI tests, screenshots) are never remembered, so test runs
+            // don't decide what the app opens on the next normal launch.
+            model.open(URL(fileURLWithPath: p), remember: false)
         } else if d.bool(forKey: "sample") {
-            model.openSample()
+            model.openSample(remember: false)
         } else if model.rulebook == nil, let last = Library.last {
             model.open(last)
         }

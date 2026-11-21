@@ -59,8 +59,8 @@ final class ViewerModel {
         do { open(try Library.importPDF(from: url)) } catch { openError = "Import failed: \(error.localizedDescription)" }
     }
 
-    func openSample() {
-        do { open(try Library.sampleRulebook()) } catch { openError = "\(error)" }
+    func openSample(remember: Bool = true) {
+        do { open(try Library.sampleRulebook(), remember: remember) } catch { openError = "\(error)" }
     }
 
     // MARK: Asking
