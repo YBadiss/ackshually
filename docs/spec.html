@@ -228,7 +228,9 @@
 }</pre>
 <p><code>box</code> is <code>{x, y, w, h}</code> normalized 0–1, used for figures.</p>
 <h4>Placing a highlight, in order</h4>
-<ol><li>Match <code>quote</code> to the page's words (PDF text layer, or OCR words for scanned/outlined pages) → word-level highlight.</li>
+<ol><li>Match <code>quote</code> to the page's words as a continuous passage (PDF text layer, or OCR words for scanned/outlined pages) → word-level highlight.</li>
+<li><b>Layout-tolerant match:</b> multi-column pages and text over art scramble the text layer's reading order. Find the region where the quote's words cluster by position instead of requiring them in sequence; if that fails, OCR the page with Vision (visual reading order) and retry. <i>M1: all 4 misses were this case, not model misquotes.</i></li>
+<li><b>Repair call</b> (background, cheap model): "this quote wasn't found on p.N; here is the page text; return the exact passage." The highlight appears a moment later.</li>
 <li>Otherwise draw <code>box</code> if it passes sanity checks.</li>
 <li>Otherwise show the whole page and log a miss.</li></ol>
 <p>M1 compares two evidence modes: quotes written by the model (<code>json</code>, supports figure boxes) and Claude's native PDF citations (<code>citations</code>, no boxes). The winner becomes the default.</p>
