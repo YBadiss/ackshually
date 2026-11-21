@@ -17,7 +17,10 @@ struct Judge {
         "additionalProperties": false,
     ]
 
-    func judge(question q: Question, answer a: Answer) async -> Judgement? {
+    /// `pageTexts`: text of the rulebook pages the answer cites plus the expected pages, so the judge
+    /// can check extra claims against the source instead of treating anything outside the expected ruling as invented.
+    func judge(question q: Question, answer a: Answer, pageTexts: [(page: Int, text: String)] = []) async -> Judgement? {
+        let excerpts = pageTexts.map { "--- page \($0.page) ---\n\($0.text.prefix(6000))" }.joined(separator: "\n")
         let branches = a.branches.map { "- if \($0.condition): \($0.verdict)" }.joined(separator: "\n")
         let prompt = """
         You grade a board-game rules assistant. Compare its ruling with the expected ruling.
@@ -25,6 +28,9 @@ struct Judge {
         "partially_correct": right direction but misses or gets wrong an important condition/exception, \
         or only gives the right answer as a branch.
         "incorrect": different outcome, or claims the rulebook says something it does not.
+        Use the RULEBOOK PAGES below to check any extra claims (branches, examples, exceptions). A claim supported \
+        by those pages is fine even if the expected ruling does not mention it. Only treat a claim as invented if \
+        it is absent from or contradicts the pages (PDF text may be scrambled by layout; read generously).
         If the expected ruling says the rulebook does not cover it, a response that clearly says so \
         (confidence not_covered or inferred, flagged as not stated) is correct.
 
@@ -35,6 +41,9 @@ struct Judge {
         Assistant confidence: \(a.confidence.rawValue)
         \(branches.isEmpty ? "" : "Assistant branches:\n\(branches)\n")Assistant reasoning steps:
         \(a.steps.enumerated().map { "\($0.offset + 1). \($0.element.text)" }.joined(separator: "\n"))
+
+        RULEBOOK PAGES (text layer):
+        \(excerpts.isEmpty ? "(none)" : excerpts)
         """
         let body: JSONValue = [
             "model": .string(model),

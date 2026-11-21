@@ -137,7 +137,10 @@ final class Runner {
                 log("  → \(q.id) [\(position)] \(q.question.prefix(70))")
                 var rec = await ask(q: q, game: g, pdf: pdf, title: g.name, history: history, matcher: matcher, position: position)
                 if let a = rec.answer, let judge {
-                    rec.judge = await judge.judge(question: q, answer: a)
+                    let cited = Set(a.steps.flatMap { $0.evidence.map(\.page) } + (q.expectedPages ?? []))
+                    let texts = cited.sorted().filter { $0 >= 1 && $0 <= matcher.pageCount }
+                        .map { (page: $0, text: matcher.document.page(at: $0 - 1)?.string ?? "") }
+                    rec.judge = await judge.judge(question: q, answer: a, pageTexts: texts)
                 }
                 turnsByID[q.id] = history + [Turn(question: q.question, answer: rec.answer, rawAssistantText: rec.rawText ?? "")]
                 log("    \(summary(rec))")
