@@ -6,3 +6,4 @@
 - The API key comes from `ANTHROPIC_API_KEY`; never write it to a file in the repo.
 - Rulebook PDFs are copyrighted and git-ignored. Don't commit them or long excerpts.
 - Default answer config (from M1): `claude-sonnet-5-5`, `json` evidence mode, effort `low`.
+- iOS app (`App/`): small, modular SwiftUI components, one concept per file, grouped by feature. Leaf views take plain values + action closures (no network, Keychain or global state); orchestration lives in a few injected `@Observable` models. All colors, radii, spacing and type styles come from one Theme file (spec §3). Every component has `#Preview`s covering its states, built from shared fixtures so screens can be iterated on without an API key.
