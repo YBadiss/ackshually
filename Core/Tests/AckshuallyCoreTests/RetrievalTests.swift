@@ -138,6 +138,21 @@ final class ExcerptTests: XCTestCase {
         XCTAssertFalse(text.contains("=== Rulebook page 3 ==="))
     }
 
+    func testMisnumberedEvidenceIsCorrectedByQuote() throws {
+        let book = try XCTUnwrap(RulebookIndex(url: Self.url))
+        let sel = book.selection(pages: [2, 4])
+        // Model says page 2 (in the selection) but the quote is on page 4: off-by-one numbering.
+        let e = Evidence(page: 2, quote: "keeps up to 2 unused energy")
+        XCTAssertEqual(book.resolvePage(e, in: sel), 4)
+        // Quote really on the named page: kept.
+        XCTAssertEqual(book.resolvePage(Evidence(page: 2, quote: "Players take turns in clockwise order"), in: sel), 2)
+        // Quote nowhere / empty: keep the (mapped) named page.
+        XCTAssertEqual(book.resolvePage(Evidence(page: 2, quote: "zebra unicorn rainbow"), in: sel), 2)
+        XCTAssertEqual(book.resolvePage(Evidence(page: 1, quote: ""), in: sel), 2)
+        // Citations: excerpt positions.
+        XCTAssertEqual(book.resolvePage(Evidence(page: 2, quote: "keeps up to 2 unused energy"), in: sel, excerptPositions: true), 4)
+    }
+
     func testRetrievalOnFixture() throws {
         let book = try XCTUnwrap(RulebookIndex(url: Self.url))
         let sel = book.select(question: "Does my battery keep unused energy?",

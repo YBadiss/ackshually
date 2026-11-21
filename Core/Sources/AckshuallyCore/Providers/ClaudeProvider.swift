@@ -246,16 +246,24 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
         }
 
         let sel = excerpt.selection
-        func page(_ p: Int) -> Int {
-            // Citations report positions in the attached (excerpt) PDF; json mode is asked for original pages.
-            citations ? (sel.originalPage(excerptPage: p) ?? p) : sel.resolveModelPage(p)
+        let book = r.rulebook ?? rulebook(for: r.pdf)
+        var resolved: [String: Int] = [:]
+        func page(_ e: Evidence) -> Int {
+            // Citations report positions in the attached (excerpt) PDF; json mode is asked for original
+            // pages but can mis-number them, so quotes are checked against the selected pages' text.
+            let key = "\(e.page)|\(e.quote ?? "")"
+            if let p = resolved[key] { return p }
+            let p = book?.resolvePage(e, in: sel, excerptPositions: citations)
+                ?? (citations ? (sel.originalPage(excerptPage: e.page) ?? e.page) : sel.resolveModelPage(e.page))
+            resolved[key] = p
+            return p
         }
         func remap(_ st: Step) -> Step {
-            Step(text: st.text, evidence: st.evidence.map { var x = $0; x.page = page(x.page); return x })
+            Step(text: st.text, evidence: st.evidence.map { var x = $0; x.page = page(x); return x })
         }
         func remap(_ e: AnswerEvent) -> AnswerEvent {
             switch e {
-            case .evidence(let s, let i, var ev): ev.page = page(ev.page); return .evidence(step: s, index: i, ev)
+            case .evidence(let s, let i, var ev): ev.page = page(ev); return .evidence(step: s, index: i, ev)
             case .step(let i, let st): return .step(index: i, remap(st))
             default: return e
             }
@@ -269,7 +277,7 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
             var e = remap(raw)
             if case .completed(var res) = e {
                 if let a = res.answer {
-                    info.remappedPages = a.steps.flatMap(\.evidence).filter { page($0.page) != $0.page }.count
+                    info.remappedPages = a.steps.flatMap(\.evidence).filter { page($0) != $0.page }.count
                     var m = a
                     m.steps = a.steps.map(remap)
                     res.answer = m

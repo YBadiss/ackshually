@@ -16,6 +16,8 @@ public final class RulebookIndex: @unchecked Sendable {
     /// Text set in a larger font than the body (section headings), per page.
     public let headings: [String]
     public let index: PageIndex
+    /// Quote locator on the same document (corrects mis-numbered evidence pages on excerpts).
+    public let matcher: QuoteMatcher
     private let lock = NSLock()
 
     public init(document: PDFDocument) {
@@ -23,6 +25,15 @@ public final class RulebookIndex: @unchecked Sendable {
         pageTexts = (0..<document.pageCount).map { document.page(at: $0)?.string ?? "" }
         headings = Self.headings(document)
         index = PageIndex(pageTexts: pageTexts, headings: headings)
+        matcher = QuoteMatcher(document: document)
+    }
+
+    /// Original page for one piece of excerpt evidence: the page the model named (mapped from an
+    /// excerpt position if needed), unless its quote is not there but is on another selected page.
+    public func resolvePage(_ e: Evidence, in selection: PageSelection, excerptPositions: Bool = false) -> Int {
+        let named = excerptPositions ? (selection.originalPage(excerptPage: e.page) ?? e.page) : selection.resolveModelPage(e.page)
+        guard !selection.isFullDocument, let q = e.quote, !q.isEmpty else { return named }
+        return matcher.locate(quote: q, candidates: [named] + selection.pages) ?? named
     }
 
     /// Runs whose font is ≥ 1.25× the body size (most common size by characters). Cheap: one
