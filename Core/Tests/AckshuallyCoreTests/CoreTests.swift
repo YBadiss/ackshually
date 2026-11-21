@@ -58,7 +58,8 @@ final class IncrementalJSONTests: XCTestCase {
         let v = body.range(of: "\"verdict\":{")!.lowerBound
         let s = body.range(of: "\"steps\":{")!.lowerBound
         XCTAssertTrue(r < v && v < s)
-        XCTAssertTrue(body.contains("\"cache_control\":{\"type\":\"ephemeral\"}"))
+        XCTAssertTrue(body.contains("\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"))
+        XCTAssertFalse(body.contains("\"cache_control\":{\"type\":\"ephemeral\"}"), "all markers share the 1h TTL")
         XCTAssertTrue(body.contains("\"fallbacks\":\"default\""))
         XCTAssertTrue(body.contains("{\"role\":\"assistant\",\"content\":\"{}\"},{\"role\":\"user\",\"content\":\"Q2\"}"))
         // Deterministic → stable cache prefix.
@@ -171,5 +172,13 @@ final class MatcherTests: XCTestCase {
         XCTAssertEqual(QuoteMatcher.check(box: .init(x: 0, y: 0, w: 1, h: 1)), .wholePage)
         let fig = FixtureRulebook.pages[3].figure!.box
         XCTAssertGreaterThan(fig.iou(.init(x: 0.18, y: 0.5, w: 0.7, h: 0.32)), 0.7)
+    }
+
+    func testOneHourCacheWriteCost() {
+        // 10k tokens written with 1h TTL on Sonnet 5.5: 10_000 * $2 * 2 / 1M = $0.04
+        let u = TokenUsage(cacheCreationInputTokens: 10_000, cacheCreation1hInputTokens: 10_000)
+        XCTAssertEqual(ModelPricing.cost(model: "claude-sonnet-5-5", usage: u)!, 0.04, accuracy: 1e-9)
+        let five = TokenUsage(cacheCreationInputTokens: 10_000)
+        XCTAssertEqual(ModelPricing.cost(model: "claude-sonnet-5-5", usage: five)!, 0.025, accuracy: 1e-9)
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// USD per million tokens. First-party API list prices (cached 2026-11). Cache write = 5-minute TTL (1.25x input).
+/// USD per million tokens. First-party API list prices (cached 2026-11). Cache write = 5-minute TTL (1.25x input); 1-hour TTL writes cost 2x input.
 public struct ModelPricing: Sendable {
     public let input: Double
     public let output: Double
@@ -30,6 +30,7 @@ public struct ModelPricing: Sendable {
         return Double(u.inputTokens) * p.input / m
             + Double(u.outputTokens) * p.output / m
             + Double(u.cacheReadInputTokens) * p.cacheRead / m
-            + Double(u.cacheCreationInputTokens) * p.cacheWrite / m
+            + Double(u.cacheCreationInputTokens - u.cacheCreation1hInputTokens) * p.cacheWrite / m
+            + Double(u.cacheCreation1hInputTokens) * p.input * 2 / m
     }
 }

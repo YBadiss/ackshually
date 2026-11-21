@@ -19,19 +19,34 @@ public struct TokenUsage: Codable, Sendable, Equatable {
     public var outputTokens: Int = 0
     public var cacheCreationInputTokens: Int = 0
     public var cacheReadInputTokens: Int = 0
+    /// Part of `cacheCreationInputTokens` written with the 1-hour TTL (billed 2x input instead of 1.25x).
+    public var cacheCreation1hInputTokens: Int = 0
 
-    public init(inputTokens: Int = 0, outputTokens: Int = 0, cacheCreationInputTokens: Int = 0, cacheReadInputTokens: Int = 0) {
+    public init(inputTokens: Int = 0, outputTokens: Int = 0, cacheCreationInputTokens: Int = 0, cacheReadInputTokens: Int = 0,
+                cacheCreation1hInputTokens: Int = 0) {
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
         self.cacheCreationInputTokens = cacheCreationInputTokens
         self.cacheReadInputTokens = cacheReadInputTokens
+        self.cacheCreation1hInputTokens = cacheCreation1hInputTokens
+    }
+
+    // Tolerant decoding: results recorded before the 1-hour field existed still load.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        inputTokens = try c.decodeIfPresent(Int.self, forKey: .inputTokens) ?? 0
+        outputTokens = try c.decodeIfPresent(Int.self, forKey: .outputTokens) ?? 0
+        cacheCreationInputTokens = try c.decodeIfPresent(Int.self, forKey: .cacheCreationInputTokens) ?? 0
+        cacheReadInputTokens = try c.decodeIfPresent(Int.self, forKey: .cacheReadInputTokens) ?? 0
+        cacheCreation1hInputTokens = try c.decodeIfPresent(Int.self, forKey: .cacheCreation1hInputTokens) ?? 0
     }
 
     public static func + (a: TokenUsage, b: TokenUsage) -> TokenUsage {
         TokenUsage(inputTokens: a.inputTokens + b.inputTokens,
                    outputTokens: a.outputTokens + b.outputTokens,
                    cacheCreationInputTokens: a.cacheCreationInputTokens + b.cacheCreationInputTokens,
-                   cacheReadInputTokens: a.cacheReadInputTokens + b.cacheReadInputTokens)
+                   cacheReadInputTokens: a.cacheReadInputTokens + b.cacheReadInputTokens,
+                   cacheCreation1hInputTokens: a.cacheCreation1hInputTokens + b.cacheCreation1hInputTokens)
     }
 }
 

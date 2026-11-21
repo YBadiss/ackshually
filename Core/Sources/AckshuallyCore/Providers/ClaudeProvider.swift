@@ -14,10 +14,14 @@ public struct ClaudeConfig: Sendable {
     public var baseURL: URL
     /// Idle timeout for the HTTP stream.
     public var requestTimeout: TimeInterval
+    /// Prompt-cache lifetime for the rulebook prefix. Mid-game questions are often 5–60 min apart, so the
+    /// default is 1 hour (write costs 2x input instead of 1.25x; pays off from the 3rd question).
+    public var cacheTTL: CacheTTL
 
     public init(apiKey: String, model: String = "claude-sonnet-5-5", effort: String = "low", mode: EvidenceMode = .json,
                 maxTokens: Int = 16000, useSchema: Bool = true, useFallbacks: Bool = true,
-                baseURL: URL = URL(string: "https://api.anthropic.com")!, requestTimeout: TimeInterval = 120) {
+                baseURL: URL = URL(string: "https://api.anthropic.com")!, requestTimeout: TimeInterval = 120,
+                cacheTTL: CacheTTL = .oneHour) {
         self.apiKey = apiKey
         self.model = model
         self.effort = effort
@@ -27,6 +31,20 @@ public struct ClaudeConfig: Sendable {
         self.useFallbacks = useFallbacks
         self.baseURL = baseURL
         self.requestTimeout = requestTimeout
+        self.cacheTTL = cacheTTL
+    }
+}
+
+public enum CacheTTL: String, Sendable {
+    case fiveMinutes = "5m"
+    case oneHour = "1h"
+
+    /// `cache_control` value. Every marker in a request uses the same TTL (longer TTLs must come first).
+    var cacheControl: JSONValue {
+        switch self {
+        case .fiveMinutes: return ["type": "ephemeral"]
+        case .oneHour: return ["type": "ephemeral", "ttl": "1h"]
+        }
     }
 }
 
@@ -61,7 +79,7 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
         var firstContent: [JSONValue] = []
         if let excerpt, let text = excerpt.text {
             firstContent.append(["type": "text", "text": .string(excerpt.note)])
-            firstContent.append(["type": "text", "text": .string(text), "cache_control": ["type": "ephemeral"]])
+            firstContent.append(["type": "text", "text": .string(text), "cache_control": config.cacheTTL.cacheControl])
         } else {
             let data = excerpt?.pdf ?? r.pdf
             var docBlock: [(String, JSONValue)] = [
@@ -70,7 +88,7 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
                 ("title", .string(excerpt == nil ? r.documentTitle : "\(r.documentTitle) (excerpt)")),
             ]
             if citations { docBlock.append(("citations", ["enabled": true])) }
-            docBlock.append(("cache_control", ["type": "ephemeral"]))
+            docBlock.append(("cache_control", config.cacheTTL.cacheControl))
             if let excerpt { firstContent.append(["type": "text", "text": .string(excerpt.note)]) }
             firstContent.append(.object(docBlock))
         }
@@ -97,7 +115,7 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
             ("stream", true),
             ("system", .string(citations ? Prompts.citationsSystem : Prompts.jsonSystem)),
             ("output_config", .object(outputConfig)),
-            ("cache_control", ["type": "ephemeral"]),
+            ("cache_control", config.cacheTTL.cacheControl),
             ("messages", .array(messages)),
         ]
         if useFallbacks { body.append(("fallbacks", "default")) }
@@ -426,5 +444,8 @@ public struct SSEAnswerParser: Sendable {
         if let v = u["output_tokens"] as? Int, v > 0 { usage.outputTokens = v }
         if let v = u["cache_creation_input_tokens"] as? Int, v > 0 { usage.cacheCreationInputTokens = v }
         if let v = u["cache_read_input_tokens"] as? Int, v > 0 { usage.cacheReadInputTokens = v }
+        if let c = u["cache_creation"] as? [String: Any], let v = c["ephemeral_1h_input_tokens"] as? Int, v > 0 {
+            usage.cacheCreation1hInputTokens = v
+        }
     }
 }
