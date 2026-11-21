@@ -1,10 +1,15 @@
 import XCTest
 
-/// Drives the M2 interactions on the sample rulebook with demo answers (no API key).
-/// Set SCREENSHOT_DIR in the test environment to save PNGs (used for docs/m2-screenshots).
+/// Drives the M2 interactions on the sample rulebook with demo answers (no API key), on the
+/// native UI: system sheet with detents, inspector on wide screens, glass ask field.
+/// Set SCREENSHOT_DIR in the test environment to save PNGs.
 @MainActor
 final class ViewerUITests: XCTestCase {
     private let app = XCUIApplication()
+
+    override func tearDown() async throws {
+        XCUIDevice.shared.orientation = .portrait
+    }
 
     private func launch(_ args: [String]) {
         continueAfterFailure = false
@@ -22,44 +27,59 @@ final class ViewerUITests: XCTestCase {
         }
     }
 
+    /// Drags from an element to a point at `y` (fraction of the window height).
+    private func drag(_ e: XCUIElement, toY y: CGFloat) {
+        let start = e.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let end = app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: y))
+        start.press(forDuration: 0.05, thenDragTo: end)
+    }
+
+    private var dots: XCUIElement { app.descendants(matching: .any)["cardDots"].firstMatch }
+    private var verdict: XCUIElement { app.staticTexts["verdict"] }
+
+    private func waitForCard(_ label: String, timeout: TimeInterval = 3) -> Bool {
+        let p = NSPredicate(format: "label == %@", label)
+        return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: p, object: dots)], timeout: timeout) == .completed
+    }
+
     func testStreamingThenStepping() {
         launch(["-ask", "what happens to my energy at end of turn if I have the battery"])
+        // S3 → S4: the ask field becomes "Reading the rulebook…" + Stop; the sheet rises on the first token.
         XCTAssertTrue(app.buttons["stop"].waitForExistence(timeout: 3))
         shot("s3-waiting")
-        // S4: header arrives first, then the verdict and step 1.
-        XCTAssertTrue(app.staticTexts["verdict"].waitForExistence(timeout: 8))
+        XCTAssertTrue(verdict.waitForExistence(timeout: 8))
         shot("s4-streaming")
         let carousel = app.scrollViews["carousel"]
         XCTAssertTrue(carousel.waitForExistence(timeout: 5))
-        sleep(3)
+        XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 6), "Stop turns into Close when done")
         shot("s5-step1")
+        XCTAssertTrue(waitForCard("Card 1 of 4"))
         carousel.swipeLeft()
-        sleep(1)
+        XCTAssertTrue(waitForCard("Card 2 of 4"))
         shot("s6-step2")
         // Tap the right peek → next card.
-        let peek = carousel.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5))
-        peek.tap()
-        sleep(1)
+        carousel.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
+        XCTAssertTrue(waitForCard("Card 3 of 4"))
         shot("s6-step3")
-        XCTAssertTrue(app.staticTexts["3 · Step"].exists || app.staticTexts["4 · Result"].exists)
     }
 
     func testInspectBackToStepAndDoubleTap() {
         launch(["-present", "YES", "-card", "1"])
         let window = app.windows.firstMatch
-        XCTAssertTrue(app.staticTexts["verdict"].waitForExistence(timeout: 5))
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        XCTAssertTrue(waitForCard("Card 2 of 4"))
         sleep(1)
-        // S8: pan the PDF → Back to step pill. (XCUITest press-and-drag reads as text selection; swipe pans.)
+        // S8: the PDF stays pannable under the sheet (background interaction) → Back to Step.
         XCTAssertFalse(app.buttons["backToStep"].exists)
-        window.swipeDown(velocity: .slow)
+        let from = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+        from.press(forDuration: 0.05, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)))
         XCTAssertTrue(app.buttons["backToStep"].waitForExistence(timeout: 2))
         shot("s8-inspect")
         app.buttons["backToStep"].tap()
-        sleep(1)
-        XCTAssertFalse(app.buttons["backToStep"].exists)
+        XCTAssertTrue(app.buttons["backToStep"].waitForNonExistence(timeout: 2))
         // Tapping the PDF never changes steps.
         window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
-        XCTAssertTrue(app.staticTexts["2 · Step"].exists)
+        XCTAssertTrue(waitForCard("Card 2 of 4"))
         // Double-tap: evidence ↔ full page.
         window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).doubleTap()
         sleep(1)
@@ -68,21 +88,32 @@ final class ViewerUITests: XCTestCase {
 
     func testBranchAndDetents() {
         launch(["-present", "YES"])
-        XCTAssertTrue(app.staticTexts["verdict"].waitForExistence(timeout: 5))
-        app.buttons["No Battery? Discard all 3. ›"].tap()
-        XCTAssertTrue(app.buttons["‹ Main answer"].waitForExistence(timeout: 2))
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        // S9: a branch row switches the cards to the branch's own steps; Main Answer returns.
+        app.buttons["branch-0"].tap()
+        XCTAssertTrue(app.buttons["mainAnswer"].waitForExistence(timeout: 2))
+        XCTAssertTrue(waitForCard("Card 1 of 2"))
+        XCTAssertEqual(verdict.label, "Discard all 3.")
         shot("s9-branch")
-        app.buttons["‹ Main answer"].tap()
-        // Drag the sheet down (S7) and back up, then up again (S9).
-        let grab = app.descendants(matching: .any).matching(identifier: "sheetGrabber").firstMatch
-        grab.swipeDown()
+        app.buttons["mainAnswer"].tap()
+        XCTAssertTrue(waitForCard("Card 1 of 4"))
+        // S7: drag the system sheet down to the collapsed detent: the cards go off screen.
+        drag(verdict, toY: 0.98)
         sleep(1)
+        XCTAssertTrue(verdict.isHittable)
+        XCTAssertFalse(app.buttons["branch-0"].isHittable)
         shot("s7-collapsed")
-        grab.swipeUp()
+        // Drag up → medium, again → large (S9: all steps).
+        drag(verdict, toY: 0.55)
         sleep(1)
-        grab.swipeUp()
+        XCTAssertTrue(app.buttons["branch-0"].isHittable)
+        drag(verdict, toY: 0.05)
         sleep(1)
+        XCTAssertTrue(app.buttons["stepRow-2"].isHittable)
         shot("s9-expanded")
+        // Tapping a step row jumps back to that card at medium.
+        app.buttons["stepRow-1"].tap()
+        XCTAssertTrue(waitForCard("Card 2 of 4"))
     }
 
     func testFollowUpKeepsContext() {
@@ -90,12 +121,31 @@ final class ViewerUITests: XCTestCase {
         let carousel = app.scrollViews["carousel"]
         XCTAssertTrue(carousel.waitForExistence(timeout: 5))
         for _ in 0..<3 { carousel.swipeLeft(); usleep(400_000) }
+        XCTAssertTrue(waitForCard("Card 4 of 4"))
         let field = app.textFields["followUpField"]
         XCTAssertTrue(field.waitForExistence(timeout: 3))
         shot("s6-last-card")
         field.tap()
         field.typeText("And with two Batteries?\n")
         XCTAssertTrue(app.buttons["stop"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["verdict"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 12))
+    }
+
+    func testCloseThenAskAgainAndLandscapeInspector() {
+        launch(["-present", "YES"])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        app.buttons["closeAnswer"].tap()
+        XCTAssertTrue(app.textFields["askField"].waitForExistence(timeout: 3))
+        // ⋯ → Show Answer brings it back.
+        // The ⋯ is the system toolbar overflow menu.
+        app.navigationBars.buttons["More"].firstMatch.tap()
+        app.buttons["Show Answer"].tap()
+        XCTAssertTrue(verdict.waitForExistence(timeout: 3))
+        // Phone landscape: the answer moves to the inspector column (no sheet).
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        shot("wide-landscape")
+        XCTAssertTrue(verdict.isHittable)
+        XCTAssertTrue(app.buttons["toggleAnswer"].exists)
     }
 }

@@ -26,9 +26,9 @@ final class ViewerModel {
     private(set) var evidenceIndex = 0
     private(set) var zoom: ZoomMode = .evidence
     private(set) var focus: PDFFocus?
-    /// Set by the PDF view when the user pinches/pans (shows "⤺ Back to step N").
+    /// Set by the PDF view when the user pinches/pans (shows "Back to Step N").
     var userMovedPDF = false
-    /// 👍/👎 per answer, in memory for M2 (S11 storage is M3).
+    /// Thumbs up/down per answer, in memory for M2 (S11 storage is M3).
     private(set) var feedback: [UUID: Bool] = [:]
     private(set) var isDemo = false
 
@@ -132,6 +132,7 @@ final class ViewerModel {
     func showSheet() {
         guard answer != nil else { return }
         sheetVisible = true
+        refocus()
     }
 
     func retry() {
@@ -199,7 +200,10 @@ final class ViewerModel {
 
     var cards: [CardID] {
         guard let a = answer else { return [] }
-        if let b = activeBranch { return [.branch(b), .result] }
+        if let b = activeBranch, let branch = a.branches[safe: b] {
+            if branch.steps.isEmpty { return [.branch(b), .result] }
+            return branch.steps.indices.map { .branchStep(branch: b, step: $0) } + [.result]
+        }
         var c: [CardID] = a.steps.indices.map { .step($0) }
         if a.complete || a.stopped {
             c.append(.result)
@@ -211,9 +215,17 @@ final class ViewerModel {
 
     var currentCard: CardID? { cardID ?? cards.first }
 
-    /// 1-based step number of the card the PDF follows.
+    /// 1-based step number of the card the PDF follows (main answer or branch).
     var focusedStepNumber: Int? {
-        if case .step(let i) = currentCard { return i + 1 }
+        switch currentCard {
+        case .step(let i), .branchStep(_, let i): i + 1
+        default: nil
+        }
+    }
+
+    /// Index of the main-answer step on screen (the expanded step list marks it).
+    var focusedMainStep: Int? {
+        if case .step(let i) = currentCard { return i }
         return nil
     }
 
@@ -241,7 +253,7 @@ final class ViewerModel {
 
     func selectBranch(_ i: Int?) {
         activeBranch = i
-        cardID = i.map { .branch($0) } ?? cards.first
+        cardID = cards.first
     }
 
     private func cardChanged() {
@@ -254,8 +266,12 @@ final class ViewerModel {
     // MARK: PDF focus
 
     var currentStep: Step? {
-        guard case .step(let i) = currentCard, let a = answer, a.steps.indices.contains(i) else { return nil }
-        return a.steps[i]
+        guard let a = answer else { return nil }
+        switch currentCard {
+        case .step(let i): return a.steps[safe: i]
+        case .branchStep(let b, let i): return a.branches[safe: b]?.steps[safe: i]
+        default: return nil
+        }
     }
 
     var currentEvidence: Evidence? {
@@ -331,7 +347,7 @@ final class ViewerModel {
         isDemo = demo
         sheetVisible = true
         if let m = rulebook?.matcher {
-            for e in live.steps.flatMap(\.evidence) { highlights[Self.key(e)] = HighlightPlacer.place(e, matcher: m) }
+            for e in (live.steps + live.branches.flatMap(\.steps)).flatMap(\.evidence) { highlights[Self.key(e)] = HighlightPlacer.place(e, matcher: m) }
         }
         cardID = nil
         rebuildCardsIfNeeded()

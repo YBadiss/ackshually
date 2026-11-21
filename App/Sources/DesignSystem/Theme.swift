@@ -1,8 +1,10 @@
 import SwiftUI
+import UIKit
 
-/// Design tokens (spec §3), injected through the environment: `@Environment(\.theme)`.
-/// Views use only these semantic tokens, so restyling (density, dark mode, alternates) is a
-/// change here. Spacing and sizes are scaled with Dynamic Type by `ThemeProvider`.
+/// Design tokens (spec §3, "native iOS, warm"), injected through the environment:
+/// `@Environment(\.theme)`. Views use only these semantic tokens. Every color is a dynamic
+/// light/dark pair, so the same token also works inside UIKit (PDFKit) and follows the
+/// appearance by itself. Spacing and sizes are scaled with Dynamic Type by `ThemeProvider`.
 struct Theme: Sendable {
     var colors: Colors
     var radius: Radius
@@ -12,32 +14,43 @@ struct Theme: Sendable {
     var layout: Layout
 
     struct Colors: Sendable {
-        var background: Color      // app chrome, nav, around the PDF
-        var paper: Color
-        var sheet: Color           // answer sheet: a shade darker than the page
-        var card: Color            // step cards, rows, fields
-        var ink: Color
-        var muted: Color
-        var line: Color            // borders, dividers, inactive dots
-        var accent: Color          // primary actions, active dot, warnings
-        var accentInk: Color
+        /// App tint (brick red): buttons, links, selection.
+        var tint: Color
+        /// Navigation bar and the canvas around the PDF pages.
+        var bar: Color
+        /// Answer sheet / inspector background (warm, a shade off the page).
+        var sheet: Color
+        /// Grouped backgrounds outside the sheet (empty state, settings).
+        var groupedBackground: Color
+        /// Step cards and grouped rows on the sheet.
+        var card: Color
+        /// Inline text field fill on the sheet (follow-up).
+        var fieldFill: Color
+        var label: Color
+        var secondaryLabel: Color
+        var tertiaryLabel: Color
+        var separator: Color
+        /// Proof line symbol per confidence.
         var stated: Color
-        var statedBG: Color
+        var inferred: Color
+        var notCovered: Color
+        /// Web findings that disagree (S10).
         var warning: Color
-        var warningBG: Color
-        var shadow: Color
-        var highlightFill: Color   // evidence on the PDF
+        var dot: Color
+        var dotActive: Color
+        /// Warm highlighter on the PDF.
+        var highlightFill: Color
         var highlightOutline: Color
         var figureFill: Color
     }
 
     struct Radius: Sendable {
-        var sheet: CGFloat = 16
-        var card: CGFloat = 12
-        var row: CGFloat = 10
-        var button: CGFloat = 9
-        var label: CGFloat = 6
-        var field: CGFloat = 22
+        /// Step cards (App Store / Music shelf cards).
+        var card: CGFloat = 18
+        /// Inline field on the sheet.
+        var field: CGFloat = 20
+        /// Grouped sections (inset-grouped rows, like Settings).
+        var group: CGFloat = 22
     }
 
     struct Spacing: Sendable {
@@ -55,65 +68,56 @@ struct Theme: Sendable {
     }
 
     struct Sizes: Sendable {
-        var micButton: CGFloat = 32
-        var micButtonCompact: CGFloat = 26
-        var cardMinHeight: CGFloat = 88
-        var grabber = CGSize(width: 36, height: 5)
-        var dot: CGFloat = 6
-        var activeDot: CGFloat = 14
+        /// HIG minimum tap area.
+        var minTapTarget: CGFloat = 44
+        var cardMinHeight: CGFloat = 92
+        var dot: CGFloat = 7
         var waveHeight: CGFloat = 18
         var waveBar: CGFloat = 2.5
-        var hairline: CGFloat = 1
-        var focusRing: CGFloat = 1.5
         var wordOutline: CGFloat = 1
         var figureOutline: CGFloat = 3
-        var skeletonLine: CGFloat = 10
-        var skeletonTitle: CGFloat = 16
 
         func scaled(_ f: CGFloat) -> Sizes {
             var s = self
-            s.micButton *= f; s.micButtonCompact *= f; s.cardMinHeight *= f
-            s.dot *= min(f, 1.4); s.activeDot *= min(f, 1.4); s.waveHeight *= f
-            s.skeletonLine *= f; s.skeletonTitle *= f
+            s.cardMinHeight *= f
+            s.dot *= min(f, 1.4)
+            s.waveHeight *= f
             return s
         }
     }
 
-    /// Text styles only (Dynamic Type).
+    /// Text styles only (Dynamic Type). Hierarchy comes from size and weight, not decoration.
     struct Fonts: Sendable {
-        var verdict = Font.title2.weight(.bold)
-        var verdictTracking: CGFloat = -0.4
-        var restated = Font.footnote
-        var question = Font.subheadline.weight(.semibold)
-        var body = Font.subheadline
-        var bodyStrong = Font.subheadline.weight(.medium)
-        var cardTitle = Font.footnote.weight(.bold)
-        var meta = Font.footnote
-        var chip = Font.caption.weight(.semibold)
-        var section = Font.caption.weight(.semibold)
-        var pill = Font.footnote.weight(.semibold)
+        var verdict = Font.title3.weight(.bold)
+        var proof = Font.subheadline
+        var question = Font.subheadline
+        var cardCaption = Font.footnote.weight(.semibold)
+        var cardBody = Font.callout
+        var cardStrong = Font.callout.weight(.semibold)
+        var row = Font.body
+        var rowValue = Font.subheadline
+        var footnote = Font.footnote
+        var sectionHeader = Font.footnote.weight(.semibold)
         var field = Font.body
-        var fieldCompact = Font.subheadline
-        var title = Font.title2.weight(.bold)
-        var emoji = Font.title3
-        var icon = Font.subheadline.weight(.bold)
+        var waiting = Font.subheadline.weight(.semibold)
+        var feedback = Font.title3
     }
 
     /// Relative layout rules (fractions, thresholds), never absolute frames.
     struct Layout: Sendable {
-        /// Each neighbour card peeks this fraction of the carousel width (card ≈ 84%).
+        /// Each neighbour card peeks this fraction of the carousel width.
         var cardPeekFraction: CGFloat = 0.08
-        /// Medium detent: content-sized, capped at this fraction of the available height.
-        var sheetMediumMaxFraction: CGFloat = 0.62
-        /// Expanded detent: this fraction of the available height.
-        var sheetExpandedFraction: CGFloat = 0.94
-        /// Side-by-side when the viewer is at least this wide and wider than tall…
+        /// Medium detent: content-sized, capped at this fraction of the window height.
+        var sheetMediumMaxFraction: CGFloat = 0.7
+        /// Collapsed detent never taller than this fraction (AX sizes).
+        var sheetCollapsedMaxFraction: CGFloat = 0.3
+        /// Side-by-side (inspector) when the viewer is at least this wide and wider than tall…
         var sideBySideMinWidth: CGFloat = 640
-        /// …with the answer panel taking this fraction of the width, within these bounds.
-        var sidePanelFraction: CGFloat = 0.38
-        var sidePanelWidthRange: ClosedRange<CGFloat> = 320...460
-        /// Readable width for the bottom sheet on very wide-but-short windows.
-        var sheetMaxWidth: CGFloat = 720
+        /// …with the inspector column in this range, ideally this fraction of the width.
+        var inspectorFraction: CGFloat = 0.38
+        var inspectorWidthRange: ClosedRange<CGFloat> = 320...460
+        /// Readable width for the floating ask field on wide windows.
+        var askFieldMaxWidth: CGFloat = 640
         var holdToTalkDelay: Duration = .milliseconds(280)
         var slideToCancelFraction: CGFloat = 0.18
         var pdfMoveDuration: TimeInterval = 0.35
@@ -121,36 +125,38 @@ struct Theme: Sendable {
         var maxHeaderTypeSize: DynamicTypeSize = .accessibility2
         /// Evidence zoom: never more than this × the page-width scale.
         var maxEvidenceZoom: CGFloat = 3.2
+        /// Wait this long after the sheet stops moving before re-centering the PDF.
+        var sheetSettleDelay: Duration = .milliseconds(160)
     }
 
     var sheetAnimation: Animation { .snappy(duration: 0.3) }
 }
 
 extension Theme {
+    /// Warm but restrained: brick tint, warm bars / sheet / grouped backgrounds; text and
+    /// separators are the system's own so hierarchy reads as iOS.
     static let warm = Theme(
-        colors: Colors(background: Color(hex: 0xEFE4D0), paper: Color(hex: 0xFBF5E9), sheet: Color(hex: 0xF4E9D5),
-                       card: Color(hex: 0xFFFAF0), ink: Color(hex: 0x33261B), muted: Color(hex: 0x8A735C),
-                       line: Color(hex: 0xD8C6A8), accent: Color(hex: 0xA2412B), accentInk: Color(hex: 0xFFF7EC),
-                       stated: Color(hex: 0x3F6B2A), statedBG: Color(hex: 0xE3EFD9),
-                       warning: Color(hex: 0xA2412B), warningBG: Color(hex: 0xA2412B).opacity(0.1),
-                       shadow: .black.opacity(0.16),
-                       highlightFill: Color(hex: 0xF2B134).opacity(0.42), highlightOutline: Color(hex: 0xD39320),
-                       figureFill: Color(hex: 0xF2B134).opacity(0.12)),
+        colors: Colors(
+            tint: Color(light: 0xA2412B, dark: 0xE2775C),
+            bar: Color(light: 0xF3ECE1, dark: 0x1C1916),
+            sheet: Color(light: 0xF6EFE4, dark: 0x221E1A),
+            groupedBackground: Color(light: 0xF3ECE1, dark: 0x14110F),
+            card: Color(light: 0xFFFDF9, dark: 0x2F2A25),
+            fieldFill: Color(light: 0xEDE3D4, dark: 0x3A342D),
+            label: Color(uiColor: .label),
+            secondaryLabel: Color(uiColor: .secondaryLabel),
+            tertiaryLabel: Color(uiColor: .tertiaryLabel),
+            separator: Color(uiColor: .separator),
+            stated: Color(uiColor: .systemGreen),
+            inferred: Color(uiColor: .systemOrange),
+            notCovered: Color(uiColor: .secondaryLabel),
+            warning: Color(light: 0xA2412B, dark: 0xE2775C),
+            dot: Color(uiColor: .tertiaryLabel),
+            dotActive: Color(uiColor: .label),
+            highlightFill: Color(light: 0xF2B134, dark: 0xF2B134, alpha: 0.42),
+            highlightOutline: Color(light: 0xD39320, dark: 0xD39320),
+            figureFill: Color(light: 0xF2B134, dark: 0xF2B134, alpha: 0.12)),
         radius: Radius(), spacing: Spacing(), size: Sizes(), font: Fonts(), layout: Layout())
-
-    /// Provisional: dark mode isn't designed yet (spec §8). Same hues, dimmed chrome.
-    static let warmDark: Theme = {
-        var t = warm
-        t.colors = Colors(background: Color(hex: 0x1F1A15), paper: Color(hex: 0x2A241E), sheet: Color(hex: 0x29221B),
-                          card: Color(hex: 0x372E25), ink: Color(hex: 0xF1E6D4), muted: Color(hex: 0xB39D84),
-                          line: Color(hex: 0x4D4134), accent: Color(hex: 0xD0674D), accentInk: Color(hex: 0x1F1A15),
-                          stated: Color(hex: 0xA8D08D), statedBG: Color(hex: 0x2F3E26),
-                          warning: Color(hex: 0xE07A5F), warningBG: Color(hex: 0xE07A5F).opacity(0.16),
-                          shadow: .black.opacity(0.5),
-                          highlightFill: Color(hex: 0xF2B134).opacity(0.42), highlightOutline: Color(hex: 0xD39320),
-                          figureFill: Color(hex: 0xF2B134).opacity(0.12))
-        return t
-    }()
 
     /// Spacing and control sizes grow with text (clamped so AX sizes stay usable).
     func scaled(for size: DynamicTypeSize) -> Theme {
@@ -168,7 +174,17 @@ extension Theme {
 }
 
 extension Color {
-    init(hex: UInt32) {
-        self.init(red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255, blue: Double(hex & 0xFF) / 255)
+    /// A dynamic color that resolves per appearance (also inside UIKit views).
+    init(light: UInt32, dark: UInt32, alpha: CGFloat = 1) {
+        self.init(uiColor: UIColor { traits in
+            UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light, alpha: alpha)
+        })
+    }
+}
+
+extension UIColor {
+    convenience init(hex: UInt32, alpha: CGFloat = 1) {
+        self.init(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
+                  blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
     }
 }

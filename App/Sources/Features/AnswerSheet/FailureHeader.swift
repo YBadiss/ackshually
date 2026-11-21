@@ -1,30 +1,30 @@
 import SwiftUI
 
-/// Error state of the header: plain message, Try again, Close.
+/// Error state of the header: what happened and Try Again (the header's close button closes).
 struct FailureHeader: View {
-    var question: String
     var message: String
     var onRetry: () -> Void
-    var onClose: () -> Void
     @Environment(\.theme) private var theme
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.spacing.s) {
-            Text(question).font(theme.font.restated).foregroundStyle(theme.colors.muted)
-            Text("Hmm, that didn't work.").font(theme.font.question).foregroundStyle(theme.colors.ink)
-            Text(message).font(theme.font.body).foregroundStyle(theme.colors.muted)
+            Label("That didn't work", systemImage: "exclamationmark.triangle.fill")
+                .font(theme.font.verdict)
+                .foregroundStyle(theme.colors.label)
+            Text(message)
+                .font(theme.font.proof)
+                .foregroundStyle(theme.colors.secondaryLabel)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: theme.spacing.m) {
-                PrimaryButton(title: "Try again", action: onRetry)
-                OutlineButton(title: "Close", action: onClose)
-            }
-            .padding(.top, theme.spacing.xs).padding(.bottom, theme.spacing.l)
+            Button("Try Again", action: onRetry)
+                .buttonStyle(.borderedProminent)
+                .padding(.top, theme.spacing.xs)
         }
     }
 }
 
 #Preview {
-    FailureHeader(question: "Can I keep energy?", message: "The API key was rejected. Check it in Settings.", onRetry: {}, onClose: {})
+    FailureHeader(message: "The API key was rejected. Check it in Settings.", onRetry: {})
         .padding()
+        .themeBackground(\.sheet)
         .themed()
 }

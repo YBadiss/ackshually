@@ -9,22 +9,10 @@ struct HoldToTalkPanel: View {
     var body: some View {
         Text(transcript.isEmpty ? "Listening…" : "“\(transcript)”")
             .font(theme.font.field)
-            .foregroundStyle(transcript.isEmpty ? theme.colors.muted : theme.colors.ink)
+            .foregroundStyle(transcript.isEmpty ? theme.colors.secondaryLabel : theme.colors.label)
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.updatesFrequently)
-    }
-}
-
-/// "‹ slide to cancel" / "Release to cancel".
-struct SlideToCancelHint: View {
-    var cancelArmed: Bool
-    @Environment(\.theme) private var theme
-
-    var body: some View {
-        Text(cancelArmed ? "Release to cancel" : "‹ slide to cancel")
-            .font(theme.font.body)
-            .foregroundStyle(cancelArmed ? theme.colors.accent : theme.colors.muted)
     }
 }
 

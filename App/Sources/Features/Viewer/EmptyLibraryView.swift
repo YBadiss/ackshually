@@ -8,23 +8,23 @@ struct EmptyLibraryView: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: theme.spacing.l) {
-                Text("ackshually").font(.largeTitle.weight(.bold)).tracking(-0.8).foregroundStyle(theme.colors.ink)
-                Text("Well, according to p.14…").font(theme.font.body).foregroundStyle(theme.colors.muted)
-                PrimaryButton(title: "Open a rulebook PDF", action: onOpen)
-                    .padding(.top, theme.spacing.xl)
-                    .accessibilityIdentifier("openPDF")
-                OutlineButton(title: "Try the sample rulebook", action: onSample)
-                    .accessibilityIdentifier("openSample")
+        ContentUnavailableView {
+            Label("No Rulebook Yet", systemImage: "book.pages")
+        } description: {
+            VStack(spacing: theme.spacing.s) {
+                Text("Open the rulebook PDF for your game, then ask. Well, according to p.14…")
                 if let error {
-                    Text(error).font(theme.font.meta).foregroundStyle(theme.colors.warning)
+                    Text(error).foregroundStyle(theme.colors.warning)
                 }
             }
-            .padding(theme.spacing.xxl)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        } actions: {
+            Button("Open a Rulebook PDF", action: onOpen)
+                .buttonStyle(.glassProminent)
+                .accessibilityIdentifier("openPDF")
+            Button("Try the Sample Rulebook", action: onSample)
+                .accessibilityIdentifier("openSample")
         }
-        .themeBackground(\.background)
+        .themeBackground(\.groupedBackground)
     }
 }
 
@@ -34,3 +34,4 @@ struct EmptyLibraryView: View {
         .themed()
         .dynamicTypeSize(.accessibility5)
 }
+#Preview("Dark") { EmptyLibraryView(onOpen: {}, onSample: {}).themed().preferredColorScheme(.dark) }

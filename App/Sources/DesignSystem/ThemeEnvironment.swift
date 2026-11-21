@@ -4,16 +4,16 @@ extension EnvironmentValues {
     @Entry var theme: Theme = .warm
 }
 
-/// Picks the palette for the color scheme and scales tokens for the Dynamic Type size.
-/// Apply once at the root (and in previews); everything below reads `@Environment(\.theme)`.
+/// Scales the tokens for the Dynamic Type size (colors are dynamic and follow dark mode on
+/// their own). Apply once at the root (and in previews); everything below reads `@Environment(\.theme)`.
 struct ThemeProvider: ViewModifier {
-    var light: Theme = .warm
-    var dark: Theme = .warmDark
-    @Environment(\.colorScheme) private var scheme
+    var base: Theme = .warm
     @Environment(\.dynamicTypeSize) private var typeSize
 
     func body(content: Content) -> some View {
-        content.environment(\.theme, (scheme == .dark ? dark : light).scaled(for: typeSize))
+        content
+            .environment(\.theme, base.scaled(for: typeSize))
+            .tint(base.colors.tint)
     }
 }
 
@@ -21,7 +21,7 @@ extension View {
     func themed() -> some View { modifier(ThemeProvider()) }
 }
 
-/// Background from a theme color (resolved from the environment, so it follows dark mode).
+/// Background from a theme color (resolved from the environment).
 struct ThemeBackground: ViewModifier {
     var color: KeyPath<Theme.Colors, Color>
     @Environment(\.theme) private var theme
