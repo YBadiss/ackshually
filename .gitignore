@@ -1,0 +1,5 @@
+.build/
+*.xcodeproj/xcuserdata/
+.swiftpm/
+bench/out/
+assets/rulebooks/*.pdf
