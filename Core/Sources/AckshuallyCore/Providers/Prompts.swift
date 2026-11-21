@@ -42,7 +42,7 @@ enum Prompts {
     normalized to 0–1 with the origin at the top-left of the page. Otherwise box is null.
     - needs_web is true when confidence is not "stated".
     Output only the JSON object, keys in this order: restated_question, verdict, confidence, \
-    branches, assumptions, steps, needs_web.
+    steps, branches, assumptions, needs_web.
     """
 
     static let citationsSystem = common + """
@@ -95,12 +95,12 @@ enum Prompts {
                 "restated_question": ["type": "string"],
                 "verdict": ["type": "string"],
                 "confidence": ["type": "string", "enum": ["stated", "inferred", "not_covered"]],
+                "steps": ["type": "array", "items": step],
                 "branches": ["type": "array", "items": branch],
                 "assumptions": ["type": "array", "items": ["type": "string"]],
-                "steps": ["type": "array", "items": step],
                 "needs_web": ["type": "boolean"],
             ],
-            "required": ["restated_question", "verdict", "confidence", "branches", "assumptions", "steps", "needs_web"],
+            "required": ["restated_question", "verdict", "confidence", "steps", "branches", "assumptions", "needs_web"],
             "additionalProperties": false,
         ]
     }()

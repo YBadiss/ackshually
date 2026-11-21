@@ -223,17 +223,11 @@
 
 <!-- ============================================================ -->
 <h2 id="contract">4 · Answer contract</h2>
-<p>What the model returns. <b>Field order is streaming order</b>: it is what lets S4 show the restated question, then the verdict, then step 1.</p>
+<p>What the model returns. <b>Field order is streaming order</b>: it is what lets S4 show the restated question, then the verdict, then step 1. Branches and assumptions come <i>after</i> the main steps so they never delay step 1.</p>
 <pre>{
   "restated_question": "You have 3 energy and a Battery at end of turn.",
   "verdict": "Keep 2 energy, discard 1.",
   "confidence": "stated | inferred | not_covered",
-  "branches": [{
-    "condition": "Without a Battery",
-    "verdict": "Discard all 3.",
-    "steps": [{ "title": "General rule", "text": "…", "evidence": [ … ] }]
-  }],
-  "assumptions": ["The Battery is already in play."],
   "steps": [
     {
       "title": "General rule",
@@ -243,6 +237,12 @@
       ]
     }
   ],
+  "branches": [{
+    "condition": "Without a Battery",
+    "verdict": "Discard all 3.",
+    "steps": [{ "title": "General rule", "text": "…", "evidence": [ … ] }]
+  }],
+  "assumptions": ["The Battery is already in play."],
   "needs_web": false
 }</pre>
 <p><code>box</code> is <code>{x, y, w, h}</code> normalized 0–1, used for figures. <code>title</code> (2–4 words) is the card caption. A branch carries its own <code>steps</code> (usually one) so the cards can switch to it (S9). Both are required by the structured-output schema and optional when decoding, so older answers still load (no title → "Step N"; a branch without steps → one card).</p>
