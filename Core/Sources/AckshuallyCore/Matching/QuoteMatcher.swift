@@ -46,6 +46,17 @@ public struct QuoteMatch: Sendable, Codable {
     /// Highlight rects, normalized 0–1, origin top-left (one per line).
     public var rects: [NormalizedBox]
     public var matchedText: String
+    /// How well the character geometry was located (`GlyphLocator`, 0–1); nil = not located,
+    /// `rects` is empty and the app shows the whole page.
+    public var geometryScore: Double?
+
+    public init(page: Int, errorRate: Double, rects: [NormalizedBox], matchedText: String, geometryScore: Double? = nil) {
+        self.page = page
+        self.errorRate = errorRate
+        self.rects = rects
+        self.matchedText = matchedText
+        self.geometryScore = geometryScore
+    }
 }
 
 public enum MatchOutcome: Sendable, Codable {
@@ -154,13 +165,14 @@ public final class QuoteMatcher: @unchecked Sendable {
         let ns = text.originalRange(range)
         var rects: [NormalizedBox] = []
         var matched = ""
+        var score: Double?
         if let p = document.page(at: page - 1) {
             let bounds = p.bounds(for: .cropBox)
-            if let sel = p.selection(for: ns) {
-                matched = sel.string ?? ""
-                for line in sel.selectionsByLine() {
-                    let r = line.bounds(for: p)
-                    guard r.width > 0, r.height > 0 else { continue }
+            matched = p.selection(for: ns)?.string ?? (text.original as NSString).substring(with: ns)
+            // Not `selection(for:).selectionsByLine()`: its geometry is misindexed (see GlyphLocator).
+            if let located = GlyphLocator.locate(range: ns, in: text.original as NSString, bounds: { p.characterBounds(at: $0) }) {
+                score = located.score
+                for r in located.rects {
                     rects.append(NormalizedBox(
                         x: (r.minX - bounds.minX) / bounds.width,
                         y: 1 - (r.maxY - bounds.minY) / bounds.height,
@@ -169,7 +181,7 @@ public final class QuoteMatcher: @unchecked Sendable {
                 }
             }
         }
-        return QuoteMatch(page: page, errorRate: err, rects: rects, matchedText: matched)
+        return QuoteMatch(page: page, errorRate: err, rects: rects, matchedText: matched, geometryScore: score)
     }
 
     /// Approximate substring match (Sellers): min edit distance of `q` against any substring of `t`.

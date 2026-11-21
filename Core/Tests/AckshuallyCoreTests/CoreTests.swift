@@ -177,6 +177,20 @@ final class MatcherTests: XCTestCase {
         XCTAssertLessThan(q.rects[0].y, 0.5)
     }
 
+    /// Regression (Azul p.3, owner's screenshots): boxes must sit on the quote, not several words
+    /// later. The fixture's text starts at x = 72 pt of 612, so a quote that starts a paragraph
+    /// starts at the left margin, and a one-line quote gets one rect.
+    func testRectsSitOnTheQuote() {
+        let m = matcher.match(quote: "Energy may not be traded between players", page: 3)
+        guard case .matched(let q) = m else { return XCTFail(m.label) }
+        XCTAssertEqual(q.rects.count, 1)
+        XCTAssertEqual(q.rects[0].x, 72.0 / 612, accuracy: 0.01)
+        XCTAssertGreaterThan(q.geometryScore ?? 0, GlyphLocator.minScore)
+        let later = matcher.match(quote: "Scoring: every 3 energy spent on a contract", page: 3).match
+        XCTAssertEqual(later?.rects.first?.x ?? 0, 72.0 / 612, accuracy: 0.01)
+        XCTAssertGreaterThan(later?.rects.first?.y ?? 0, q.rects[0].y)
+    }
+
     func testWhitespacePunctuationCaseAndLineBreaks() {
         // Spans a line break in the narrow column; different case/punctuation/quotes.
         let m = matcher.match(quote: "a player who owns a Battery — keeps up to 2 unused energy, instead of discarding them", page: 4)
