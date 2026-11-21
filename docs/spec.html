@@ -286,6 +286,8 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>Default model Sonnet 5.5, model-written quotes, effort low</td><td>M1: near-Opus accuracy, fastest, cleanest highlights, half the cost; native citations lost on every metric</td></tr>
   <tr><td>2026-11-21</td><td>Next speed lever is sending fewer pages, not a different model</td><td>First token ~4–5 s on a full rulebook for every model vs ~1.5 s on a 4-page PDF</td></tr>
   <tr><td>2026-11-21</td><td>Bench uses the owner's editions: Power Grid <i>Recharged</i>, Root <i>Learning to Play</i></td><td>Those are the PDFs at the table; answers verified against them</td></tr>
+  <tr><td>2026-11-21</td><td>Wide screens (iPad, Mac, phone landscape) show the answer in a side panel beside the PDF instead of the bottom sheet</td><td>A bottom sheet covers most of a short landscape screen; one container decides (see <a href="m2-notes.md">m2-notes</a>)</td></tr>
+  <tr><td>2026-11-21</td><td>Answer sheet is a custom overlay with three detents, not a system <code>.sheet</code></td><td>The PDF stays interactive underneath and the app knows exactly how much page is covered, so evidence centers above the sheet</td></tr>
 </table></div>
 
 <!-- ============================================================ -->
