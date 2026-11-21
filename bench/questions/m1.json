@@ -1,139 +1,248 @@
 {
-  "description": "M1 assumption-check set: 23 questions across Power Grid, Root (Law of Root), Azul, Dune: Imperium. Wording is ours (some deliberately sloppy, like at the table); topics are common disputes, with the place we saw the topic raised in `source`. expected_pages are physical PDF pages and are left empty (= TODO) until the owner's PDFs are in assets/rulebooks/ — fill them in, then re-run. Verdicts follow the base-game rules as we know them; any marked 'verify' in notes should be checked against the PDF.",
+  "description": "M1 assumption-check set: 28 questions across Power Grid Recharged, Root (Learning to Play), Azul, Dune: Imperium. Topics are common disputes; wording is ours, some deliberately sloppy like at the table (tag 'sloppy'). expected_pages are physical PDF pages (1-based). All answers verified against the owner's PDFs on 2026-11-21.",
   "games": [
     {
       "id": "powergrid",
-      "name": "Power Grid",
+      "name": "Power Grid Recharged",
       "pdf": "assets/rulebooks/powergrid.pdf",
-      "pdf_match": ["power"],
+      "pdf_match": [
+        "power"
+      ],
       "questions": [
         {
           "id": "pg-01",
           "question": "My hybrid plant burns 2 coal or oil. How much can I store on it, and can I mix coal and oil on it?",
           "expected_verdict": "Up to twice its requirement (4 resources) in any mix of coal and oil.",
           "expected_confidence": "stated",
-          "tags": ["exception", "hybrid"],
+          "tags": [
+            "exception",
+            "hybrid"
+          ],
           "source": "Power Grid FAQ topic (BGG wiki https://rpggeek.com/wiki/page/Power_Grid_FAQ; page blocked to fetch, wording ours)",
-          "expected_pages": [],
-          "notes": "TODO: page + quote (storage rule 'up to twice' and hybrid paragraph)."
+          "expected_pages": [
+            3,
+            5
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "may store at most twice as many resource tokens as it has resource symbols"
         },
         {
           "id": "pg-02",
           "question": "I already have 3 plants and just won a 4th in the auction. What happens to my plants and the coal sitting on them?",
-          "expected_verdict": "Discard one of your plants (max 3, except 4 in a 2-player game). Resources on the discarded plant may be moved to your remaining plants if they can hold them; otherwise they are lost to the supply.",
+          "expected_verdict": "Scrap one of your other plants (never the one you just bought): you may only own 3 plants at any time. Resources on the scrapped plant may move to your remaining plants if they can store them; otherwise they go back to the supply, not the resource market.",
           "expected_confidence": "stated",
-          "tags": ["exception", "approximate-wording"],
+          "tags": [
+            "exception",
+            "approximate-wording"
+          ],
           "source": "Common dispute (rules summaries surfaced by web search, e.g. https://gamerules.com/rules/power-grid/); wording ours",
-          "expected_pages": [],
-          "notes": "TODO: page + quote. Verify 2-player limit wording in this edition."
+          "expected_pages": [
+            5
+          ],
+          "notes": "Fixed for Recharged: no 2-player 4-plant exception (2p uses the Trust variant); leftover resources go to the supply, not the market.",
+          "expected_quote": "each player may own only 3 power plants at any time"
         },
         {
           "id": "pg-03",
           "question": "First round — can I just pass on the auction and not buy a plant?",
           "expected_verdict": "No. In the first round every player must buy a power plant.",
           "expected_confidence": "stated",
-          "tags": ["special-case", "first-round"],
+          "tags": [
+            "special-case",
+            "first-round"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote (first-round special rule)."
+          "expected_pages": [
+            4
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "During the first round of the game each player must buy 1 power plant"
         },
         {
           "id": "pg-04",
           "question": "Early game: can I build a house in Berlin if my friend already has one there?",
-          "expected_verdict": "Not in Step 1: each city holds one house in Step 1. A second player can build there from Step 2 (cost 15), a third from Step 3 (cost 20). A player can never have two houses in the same city.",
+          "expected_verdict": "Not in Step 1: each city can only be connected by one player. In Step 2 two players can connect to a city, in Step 3 three (spaces cost 10, 15, 20 Elektro). A player may never connect to the same city twice.",
           "expected_confidence": "stated",
-          "tags": ["steps", "approximate-wording"],
+          "tags": [
+            "steps",
+            "approximate-wording"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            6
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "In Step 1 of the game, each city can only be connected by one player"
         },
         {
           "id": "pg-05",
           "question": "Game over and two of us powered the same number of cities. Who wins?",
           "expected_verdict": "The tied player with the most Elektro (money) left wins.",
           "expected_confidence": "stated",
-          "tags": ["endgame", "tie-break"],
+          "tags": [
+            "endgame",
+            "tie-break"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            8
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "If there is a tie, the player with the most remaining money wins"
         },
         {
           "id": "pg-06",
           "question": "and if we also have exactly the same money?",
           "follows": "pg-05",
-          "expected_verdict": "Then the player with the most cities (houses) in their network wins.",
-          "expected_confidence": "stated",
-          "tags": ["follow-up", "endgame", "tie-break"],
+          "expected_verdict": "Not covered: the rulebook only breaks a tie by most remaining money and gives no further tie-breaker. Treat it as a shared win or a house rule.",
+          "expected_confidence": "not_covered",
+          "tags": [
+            "follow-up",
+            "endgame",
+            "tie-break"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote. Verify second tie-breaker in this edition."
+          "expected_pages": [
+            8
+          ],
+          "notes": "Fixed for Recharged: the rulebook has only one tie-breaker. Tests a follow-up that ends in Not covered.",
+          "expected_quote": "If there is a tie, the player with the most remaining money wins"
         },
         {
           "id": "pg-07",
           "question": "Can I lend 20 Elektro to another player and have them pay me back next round?",
           "expected_verdict": "Not covered by the rulebook (no rules for loans or trading money between players); treat as a house-rule decision.",
           "expected_confidence": "not_covered",
-          "tags": ["unanswerable"],
+          "tags": [
+            "unanswerable"
+          ],
           "source": "own",
-          "expected_pages": []
+          "expected_pages": [],
+          "notes": "Verified: no rules about loans or giving money between players."
+        },
+        {
+          "id": "pg-08",
+          "question": "do i gotta put a house down round one or can i chill and start later",
+          "expected_verdict": "You can wait: players do not have to choose their starting cities in the first round and may start their network in a later round.",
+          "expected_confidence": "stated",
+          "tags": [
+            "sloppy"
+          ],
+          "source": "own",
+          "expected_pages": [
+            6
+          ],
+          "expected_quote": "The players do not have to choose their starting cities in the first round",
+          "notes": "Verified against owner PDF 2026-11-21."
         }
       ]
     },
     {
       "id": "root",
-      "name": "Root — The Law of Root",
-      "pdf": "assets/rulebooks/root-law.pdf",
-      "pdf_match": ["law"],
+      "name": "Root — Learning to Play",
+      "pdf": "assets/rulebooks/root-learning.pdf",
+      "pdf_match": [
+        "root"
+      ],
       "questions": [
         {
           "id": "rt-01",
           "question": "I'm the attacker. Can I play an ambush card?",
           "expected_verdict": "No. Only the defender may play an ambush card (matching the battle clearing, or a bird). The attacker may only play a matching ambush card to cancel the defender's ambush.",
           "expected_confidence": "stated",
-          "tags": ["exception", "battle"],
+          "tags": [
+            "exception",
+            "battle"
+          ],
           "source": "Ambush questions on community Q&A surfaced by web search (Law excerpts, Steam discussion https://steamcommunity.com/app/965580/discussions/0/2952628008343000369); wording ours",
-          "expected_pages": [],
-          "notes": "TODO: page + quote (Battle > Ambush)."
+          "expected_pages": [
+            9
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "the defender may play an ambush card whose suit matches the clearing of battle"
         },
         {
           "id": "rt-02",
           "question": "The cats and I both have 2 pieces in a clearing. Who rules it?",
           "expected_verdict": "Nobody rules it when tied — except the Eyrie, who rule tied clearings where they have pieces (Lords of the Forest).",
           "expected_confidence": "stated",
-          "tags": ["exception", "rule"],
+          "tags": [
+            "exception",
+            "rule"
+          ],
           "source": "Rule/control questions surfaced by web search (https://lehi-innovation.github.io/boardgame-rules/rules/root/); wording ours",
-          "expected_pages": [],
-          "notes": "TODO: page + quote; Eyrie exception is in the faction section (multi-page evidence). Answer depends on whether 'I' am the Eyrie — a branch is fine."
+          "expected_pages": [
+            5,
+            12
+          ],
+          "notes": "Verified. Eyrie exception \"Lords of the Forest\" is on p.12 (multi-page evidence).",
+          "expected_quote": "On a tie, no one is ruler"
         },
         {
           "id": "rt-03",
           "question": "can my guys walk from a spot the cats own to another spot the cats also own?",
           "expected_verdict": "No. To move you must rule the clearing you move from or the clearing you move to.",
           "expected_confidence": "stated",
-          "tags": ["approximate-wording", "movement"],
+          "tags": [
+            "approximate-wording",
+            "movement"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            5
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "To move, you must rule the clearing you are moving from or moving to"
         },
         {
           "id": "rt-04",
-          "question": "If I'm told to discard a fox card, can I discard a bird card instead? And the other way round?",
+          "question": "If I have to spend a fox card, can I spend a bird card instead? And the other way round?",
           "expected_verdict": "Yes — birds are wild and can be treated as any suit, even when you must discard or spend a specific suit. But a non-bird card can never be treated as a bird.",
           "expected_confidence": "stated",
-          "tags": ["exception", "cards"],
+          "tags": [
+            "exception",
+            "cards"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote. Verify exact wording of the wild rule."
+          "expected_pages": [
+            6
+          ],
+          "notes": "Reworded: the rulebook talks about spending, not discarding.",
+          "expected_quote": "you can always treat a bird card as a mouse, fox, or rabbit card"
         },
         {
           "id": "rt-05",
           "question": "As the Woodland Alliance, does spreading sympathy into a clearing with 3 Marquise warriors cost the normal amount?",
           "expected_verdict": "No: Martial Law — if another player has three or more warriors there, it costs one more supporter.",
           "expected_confidence": "stated",
-          "tags": ["exception", "faction"],
+          "tags": [
+            "exception",
+            "faction"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote (Woodland Alliance > Spread Sympathy)."
+          "expected_pages": [
+            15
+          ],
+          "notes": "Verified. PDF text on this page is scrambled by layout: good fuzzy-matching test.",
+          "expected_quote": "Martial Law"
+        },
+        {
+          "id": "rt-06",
+          "question": "wait can my cats leave a spot where we're tied with the birds",
+          "expected_verdict": "Only if you rule the clearing you move to: on a tie no one rules your starting clearing (for you), so it can't be the one that lets you move. Branch: if you are the Eyrie, you rule tied clearings (Lords of the Forest).",
+          "expected_confidence": "stated",
+          "tags": [
+            "sloppy",
+            "exception",
+            "movement"
+          ],
+          "source": "own",
+          "expected_pages": [
+            5,
+            12
+          ],
+          "expected_quote": "To move, you must rule the clearing you are moving from or moving to",
+          "notes": "Verified. Combines the move rule, the tie rule and the Eyrie exception."
         }
       ]
     },
@@ -141,67 +250,123 @@
       "id": "azul",
       "name": "Azul",
       "pdf": "assets/rulebooks/azul.pdf",
-      "pdf_match": ["azul"],
+      "pdf_match": [
+        "azul"
+      ],
       "questions": [
         {
           "id": "az-01",
           "question": "I'm the first to take from the center. Do I have to take the first-player tile, and does it cost me anything?",
           "expected_verdict": "Yes: you must take it, place it on the leftmost free space of your floor line (it counts as a floor tile, so it costs points), and you start the next round.",
           "expected_confidence": "stated",
-          "tags": ["exception", "first-player"],
+          "tags": [
+            "exception",
+            "first-player"
+          ],
           "source": "Azul FAQ topics (https://rulespal.com/azul/faq Q15–Q16)",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            3,
+            5
+          ],
+          "notes": "Verified. \"counts as a normal tile there\" is on p.5.",
+          "expected_quote": "places it on the leftmost space of her floor line"
         },
         {
           "id": "az-02",
           "question": "Can I put blue tiles in my third pattern line if there's already a blue tile in the third row of my wall?",
           "expected_verdict": "No. You cannot place tiles of a color in a pattern line whose wall row already has that color.",
           "expected_confidence": "stated",
-          "tags": ["restriction"],
+          "tags": [
+            "restriction"
+          ],
           "source": "Azul FAQ topic (https://rulespal.com/azul/faq Q19)",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            4
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "You are not allowed to place tiles of a certain color in a pattern line whose corresponding line of your wall already holds a tile of that color"
         },
         {
           "id": "az-03",
           "question": "Can I dump my tiles straight onto the floor line even though a pattern line could take them?",
           "expected_verdict": "Yes. Tiles you cannot or do not want to place in a pattern line go to the floor line (and score its penalty).",
           "expected_confidence": "stated",
-          "tags": ["approximate-wording"],
+          "tags": [
+            "approximate-wording"
+          ],
           "source": "BGA forum thread https://forum.boardgamearena.com/viewtopic.php?p=142923 and Azul FAQ topic (https://rulespal.com/azul/faq Q9)",
-          "expected_pages": [],
-          "notes": "TODO: page + quote. Verify 'or do not want to' wording."
+          "expected_pages": [
+            4
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "cannot or do not want to place according to the rules"
         },
         {
           "id": "az-04",
           "question": "I'm placing a tile on my wall that has 2 tiles directly to its left and 1 tile directly above it. How many points is it worth?",
           "expected_verdict": "5 points: 3 for the horizontal line (including the new tile) plus 2 for the vertical line.",
           "expected_confidence": "stated",
-          "tags": ["figure", "scoring"],
+          "tags": [
+            "figure",
+            "scoring"
+          ],
           "source": "own (rulebook scoring example is a diagram)",
-          "expected_pages": [],
-          "notes": "TODO: page + expected_box of the scoring example diagram."
+          "expected_pages": [
+            5
+          ],
+          "notes": "Verified. Text + scoring diagram on p.5; expected_box still to draw.",
+          "expected_quote": "count all these linked tiles (including the newly placed one) and gain that many points"
         },
         {
           "id": "az-05",
           "question": "End of game: what's a completed column worth compared to a completed row and all five of one color?",
           "expected_verdict": "Row: 2 points each. Column: 7 points each. All 5 tiles of one color: 10 points each.",
           "expected_confidence": "stated",
-          "tags": ["figure", "scoring", "endgame"],
+          "tags": [
+            "figure",
+            "scoring",
+            "endgame"
+          ],
           "source": "Azul FAQ topic (https://rulespal.com/azul/faq Q37)",
-          "expected_pages": [],
-          "notes": "TODO: page + expected_box (end-game bonus illustration)."
+          "expected_pages": [
+            6
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "Gain 7 points for each complete vertical line"
         },
         {
           "id": "az-06",
           "question": "I've got 8 tiles that have to go on my floor line. What's the penalty?",
           "expected_verdict": "The floor line has 7 spaces (−1, −1, −2, −2, −2, −3, −3) for a maximum of −14; the 8th tile goes to the box lid with no extra penalty.",
           "expected_confidence": "stated",
-          "tags": ["figure", "floor-line", "exception"],
+          "tags": [
+            "figure",
+            "floor-line",
+            "exception"
+          ],
           "source": "Azul FAQ topic (https://rulespal.com/azul/faq Q23)",
-          "expected_pages": [],
-          "notes": "TODO: page + expected_box (floor line values are printed on the board illustration)."
+          "expected_pages": [
+            4,
+            5
+          ],
+          "notes": "Verified. The -1/-1/-2/-2/-2/-3/-3 values exist ONLY in the board illustration, not in the text: the real figure test.",
+          "expected_quote": "return any further fallen tiles to the lid of the game box"
+        },
+        {
+          "id": "az-07",
+          "question": "can i throw red on the line that's already got blue on it",
+          "expected_verdict": "No. If a pattern line already holds tiles, you may only add tiles of the same color.",
+          "expected_confidence": "stated",
+          "tags": [
+            "sloppy",
+            "restriction"
+          ],
+          "source": "own",
+          "expected_pages": [
+            3
+          ],
+          "expected_quote": "If the pattern line already holds tiles, you may only add tiles of the same color to it",
+          "notes": "Verified against owner PDF 2026-11-21."
         }
       ]
     },
@@ -209,57 +374,123 @@
       "id": "dune",
       "name": "Dune: Imperium",
       "pdf": "assets/rulebooks/dune-imperium.pdf",
-      "pdf_match": ["dune"],
+      "pdf_match": [
+        "dune"
+      ],
       "questions": [
         {
           "id": "du-01",
           "question": "I still have an agent left. Can I take my reveal turn now anyway?",
           "expected_verdict": "Yes. Agent turns are optional; you may take your Reveal turn while you still have Agents, and then you take no more turns this round.",
           "expected_confidence": "stated",
-          "tags": ["turn-structure"],
+          "tags": [
+            "turn-structure"
+          ],
           "source": "Dire Wolf rules/FAQ topics (https://www.direwolfdigital.com/assets/dune/DUNE_IMPERIUM_Rules_2020_10_26.pdf); wording ours",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            8
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "you can take a Reveal turn while you still have Agents"
         },
         {
           "id": "du-02",
           "question": "Two of us tie for the highest strength in combat. Who gets the first-place reward?",
           "expected_verdict": "Nobody: tied players for first each get the second-place reward instead (and if tied for second, they get third-place reward).",
           "expected_confidence": "stated",
-          "tags": ["exception", "combat", "tie"],
+          "tags": [
+            "exception",
+            "combat",
+            "tie"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            12
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "When players tie for first place, no one wins the Conflict"
         },
         {
           "id": "du-03",
           "question": "I have 6 swords in my reveal but no troops in the conflict. Do the swords count?",
           "expected_verdict": "No. If you have no units in the Conflict your strength is 0, regardless of swords.",
           "expected_confidence": "stated",
-          "tags": ["exception", "combat"],
+          "tags": [
+            "exception",
+            "combat"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            11
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "You must have at least one troop in the Conflict to have any strength"
         },
         {
           "id": "du-04",
           "question": "I send an agent to a combat space. How many troops can I put into the conflict?",
           "expected_verdict": "Any troops you recruited this turn, plus up to 2 troops from your garrison.",
           "expected_confidence": "stated",
-          "tags": ["combat"],
+          "tags": [
+            "combat"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            10,
+            17
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "plus up to two more troops from your garrison"
         },
         {
           "id": "du-05",
           "question": "Someone just hit 10 points mid-round. Does the game end right now?",
           "expected_verdict": "No. The game ends at the end of that round (after combat and Makers), when a player has 10+ VP or the Conflict deck is empty; Endgame Intrigue cards are then played.",
           "expected_confidence": "stated",
-          "tags": ["endgame", "timing"],
+          "tags": [
+            "endgame",
+            "timing"
+          ],
           "source": "own",
-          "expected_pages": [],
-          "notes": "TODO: page + quote."
+          "expected_pages": [
+            6,
+            13
+          ],
+          "notes": "Verified against owner PDF 2026-11-21.",
+          "expected_quote": "if any player has reached 10 or more Victory Points"
+        },
+        {
+          "id": "du-06",
+          "question": "im out of agents, can i still do the kwisatz thing",
+          "expected_verdict": "Yes. Kwisatz Haderach lets you take an Agent turn even with no Agents left in your supply, by sending an Agent that is already on a board space (it can even go back to the same space).",
+          "expected_confidence": "stated",
+          "tags": [
+            "sloppy",
+            "card"
+          ],
+          "source": "own",
+          "expected_pages": [
+            13
+          ],
+          "expected_quote": "take an Agent turn even if you have no Agents left in your supply",
+          "notes": "Verified against owner PDF 2026-11-21."
+        },
+        {
+          "id": "du-07",
+          "question": "ok so ties in the fight, me and jo both at 8, who gets the good stuff",
+          "expected_verdict": "Neither gets first place: tied players for first each receive the second reward (in a 4-player game the others still compete for the third).",
+          "expected_confidence": "stated",
+          "tags": [
+            "sloppy",
+            "combat",
+            "tie"
+          ],
+          "source": "own",
+          "expected_pages": [
+            12
+          ],
+          "expected_quote": "The tied players each receive the second reward",
+          "notes": "Sloppy rephrasing of du-02: checks that wording does not change the answer."
         }
       ]
     }

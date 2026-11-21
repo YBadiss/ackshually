@@ -11,7 +11,7 @@ Runs a question set against rulebook PDFs through the same `AckshuallyCore` code
    | Game | Expected file | Fallback match |
    |---|---|---|
    | Power Grid | `powergrid.pdf` | name contains `power` |
-   | Root — The Law of Root | `root-law.pdf` | contains `law` |
+   | Root — Learning to Play | `root-learning.pdf` | contains `root` |
    | Azul | `azul.pdf` | contains `azul` |
    | Dune: Imperium | `dune-imperium.pdf` | contains `dune` |
 
@@ -28,7 +28,7 @@ cd bench
 # 0. smoke test on the generated fake rulebook (~5 cheap questions, ~1 minute)
 swift run bench run --questions questions/fixture.json
 
-# 1. the M1 set (23 questions), default: claude-opus-5-5, json evidence mode, effort low
+# 1. the M1 set (28 questions), default: claude-opus-5-5, json evidence mode, effort low
 swift run bench run
 
 # 2. the comparison matrix (opus json / opus citations / sonnet json / haiku json)

@@ -57,7 +57,7 @@
 <p class="lede">Settle a board-game rules dispute mid-game. Ask about the rulebook PDF, get the ruling at once, and swipe through the highlighted evidence when someone pushes back.</p>
 
 <div class="docmeta">
-  <b>Status</b><span>Pre-M1 run. M1 code on branch <code>m1-tech-validation</code>, waiting on PDFs + API key.</span>
+  <b>Status</b><span>M1 built and merged; 28 questions verified against the PDFs. Waiting on the API key to run.</span>
   <b>Platform</b><span>iOS (SwiftUI), also runs on Mac. The owner's iPhone is the only target device.</span>
   <b>Model</b><span>Claude, behind a provider interface.</span>
   <b>Origins</b><span><a href="original/app-concept.md">App concept</a> · <a href="original/technical-test-plan.md">Technical test plan</a> · <a href="design/screens.html">All screens on one page</a></span>
@@ -251,7 +251,7 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
 <h2 id="milestones">6 · Milestones</h2>
 <div class="tbl"><table>
   <tr><th></th><th>Goal</th><th>Contents</th><th>Done when</th></tr>
-  <tr><td><b>M1</b><br>Assumption check</td><td>Prove the approach, quickly</td><td><code>Core</code> + <code>bench</code>, 23 questions over Power Grid, Root (Law of Root), Azul, Dune Imperium</td><td>Numbers look viable, or we know what broke</td></tr>
+  <tr><td><b>M1</b><br>Assumption check</td><td>Prove the approach, quickly</td><td><code>Core</code> + <code>bench</code>, 28 questions over Power Grid Recharged, Root (Learning to Play), Azul, Dune Imperium</td><td>Numbers look viable, or we know what broke</td></tr>
   <tr><td><b>M2</b><br>iOS viewer</td><td>Something to use at the table</td><td><a href="#s3">S3</a>–<a href="#s9">S9</a>: ask, streaming, answer sheet, stepping, collapse/expand, inspect, follow-ups</td><td>Usable on the owner's iPhone</td></tr>
   <tr><td><b>M3</b><br>Real tool</td><td>Game-night ready</td><td><a href="#s1">S1</a>, <a href="#s2">S2</a> with OCR, <a href="#s11">S11</a>, <a href="#s12">S12</a>; full ~60-question bench incl. a scanned variant</td><td>Used unprompted at game night</td></tr>
   <tr><td><b>M4</b><br>Fallbacks</td><td>Cover the gaps</td><td><a href="#s10">S10</a> web fallback, read-aloud, better figure boxes if needed</td><td>—</td></tr>
@@ -280,15 +280,14 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>Sheet v2: fixed header + peeking step cards, no buttons</td><td>Buttons + swipe were redundant; old sheet mixed answer and step</td></tr>
   <tr><td>2026-11-21</td><td>Warm palette, one font (SF), precise nerdy wording</td><td>Owner's pick from three directions</td></tr>
   <tr><td>2026-11-21</td><td>Spec is HTML with live mockups, not Markdown</td><td>Screens sit next to the text that describes them</td></tr>
+  <tr><td>2026-11-21</td><td>Bench uses the owner's editions: Power Grid <i>Recharged</i>, Root <i>Learning to Play</i></td><td>Those are the PDFs at the table; answers verified against them</td></tr>
 </table></div>
 
 <!-- ============================================================ -->
 <h2 id="open">8 · Open items</h2>
 <ul class="todo">
-  <li>Owner: add the 4 rulebook PDFs to <code>assets/rulebooks/</code> (Root: <i>The Law of Root</i>).</li>
   <li>Owner: provide the API key for the M1 run.</li>
-  <li>Fill in expected pages and Azul boxes in <code>bench/questions/m1.json</code> once the PDFs are in.</li>
-  <li>Review the 23 M1 questions (written by the agent; BGG blocked automated reading).</li>
+  <li>Draw <code>expected_box</code> for the Azul figure questions (az-04, az-06).</li>
   <li>Photograph a few Azul pages for the scanned variant (M3).</li>
   <li>Design dark mode and the app icon.</li>
   <li>Set a cost ceiling per question after the M1 numbers.</li>
