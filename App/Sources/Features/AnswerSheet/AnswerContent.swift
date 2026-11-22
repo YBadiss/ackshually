@@ -28,7 +28,14 @@ struct AnswerContent: View {
                             }
                     }
                     if answered {
-                        AnswerShelf(model: model, voice: voice, showsFollowUp: !placement.isExpanded)
+                        AnswerShelf(model: model)
+                            .hiddenWhenCollapsed(placement.isCollapsed)
+                    }
+                    // Sheet below large: follow-up + thumbs in their own row (expanded / inspector
+                    // have them in the full sections below).
+                    if model.canFollowUp, !placement.isExpanded {
+                        AnswerFooterRow(draft: $model.draft, voice: voice, rating: model.currentRating,
+                                        onRate: model.rate, onSend: model.ask)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
                     if answered, !model.branchRows.isEmpty {
@@ -58,6 +65,13 @@ struct AnswerContent: View {
             .scrollBounceBehavior(.basedOnSize)
             .onChange(of: placement.isExpanded) { _, expanded in
                 if !expanded { withAnimation(.snappy) { proxy.scrollTo("top", anchor: .top) } }
+            }
+            // "More" on a card: show that step's full text in the step list.
+            .task(id: model.expandedRow) {
+                guard let row = model.expandedRow else { return }
+                try? await Task.sleep(for: theme.layout.sheetSettleDelay)
+                withAnimation(.snappy) { proxy.scrollTo(StepListRows.scrollID(row), anchor: .top) }
+                model.clearExpandedRow()
             }
         }
         .onChange(of: metrics, initial: true) { _, m in onMetrics(m) }

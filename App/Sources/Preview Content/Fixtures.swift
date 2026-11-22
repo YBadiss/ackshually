@@ -44,6 +44,10 @@ enum Fixtures {
                                                 confidence: .notCovered, pages: [])
     static let headerBranchActive = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: "Discard all 3.",
                                                   confidence: .stated, pages: [3], condition: "Without a Battery")
+    /// Longer than the 3-line cap (old prompts produced verdicts like this).
+    static let headerLongVerdict = HeaderContent(state: .answered, question: "If I can't place any color, what do I do?",
+                                                 verdict: "You still must pick tiles, and any you can't or don't want to place go to your floor line, costing you minus points. Taking is not optional, and the starting player marker counts as a floor tile too.",
+                                                 confidence: .inferred, pages: [3, 4, 5])
     static let headerFailed = HeaderContent(state: .failed("The API key was rejected. Check it in Settings."),
                                             question: "Can I keep energy?")
 
@@ -53,8 +57,7 @@ enum Fixtures {
         .step(number: 1, title: "General rule", pages: [3], text: answer.steps[0].text, figure: false),
         .step(number: 2, title: "Scoring track", pages: [4], text: "The scoring track shows 1 point per 3 energy spent.", figure: true),
         .loading(number: 3),
-        .result(number: 4, text: answer.verdict, rating: nil),
-        .result(number: 4, text: answer.verdict, rating: true),
+        .step(number: 3, title: "Long step", pages: [4], text: longStepText, figure: false),
         .branch(condition: "No Battery", verdict: "Discard all 3."),
         .web(number: 2, WebFinding(site: "bgg.com", date: "2021", role: "Designer",
                                    quote: "Yes, as long as he has boots.", warning: "Designer disagrees")),
@@ -62,7 +65,24 @@ enum Fixtures {
 
     static let cardItems: [CardItem] = answer.steps.enumerated().map { i, s in
         CardItem(id: .step(i), content: ViewerModel.card(s, number: i + 1))
-    } + [CardItem(id: .result, content: .result(number: answer.steps.count + 1, text: answer.verdict, rating: nil))]
+    } + [CardItem(id: .step(answer.steps.count), content: cardStates[3])]
+
+    /// More than a card's line limit at any size: the card truncates and shows "More".
+    static let longStepText = "A player who owns a Battery keeps up to 2 unused energy at the end of the turn instead of discarding them. "
+        + "Any additional energy is discarded as normal, and energy kept this way can be spent on the next turn like any other energy. "
+        + "The Battery does not produce energy itself, and keeping energy is optional: you may still discard it."
+
+    static let evidenceReports: [EvidenceReport] = [
+        EvidenceReport(id: "1.1", step: "Step 1 · General rule", page: 3, quote: "you must discard all unused energy",
+                       match: MatchInfo(result: .matched, detail: "matched", matchedPage: 3, errorRate: 0, geometryScore: 0.91, rects: 1)),
+        EvidenceReport(id: "2.1", step: "Step 2 · Battery exception", page: 4, quote: "keeps up to 2 unused energy",
+                       match: MatchInfo(result: .matchedOtherPage, detail: "matched on p.4 (claimed p.3)", matchedPage: 4, rects: 1)),
+        EvidenceReport(id: "2.2", step: "Step 2 · Battery exception", page: 4, quote: "They do rule this clearing, so they can move here.",
+                       match: MatchInfo(result: .notMatched, detail: "not matched (best error 44%)", errorRate: 0.44)),
+        EvidenceReport(id: "3.1", step: "Step 3 · Scoring track", page: 4, quote: nil,
+                       box: NormalizedBox(x: 0.15, y: 0.55, w: 0.7, h: 0.3), match: MatchInfo(result: .figureBox, detail: "figure box", rects: 1)),
+        EvidenceReport(id: "3.2", step: "Step 3 · Scoring track", page: 2, quote: "Players take turns in clockwise order", match: nil),
+    ]
 
     static let stepRows: [StepRow] = answer.steps.enumerated().map {
         StepRow(index: $0, title: ViewerModel.stepTitle($1, number: $0 + 1), text: $1.text, pages: $1.evidence.map(\.page).uniqued())

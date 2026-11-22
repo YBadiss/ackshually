@@ -16,8 +16,13 @@ struct Theme: Sendable {
     struct Colors: Sendable {
         /// App tint (brick red): buttons, links, selection.
         var tint: Color
-        /// Navigation bar and the canvas around the PDF pages.
-        var bar: Color
+        /// Navigation bar: a clearly darker warm tone than the sheet and the canvas, so bar, PDF
+        /// and answer panel read as separate surfaces (owner feedback 2026-11-21, landscape).
+        var navigationBar: Color
+        /// Hairline under the navigation bar and between the PDF and the answer column.
+        var chromeSeparator: Color
+        /// Canvas around the PDF pages.
+        var canvas: Color
         /// Answer sheet / inspector background (warm, a shade off the page).
         var sheet: Color
         /// Grouped backgrounds outside the sheet (empty state, settings).
@@ -38,10 +43,11 @@ struct Theme: Sendable {
         var warning: Color
         var dot: Color
         var dotActive: Color
-        /// Warm highlighter on the PDF.
-        var highlightFill: Color
+        /// Spotlight on the cited passage: the rest of the evidence page is dimmed with this…
+        var spotlightDim: Color
+        /// …and the passage (word lines or figure box) gets a solid outline in the app tint
+        /// (brick), a colour rulebooks don't use for their own frames.
         var highlightOutline: Color
-        var figureFill: Color
     }
 
     struct Radius: Sendable {
@@ -74,8 +80,11 @@ struct Theme: Sendable {
         var dot: CGFloat = 7
         var waveHeight: CGFloat = 18
         var waveBar: CGFloat = 2.5
-        var wordOutline: CGFloat = 1
-        var figureOutline: CGFloat = 3
+        /// Outline widths in PDF page points (they zoom with the page).
+        var wordOutline: CGFloat = 1.6
+        var figureOutline: CGFloat = 2.4
+        /// Space between the cited text and its outline, in PDF page points.
+        var highlightPadding: CGFloat = 2.5
 
         func scaled(_ f: CGFloat) -> Sizes {
             var s = self
@@ -121,6 +130,11 @@ struct Theme: Sendable {
         var holdToTalkDelay: Duration = .milliseconds(280)
         var slideToCancelFraction: CGFloat = 0.18
         var pdfMoveDuration: TimeInterval = 0.35
+        /// Verdict in the header: at most this many lines (the full text is in the expanded view).
+        var verdictMaxLines = 3
+        /// Step card text: at most this many lines; all cards take the height of the tallest one
+        /// and longer text truncates with "More".
+        var cardMaxLines = 5
         /// Largest text size for the answer header: past this it would push the cards off the sheet.
         var maxHeaderTypeSize: DynamicTypeSize = .accessibility2
         /// Evidence zoom: never more than this × the page-width scale.
@@ -138,7 +152,9 @@ extension Theme {
     static let warm = Theme(
         colors: Colors(
             tint: Color(light: 0xA2412B, dark: 0xE2775C),
-            bar: Color(light: 0xF3ECE1, dark: 0x1C1916),
+            navigationBar: Color(light: 0xE2D3BD, dark: 0x0E0C0A),
+            chromeSeparator: Color(light: 0xC9B79E, dark: 0x3A332C),
+            canvas: Color(light: 0xF3ECE1, dark: 0x1C1916),
             sheet: Color(light: 0xF6EFE4, dark: 0x221E1A),
             groupedBackground: Color(light: 0xF3ECE1, dark: 0x14110F),
             card: Color(light: 0xFFFDF9, dark: 0x2F2A25),
@@ -153,9 +169,8 @@ extension Theme {
             warning: Color(light: 0xA2412B, dark: 0xE2775C),
             dot: Color(uiColor: .tertiaryLabel),
             dotActive: Color(uiColor: .label),
-            highlightFill: Color(light: 0xF2B134, dark: 0xF2B134, alpha: 0.42),
-            highlightOutline: Color(light: 0xD39320, dark: 0xD39320),
-            figureFill: Color(light: 0xF2B134, dark: 0xF2B134, alpha: 0.12)),
+            spotlightDim: Color(light: 0x1A1410, dark: 0x000000, alpha: 0.34),
+            highlightOutline: Color(light: 0xA2412B, dark: 0xE2775C)),
         radius: Radius(), spacing: Spacing(), size: Sizes(), font: Fonts(), layout: Layout())
 
     /// Spacing and control sizes grow with text (clamped so AX sizes stay usable).

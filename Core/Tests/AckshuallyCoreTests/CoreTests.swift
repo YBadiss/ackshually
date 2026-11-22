@@ -70,6 +70,19 @@ final class IncrementalJSONTests: XCTestCase {
         XCTAssertNil(blank.title)
     }
 
+    /// Owner feedback 2026-11-21: verdicts ran to 5 bold lines and the last step repeated the verdict.
+    func testPromptLimitsVerdictAndForbidsRepeatingIt() {
+        XCTAssertTrue(Prompts.common.contains("at most 12 words"))
+        XCTAssertTrue(Prompts.common.contains("never restate"))
+        XCTAssertTrue(Prompts.jsonSystem.contains("Never title a step \"Result\""))
+        // Schema field order (= streaming order) is unchanged.
+        let order = ["restated_question", "verdict", "confidence", "steps", "branches", "assumptions", "needs_web"]
+        let tail = Prompts.jsonSystem.components(separatedBy: "keys in this order:").last ?? ""
+        let positions = order.compactMap { tail.range(of: $0)?.lowerBound }
+        XCTAssertEqual(positions.count, order.count)
+        XCTAssertEqual(positions, positions.sorted())
+    }
+
     func testSchemaHasTitlesAndBranchSteps() {
         let body = ClaudeProvider(config: ClaudeConfig(apiKey: "x"))
             .requestBody(for: AnswerRequest(pdf: Data([1]), documentTitle: "T", question: "Q")).serialized()
@@ -202,6 +215,20 @@ final class MatcherTests: XCTestCase {
         for r in q.rects { XCTAssertTrue(r.w > 0.05 && r.h > 0.005 && r.x >= 0 && r.y >= 0 && r.x + r.w <= 1) }
         // Text is drawn in the top half of the page.
         XCTAssertLessThan(q.rects[0].y, 0.5)
+    }
+
+    /// Regression (Azul p.3, owner's screenshots): boxes must sit on the quote, not several words
+    /// later. The fixture's text starts at x = 72 pt of 612, so a quote that starts a paragraph
+    /// starts at the left margin, and a one-line quote gets one rect.
+    func testRectsSitOnTheQuote() {
+        let m = matcher.match(quote: "Energy may not be traded between players", page: 3)
+        guard case .matched(let q) = m else { return XCTFail(m.label) }
+        XCTAssertEqual(q.rects.count, 1)
+        XCTAssertEqual(q.rects[0].x, 72.0 / 612, accuracy: 0.01)
+        XCTAssertGreaterThan(q.geometryScore ?? 0, GlyphLocator.minScore)
+        let later = matcher.match(quote: "Scoring: every 3 energy spent on a contract", page: 3).match
+        XCTAssertEqual(later?.rects.first?.x ?? 0, 72.0 / 612, accuracy: 0.01)
+        XCTAssertGreaterThan(later?.rects.first?.y ?? 0, q.rects[0].y)
     }
 
     func testWhitespacePunctuationCaseAndLineBreaks() {

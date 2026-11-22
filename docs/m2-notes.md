@@ -1,7 +1,7 @@
 # M2 notes: iOS viewer
 
 **Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch). Built on `Core/`.
-**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. The first-build notes further down still describe behaviour; their screenshots show the old look.
+**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). The first-build notes further down still describe behaviour; their screenshots show the old look.
 
 ## Run it
 
@@ -14,8 +14,108 @@ open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; run
 - **Rulebook.** ⋯ → Open a rulebook PDF… (file importer; the PDF is copied into Application Support and reopened on the next launch), or ⋯ → Sample rulebook (Core's fake "Power Plant Rush").
 - **Device.** Pick your team under Signing & Capabilities, then run on the iPhone. Push-to-talk needs a real device; the simulator has no live mic input in automation.
 - **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf`, `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`. Details are in `App/Sources/App/LaunchOptions.swift`.
-- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. Five tests run on the sample with demo answers: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
+- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. 13 tests run on the sample (or PDFs/answers they generate) with demo answers; the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
 
+
+## Answer polish (owner's Azul test)
+
+**Date:** 2026-11-21/22. The owner tried the app on Azul ("If every color available to pick (in factories or center) is one I can't legally place in any pattern line, what do I do on my turn?"). Five problems, all fixed:
+
+| # | Problem (owner's screenshot) | Before | After |
+|---|---|---|---|
+| 1 | Landscape: bar and answer panel the same beige, one block | `bar` #f3ece1 ≈ `sheet` #f6efe4 | New `navigationBar` token (#e2d3bd / dark #0e0c0a), `chromeSeparator` hairlines under the bar and beside the column; PDF canvas keeps its own `canvas` token |
+| 2 | No visible highlight; Azul's red frames looked like ours | 42% yellow PDF annotations | **Nothing was drawn at all** on Azul: its PDF forbids annotations, and PDFKit's character boxes were misplaced (see below). Now a **spotlight** drawn by a page overlay view: the page is dimmed except the cited lines / figure box, outlined in brick. A quote that doesn't match says *Passage not found · showing the whole page* |
+| 3 | Verdict: 5 bold lines | "one or two short sentences" | Prompt: one sentence, ≤12 words (bench: median 10, max 12). UI: 3 lines max on the sheet, full text expanded / VoiceOver |
+| 4 | Step card text overflowed the card | Text `fixedSize` in a `LazyHStack` card of unmeasured height | All cards share one height = tallest content, text ≤5 lines, **More** opens the expanded answer at that step (plain `HStack`, measured) |
+| 5 | Last card repeated the verdict | Closing "Result" card with thumbs + follow-up | No Result card; prompt: last step applies the rule ("Your 3 energy"), never restates; follow-up + thumbs in their own row under the shelf |
+
+Plus, at the owner's request, **⋯ → Answer Details**: every cited passage with page, quote and match status (matched / matched on p.N / matched, not located / not matched (why) / figure box), and **Copy JSON** (raw answer, the model's raw text when it came from Claude, and the match results). Debug builds log the answer JSON and each match with `os.Logger` (subsystem `app.ackshually.viewer`, category `answer`).
+
+### Why the Azul highlights were missing
+
+Reproduced with the real Azul PDF and the owner's question through Core (`bench run` with a one-game question set; raw answers in [evals/results/2026-11-22-azul-highlight-probe](../evals/results/2026-11-22-azul-highlight-probe/report.md)):
+
+1. **The quotes matched**: every Azul quote matched the page text exactly (error 0). The model was right.
+2. **The app drew nothing**: Azul's PDF is encrypted with permissions that forbid annotations (`allowsCommenting == false`), so `PDFPage.addAnnotation` silently did nothing. Highlights are now a `PDFPageOverlayViewProvider` view.
+3. **The rects were wrong anyway**: PDFKit's `characterBounds(at:)` and `selection(for: NSRange)` bounds are indexed **without the line breaks** in `PDFPage.string` (plus a few characters of drift on some PDFs). On Azul p.3 the box for "On your turn, you must pick tiles…" started 14 characters late and wrapped over 3 lines. This affects all four rulebooks and the generated fixture (macOS and iOS). Core's new `GlyphLocator` picks the index mapping whose box widths correlate with the characters' widths (r ≈ 0.85–0.97 when right, ≈ 0 when wrong), per line of the quote, and returns no rects (→ whole page + note) when nothing fits. Unit tests: `GlyphLocatorTests`, `MatcherTests.testRectsSitOnTheQuote`.
+4. The Root miss is different: captions over map art are interleaved with the sidebar in the text layer and lose the decorative "Th" (spec §4 layout-tolerant matching; not done here, the app says so on the PDF).
+
+Owner's question + 3 follow-ups on Azul, 1 question on Root:
+
+**old prompt (2026-11-21, owner question reproduced)**
+
+| Q | Step | Page | Quote | Text match | Geometry (this PR) |
+|---|---|---|---|---|---|
+| az-owner | 1 | 3 | “On your turn, you must pick tiles in one of the following ways:” | matched | located, r=0.95, 1 rect(s) |
+| az-owner | 2 | 4 | “Any tiles you have picked that you cannot or do not want to place a…” | matched | located, r=0.93, 2 rect(s) |
+| az-owner | 2 | 4 | “If all spaces of your floor line are occupied, return any further f…” | matched | located, r=0.90, 2 rect(s) |
+| az-owner | 3 | 3 | “If you are the first player in this round to pick tiles from the ce…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f1 | 1 | 3 | “If you are the first player in this round to pick tiles from the ce…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f1 | 2 | 5 | “If you have the starting player marker in your floor line, it count…” | matched | located, r=0.93, 2 rect(s) |
+| az-owner-f1 | 3 | 5 | “The player with the starting player marker refills each of the Fact…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f1 | 3 | 4 | “filling its spaces from left to right.” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f2 | 1 | 4 | “If all spaces of your floor line are occupied, return any further f…” | matched | located, r=0.91, 2 rect(s) |
+| az-owner-f2 | 1 | 3 | “On your turn, you must pick tiles in one of the following ways:” | matched | located, r=0.95, 1 rect(s) |
+| az-owner-f2 | 2 | 3 | “also take the starting player marker and place it onto the leftmost…” | matched | located, r=0.93, 2 rect(s) |
+| az-owner-f3 | 1 | 5 | “For each tile in your floor line, you lose the number of points ind…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f3 | 1 | 5 | (figure box) | box ok | box outline |
+| az-owner-f3 | 2 | 5 | “however, you can never drop below 0 points” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f3 | 2 | 4 | “If all spaces of your floor line are occupied, return any further f…” | matched | located, r=0.90, 2 rect(s) |
+| rt-probe | 1 | 5 | “To move, you must rule the clearing you are moving from or moving to.” | matched | located, r=0.90, 2 rect(s) |
+| rt-probe | 2 | 5 | “They do rule this clearing, so they can move here.” | not matched (best error 44%) | — (no text match) |
+| rt-probe | 3 | 17 | “but he is Nimble, so he can move regardless of who rules his cleari…” | matched | located, r=0.88, 1 rect(s) |
+
+**new prompt (this PR)**
+
+| Q | Step | Page | Quote | Text match | Geometry (this PR) |
+|---|---|---|---|---|---|
+| az-owner | 1 | 3 | “On your turn, you must pick tiles in one of the following ways:” | matched | located, r=0.95, 1 rect(s) |
+| az-owner | 2 | 4 | “Any tiles you have picked that you cannot or do not want to place a…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner | 3 | 4 | “She may even choose to place both tiles in the floor line (C).” | matched | located, r=0.87, 1 rect(s) |
+| az-owner-f1 | 1 | 3 | “If you are the first player in this round to pick tiles from the ce…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f1 | 2 | 5 | “If you have the starting player marker in your floor line, it count…” | matched | located, r=0.93, 2 rect(s) |
+| az-owner-f1 | 3 | 5 | “But instead of placing it in the lid, place it in front of you.” | matched | located, r=0.94, 2 rect(s) |
+| az-owner-f2 | 1 | 4 | “If all spaces of your floor line are occupied, return any further f…” | matched | located, r=0.91, 2 rect(s) |
+| az-owner-f2 | 2 | 3 | “If you are the first player in this round to pick tiles from the ce…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f2 | 3 | 5 | “But instead of placing it in the lid, place it in front of you.” | matched | located, r=0.94, 2 rect(s) |
+| az-owner-f3 | 1 | 5 | “For each tile in your floor line, you lose the number of points ind…” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f3 | 1 | 5 | (figure box) | box ok | box outline |
+| az-owner-f3 | 2 | 5 | “however, you can never drop below 0 points” | matched | located, r=0.92, 2 rect(s) |
+| az-owner-f3 | 3 | 5 | “Peter loses a total of 8 points as he has 4 tiles and the starting …” | matched | located, r=0.85, 2 rect(s) |
+| rt-probe | 1 | 5 | “To move, you must rule the clearing you are moving from or moving to.” | matched | located, r=0.90, 2 rect(s) |
+| rt-probe | 2 | 5 | “You rule a clearing if you have the most combined warriors and buil…” | matched | located, r=0.89, 2 rect(s) |
+| rt-probe | 3 | 5 | “They don’t rule this clearing either, so they cannot move here.” | not matched (best error 24%) | — (no text match) |
+
+
+### Screenshots (sample rulebook, demo answers; `m2-screenshots/polish/`)
+
+Spotlight · miss note · equal-height cards · AX L · More → expanded · follow-up row · Answer Details · expanded
+<p>
+<img src="m2-screenshots/polish/01-spotlight-step1.png" width="140"> <img src="m2-screenshots/polish/02-spotlight-miss-note.png" width="140"> <img src="m2-screenshots/polish/03-cards-equal-height-default.png" width="140"> <img src="m2-screenshots/polish/04-cards-equal-height-axl.png" width="140"> <img src="m2-screenshots/polish/05-card-more-expanded.png" width="140"> <img src="m2-screenshots/polish/06-s6-last-card.png" width="140"> <img src="m2-screenshots/polish/07-answer-details.png" width="140"> <img src="m2-screenshots/polish/09-s9-expanded.png" width="140">
+</p>
+
+Landscape: darker bar, hairlines, spotlight
+<p><img src="m2-screenshots/polish/08-landscape-bar-darker.png" width="420"></p>
+
+The real-Azul checks (owner's question with the API key, the spotlight on p.3 / p.4) were done by hand and are not committed (copyrighted pages).
+
+### New components
+
+| Component | Preview states |
+|---|---|
+| `Viewer/SpotlightOverlayView` + `Spotlight` (UIKit overlay inside PDFKit) | via `PDFViewer` previews |
+| `AnswerSheet/TruncatingText` (line cap + measured More) | short, long, AX5 |
+| `AnswerSheet/AnswerFooterRow` (follow-up + thumbs) | unrated, rated, AX5 dark |
+| `AnswerDetails/AnswerDetailsView`, `EvidenceStatusRow` | statuses, dark AX3, AX5 |
+| Model: `MatchInfo`, `EvidenceReport`, `AnswerDetailsExport`, `ViewerModel+Details` (reports, JSON, logging) | `Fixtures.evidenceReports` |
+
+### Tests
+
+Core: `GlyphLocatorTests` (3), `MatcherTests.testRectsSitOnTheQuote`, `testPromptLimitsVerdictAndForbidsRepeatingIt`, 38 total. UI (13, iPhone 18 Pro, iOS 27.2): the 8 existing (updated for a shelf without the Result card) plus `testCardTextStaysInsideCard` (default + AX L, equal heights, More → expanded), `testLongVerdictIsCappedUntilExpanded`, `testSpotlightAndExplicitMiss`, `testAnswerDetailsListsMatchStatus`, `testNavigationBarIsDarkerThanAnswerColumn` (pixel luminance in landscape). The PDF view's accessibility value now reads "Zoomed, spotlight N" so tests can see the overlay.
+
+### swiftui-pro review
+
+Fixed: one type per file (`Spotlight`, `AnswerDetailsExport` split out), section grouping moved from `AnswerDetailsView` to `EvidenceReport.sections`. Kept: the PDF overlay is UIKit (PDFKit's overlay provider needs a `UIView`); `StepCard`'s small `body(_:)` text helper.
 
 ## Restyle (native iOS)
 
@@ -147,7 +247,7 @@ Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `S
 | `WaitingBar` (glass) | S3→S4 | default, AX5 dark |
 | **Features/AnswerSheet/** `AnswerHeader` (+ `FailureHeader`) | S4, S5, S9 | arriving (redacted), streaming, stated, with question, inferred, not covered, branch, failed, AX5, dark |
 | `ProofLine` (+ `Confidence+Display`) | S5, S7 | stated, inferred, not covered, AX5 dark |
-| `StepCard`, `CardCaption` | S5, S6, S10 | step, figure, loading, result, rated, branch without steps, web, AX5, dark |
+| `StepCard`, `CardCaption` | S5, S6, S10 | step, figure, loading, long (More), branch without steps, web, AX5, dark |
 | `StepCarousel`, `CardDots` | S5, S6 | iPhone, SE width, AX5, dark |
 | `FeedbackButtons` | S6, S9 | none, up, down |
 | `BranchRows`, `StepListRows`, `AssumptionRows` | S5, S9 | none active, active, AX5, dark |

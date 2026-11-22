@@ -3,12 +3,20 @@ import SwiftUI
 /// Horizontal step cards (S5/S6), a system shelf: `.viewAligned` paging, next card peeking from the edge,
 /// `.scrollPosition(id:)` bound to the current card (which drives the PDF). Card width is
 /// relative to the carousel: each side keeps `layout.cardPeekFraction` for the neighbours.
+/// All cards share one height, the tallest card's content (each card caps its text at
+/// `layout.cardMaxLines` and offers "More"), so text never runs outside a card. A plain `HStack`
+/// (an answer has a handful of cards) so every card is measured, not just the visible ones.
 struct StepCarousel: View {
     var items: [CardItem]
     @Binding var selection: CardID?
-    var onRate: (Bool) -> Void = { _ in }
+    var onMore: (CardID) -> Void = { _ in }
     @Environment(\.theme) private var theme
     @State private var width: CGFloat = 0
+    @State private var contentHeights: [CardID: CGFloat] = [:]
+
+    private var shelfHeight: CGFloat? {
+        items.compactMap { contentHeights[$0.id] }.max()
+    }
 
     private var current: CardID? { selection ?? items.first?.id }
 
@@ -22,9 +30,11 @@ struct StepCarousel: View {
 
     private var carousel: some View {
         ScrollView(.horizontal) {
-            LazyHStack(alignment: .top, spacing: theme.spacing.m) {
+            HStack(alignment: .top, spacing: theme.spacing.m) {
                 ForEach(items) { item in
-                    StepCard(content: item.content, onRate: onRate)
+                    StepCard(content: item.content, height: shelfHeight, onMore: { onMore(item.id) }) { h in
+                        contentHeights[item.id] = h
+                    }
                         .containerRelativeFrame(.horizontal)
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -33,6 +43,7 @@ struct StepCarousel: View {
                         }
                         .accessibilityAction(named: "Show") { selection = item.id }
                         .accessibilityLabel(Self.accessibilityLabel(item, of: items.count))
+                        .accessibilityIdentifier("stepCard")
                         .id(item.id)
                 }
             }
@@ -54,7 +65,6 @@ extension StepCarousel {
         case let .step(n, title, pages, text, _):
             "Step \(n), \(title)\(pages.isEmpty ? "" : ", page \(pages.map(String.init).joined(separator: ", "))"). \(text)"
         case .loading: "Next step loading"
-        case let .result(_, text, _): "Result. \(text)"
         case let .branch(c, v): "If \(c): \(v)"
         case let .web(_, w): "\(w.site), \(w.role): \(w.quote)"
         }

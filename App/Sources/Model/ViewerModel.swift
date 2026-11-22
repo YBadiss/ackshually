@@ -18,6 +18,8 @@ final class ViewerModel {
     private(set) var phase: AnswerPhase = .done
     private(set) var sheetVisible = false
     var detent: SheetDetent = .medium
+    /// Step row the expanded answer scrolls to ("More" on a truncated card).
+    private(set) var expandedRow: Int?
     /// Bound to the carousel's `.scrollPosition(id:)`.
     var cardID: CardID? {
         didSet { if cardID != oldValue { cardChanged() } }
@@ -33,7 +35,7 @@ final class ViewerModel {
     private(set) var isDemo = false
 
     private var task: Task<Void, Never>?
-    private var highlights: [String: Highlight] = [:]
+    private(set) var highlights: [String: Highlight] = [:]
     private var resolving: Set<String> = []
     private var focusToken = 0
 
@@ -184,6 +186,8 @@ final class ViewerModel {
                 for e in final.steps.flatMap(\.evidence) { resolve(e) }
                 turns.append(Turn(question: a.question, answer: final, rawAssistantText: r.rawText))
                 phase = .done
+                answer = a
+                logAnswer()
             } else {
                 answer = a
                 fail("The answer couldn't be read (\(r.parseError ?? "unknown error")).")
@@ -209,15 +213,13 @@ final class ViewerModel {
     var cards: [CardID] {
         guard let a = answer else { return [] }
         if let b = activeBranch, let branch = a.branches[safe: b] {
-            if branch.steps.isEmpty { return [.branch(b), .result] }
-            return branch.steps.indices.map { .branchStep(branch: b, step: $0) } + [.result]
+            if branch.steps.isEmpty { return [.branch(b)] }
+            return branch.steps.indices.map { .branchStep(branch: b, step: $0) }
         }
+        // No closing "Result" card: it only repeated the verdict. Feedback and the follow-up
+        // field sit in their own row under the shelf.
         var c: [CardID] = a.steps.indices.map { .step($0) }
-        if a.complete || a.stopped {
-            c.append(.result)
-        } else if a.verdict != nil {
-            c.append(.loading)
-        }
+        if !(a.complete || a.stopped), a.verdict != nil { c.append(.loading) }
         return c
     }
 
@@ -231,10 +233,12 @@ final class ViewerModel {
         }
     }
 
-    /// Index of the main-answer step on screen (the expanded step list marks it).
-    var focusedMainStep: Int? {
-        if case .step(let i) = currentCard { return i }
-        return nil
+    /// Index of the step on screen in the expanded step list (main answer or active branch).
+    var focusedRow: Int? {
+        switch currentCard {
+        case .step(let i), .branchStep(_, let i): i
+        default: nil
+        }
     }
 
     /// Keeps the carousel on a valid card as cards stream in: step 1 becomes current when it
@@ -258,6 +262,23 @@ final class ViewerModel {
         activeBranch = nil
         cardID = .step(i)
     }
+
+    /// A row of the expanded step list: that step of whatever is shown (main answer or branch).
+    func selectRow(_ i: Int) {
+        if let b = activeBranch { cardID = .branchStep(branch: b, step: i) } else { cardID = .step(i) }
+    }
+
+    /// "More" on a truncated card: the expanded answer, scrolled to that step's full text.
+    func showMore(_ card: CardID) {
+        switch card {
+        case .step(let i), .branchStep(_, let i): expandedRow = i
+        default: expandedRow = nil
+        }
+        cardID = card
+        detent = .expanded
+    }
+
+    func clearExpandedRow() { expandedRow = nil }
 
     func selectBranch(_ i: Int?) {
         activeBranch = i
@@ -327,7 +348,7 @@ final class ViewerModel {
         }
     }
 
-    private static func key(_ e: Evidence) -> String {
+    static func key(_ e: Evidence) -> String {
         "\(e.page)|\(e.quote ?? "")|\(e.box.map { "\($0.x),\($0.y),\($0.w),\($0.h)" } ?? "")"
     }
 
@@ -341,6 +362,7 @@ final class ViewerModel {
             guard let self else { return }
             self.resolving.remove(k)
             self.highlights[k] = h
+            self.logMatch(e, h)
             if let cur = self.currentEvidence, Self.key(cur) == k { self.refocus() }
         }
     }
@@ -355,8 +377,13 @@ final class ViewerModel {
         isDemo = demo
         sheetVisible = true
         if let m = rulebook?.matcher {
-            for e in (live.steps + live.branches.flatMap(\.steps)).flatMap(\.evidence) { highlights[Self.key(e)] = HighlightPlacer.place(e, matcher: m) }
+            for e in (live.steps + live.branches.flatMap(\.steps)).flatMap(\.evidence) {
+                let h = HighlightPlacer.place(e, matcher: m)
+                highlights[Self.key(e)] = h
+                logMatch(e, h)
+            }
         }
+        logAnswer()
         cardID = nil
         rebuildCardsIfNeeded()
     }

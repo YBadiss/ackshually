@@ -25,6 +25,7 @@ struct ViewerScreen: View {
                            onOpen: { presentation.importing = true },
                            onSample: { model.openSample() },
                            onShowAnswer: { withAnimation(.snappy) { model.showSheet() } },
+                           onDetails: { presentation.answerDetails = true },
                            onSettings: { presentation.settings = true })
             }
             .viewerChrome()

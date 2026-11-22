@@ -63,11 +63,16 @@ struct AdaptiveViewerLayout: View {
                 Container(size: $0.size, bottom: $0.frame(in: .global).maxY + $0.safeAreaInsets.bottom, safeBottom: $0.safeAreaInsets.bottom)
             } action: { container = $0 }
             if columnPresented {
-                Rectangle().fill(theme.colors.separator).frame(width: 1 / displayScale).ignoresSafeArea()
+                Rectangle().fill(theme.colors.chromeSeparator).frame(width: 1 / displayScale).ignoresSafeArea()
                 AnswerInspector(model: model, voice: voice, idealWidth: inspectorIdealWidth)
                     .frame(width: inspectorIdealWidth)
                     .transition(.move(edge: .trailing))
             }
+        }
+        // Hairline under the (darker) navigation bar: bar, PDF and answer column read as three surfaces.
+        .overlay(alignment: .top) {
+            Rectangle().fill(theme.colors.chromeSeparator).frame(height: 1 / displayScale)
+                .accessibilityHidden(true)
         }
         .animation(theme.sheetAnimation, value: columnPresented)
         // Re-center only once the sheet (or the inspector, a rotation) stops moving.
@@ -130,7 +135,8 @@ struct AdaptiveViewerLayout: View {
             .overlay(alignment: .top) {
                 if model.focus != nil, model.sheetVisible {
                     HighlightOverlay(evidenceIndex: model.evidenceIndex, evidenceCount: model.currentStep?.evidence.count ?? 0,
-                                     note: model.currentHighlight?.note ?? (model.currentHighlight?.kind == .wholePage ? "Showing the whole page" : nil),
+                                     note: model.currentHighlight?.note ?? (model.currentHighlight?.kind == .wholePage ? HighlightPlacer.notFoundNote : nil),
+                                     isMiss: model.currentHighlight.map { !$0.match.isSpotlit } ?? false,
                                      onNext: { model.nextEvidence() })
                         .padding(.top, theme.spacing.s)
                 }

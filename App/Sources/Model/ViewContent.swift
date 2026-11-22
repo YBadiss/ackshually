@@ -38,7 +38,6 @@ struct WebFinding: Equatable {
 enum StepCardContent: Equatable {
     case step(number: Int, title: String, pages: [Int], text: String, figure: Bool)
     case loading(number: Int)
-    case result(number: Int, text: String, rating: Bool?)
     case branch(condition: String, verdict: String)
     case web(number: Int, WebFinding)
 }

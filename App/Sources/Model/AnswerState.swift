@@ -49,8 +49,6 @@ enum CardID: Hashable {
     case step(Int)
     /// Placeholder peeking while later steps stream.
     case loading
-    /// Last card: result + thumbs up/down + follow-up.
-    case result
     /// A branch without steps of its own (answers from before `branches[].steps`): one card.
     case branch(Int)
     /// Step `step` of branch `branch` (contract v2: a branch carries its own steps).
@@ -73,6 +71,8 @@ struct Highlight: Equatable, Sendable {
     var kind: Kind
     /// Small caption shown on the PDF, e.g. "See the figure on this page".
     var note: String?
+    /// How it was matched (Answer details, debug log).
+    var match = MatchInfo(result: .matched, detail: "matched")
 }
 
 /// What the PDF view should show now. A new `token` re-applies it (Back to step, double-tap).

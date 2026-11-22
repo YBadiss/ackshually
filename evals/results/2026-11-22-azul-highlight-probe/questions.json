@@ -1,0 +1,12 @@
+{"description":"Highlight probe (owner's Azul question + follow-ups, one Root). Not scored.",
+ "games":[
+ {"id":"azul","name":"Azul","pdf":"assets/rulebooks/azul.pdf","questions":[
+  {"id":"az-owner","question":"If every color available to pick (in factories or center) is one I can't legally place in any pattern line, what do I do on my turn?","expected_verdict":"You must still pick tiles; they all go to your floor line.","source":"owner"},
+  {"id":"az-owner-f1","follows":"az-owner","question":"And if I'm the first to take from the center in that case?","expected_verdict":"Also take the starting player marker; it goes to the floor line too.","source":"own"},
+  {"id":"az-owner-f2","follows":"az-owner-f1","question":"What if my floor line is already full?","expected_verdict":"Excess tiles go to the box lid.","source":"own"},
+  {"id":"az-owner-f3","follows":"az-owner-f2","question":"How many points do I lose for a full floor line?","expected_verdict":"-14 (-1,-1,-2,-2,-2,-3,-3), never below 0.","source":"own"}
+ ]},
+ {"id":"root","name":"Root","pdf":"assets/rulebooks/root-learning.pdf","questions":[
+  {"id":"rt-probe","question":"Can my warriors move out of a clearing my enemy rules?","expected_verdict":"Yes, if you rule the origin or destination clearing.","source":"own"}
+ ]}
+]}

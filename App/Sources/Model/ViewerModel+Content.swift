@@ -27,9 +27,6 @@ extension ViewerModel {
                 return CardItem(id: id, content: Self.card(s, number: i + 1))
             case .loading:
                 return CardItem(id: id, content: .loading(number: a.steps.count + 1))
-            case .result:
-                let text = activeBranch.flatMap { a.branches[safe: $0]?.verdict } ?? a.verdict ?? ""
-                return CardItem(id: id, content: .result(number: ids.count, text: text, rating: currentRating))
             case .branch(let i):
                 guard let b = a.branches[safe: i] else { return nil }
                 return CardItem(id: id, content: .branch(condition: b.condition, verdict: b.verdict))
@@ -37,8 +34,10 @@ extension ViewerModel {
         }
     }
 
+    /// Steps of what is shown: the active branch's, else the main answer's.
     var stepRows: [StepRow] {
-        (answer?.steps ?? []).enumerated().map {
+        let steps = activeBranch.flatMap { answer?.branches[safe: $0]?.steps }.flatMap { $0.isEmpty ? nil : $0 } ?? answer?.steps ?? []
+        return steps.enumerated().map {
             StepRow(index: $0, title: Self.stepTitle($1, number: $0 + 1), text: $1.text,
                     pages: $1.evidence.map(\.page).uniqued().sorted())
         }

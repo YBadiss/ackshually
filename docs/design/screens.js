@@ -11,7 +11,9 @@ const head = `<div class="head"><div class="rq">3 energy + a Battery, at end of 
   <div class="meta"><span class="chip">✓ Stated · p.12, p.14</span><span class="chip alt">No Battery? Discard 3 ›</span></div></div>`;
 const c1 = (peek)=>`<div class="card${peek?' peek':''}"><div class="h"><b>1 · General rule</b><span>p.12</span></div>Unused energy is discarded at end of turn.</div>`;
 const c2 = (peek)=>`<div class="card${peek?' peek':''}"><div class="h"><b>2 · Exception</b><span>p.14</span></div>The Battery keeps up to 2 unused energy, overriding the discard.</div>`;
-const c3 = (peek)=>`<div class="card${peek?' peek':''}"><div class="h"><b>3 · Result</b></div>2 stay on the Battery, 1 goes back.${peek?'':'<div class="fb"><span>👍</span><span>👎</span></div>'}</div>`;
+const c3 = (peek)=>`<div class="card${peek?' peek':''}"><div class="h"><b>3 · Your 3 energy</b><span>p.14</span></div>2 stay on the Battery, 1 goes back to the supply.</div>`;
+// Follow-up + thumbs: their own row under the shelf (2026-11-21), not a closing "Result" card.
+const footer = `<div class="fb" style="margin:6px 11px 0"><span style="flex:4;text-align:left;padding-left:8px;color:var(--muted)">Ask a follow-up</span><span>👍</span><span>👎</span></div>`;
 const dots = n => `<div class="dots">${[0,1,2].map(i=>`<i${i===n?' class="on"':''}></i>`).join('')}</div>`;
 const covers = ['#3a6ea5','#c9572b','#2f8f83','#b8892b'];
 
@@ -53,7 +55,7 @@ const S = [
 
  {t:'6 · Step 2', ms:'Sheet · M2', li:['Header <b>never changes</b> while stepping','PDF <b>follows the card</b>: page turn + zoom','<b>Swipe right</b> / tap left peek = back'],
   h:`${chrome('Power Grid')}${pageBattery()}<div class="sheet"><div class="grab"></div>${head}
-   <div class="rail mid">${c1(true)}${c2()}${c3(true)}</div>${dots(1)}</div>
+   <div class="rail mid">${c1(true)}${c2()}${c3(true)}</div>${dots(1)}${footer}</div>
    <div class="gest" style="top:150px;left:50%;transform:translateX(-50%)">page follows the card</div>`},
 
  {t:'7 · Show the skeptic', ms:'Sheet collapsed · M2', li:['<b>Drag sheet down</b>: page near full-screen','Verdict stays pinned as one line','Drag up to restore'],
@@ -73,7 +75,7 @@ const S = [
     <div class="head"><div class="sect" style="margin-top:2px">Steps</div>
      <div class="steprow"><div>1 · General rule</div><span>p.12</span></div>
      <div class="steprow on"><div>2 · Exception</div><span>p.14</span></div>
-     <div class="steprow"><div>3 · Result</div><span></span></div>
+     <div class="steprow"><div>3 · Your 3 energy</div><span>p.14</span></div>
      <div class="sect">Assumes</div><div style="color:var(--muted)">The Battery is already in play.</div></div></div>
    <div class="gest" style="top:52px;right:10px">drag up ↑</div>`},
 
@@ -86,7 +88,7 @@ const S = [
      <div class="card web"><div class="warnl">⚠ Designer disagrees</div><div class="h"><span>🌐 bgg.com · 2021</span><span>↗</span></div>“Yes, as long as he has boots.”</div>
      <div class="card peek"><div class="h"><b>3</b></div>…</div></div>${dots(1)}</div>`},
 
- {t:'11 · 👎 feedback', ms:'Last card · M3', li:['<b>👍</b> saved silently','<b>👎</b>: one-tap reason, optional step + note','⋯ → <b>Export game</b> as JSON'],
+ {t:'11 · 👎 feedback', ms:'Feedback row · M3', li:['<b>👍</b> saved silently','<b>👎</b>: one-tap reason, optional step + note','⋯ → <b>Export game</b> as JSON'],
   h:`${chrome('Power Grid')}${pageBattery()}<div class="dim"></div>
    <div class="modal"><div class="grab"></div><b style="font-size:11.5px">What was wrong?</b>
     <div class="opts" style="margin-top:4px"><span>Wrong verdict</span><span>Missed exception</span><span class="on">Wrong highlight</span><span>Wrong page</span><span>Too slow</span><span>Other</span></div>

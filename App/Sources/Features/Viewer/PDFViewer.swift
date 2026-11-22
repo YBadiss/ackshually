@@ -18,20 +18,23 @@ struct PDFViewer: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     private var style: Coordinator.Style {
-        Coordinator.Style(fill: UIColor(theme.colors.highlightFill), outline: UIColor(theme.colors.highlightOutline),
-                          figureFill: UIColor(theme.colors.figureFill), wordOutline: theme.size.wordOutline,
-                          figureOutline: theme.size.figureOutline, moveDuration: theme.layout.pdfMoveDuration,
-                          maxZoom: theme.layout.maxEvidenceZoom, margin: theme.spacing.m)
+        Coordinator.Style(
+            spotlight: SpotlightOverlayView.Style(dim: UIColor(theme.colors.spotlightDim), outline: UIColor(theme.colors.highlightOutline),
+                                                  wordOutline: theme.size.wordOutline, figureOutline: theme.size.figureOutline,
+                                                  padding: theme.size.highlightPadding),
+            moveDuration: theme.layout.pdfMoveDuration, maxZoom: theme.layout.maxEvidenceZoom, margin: theme.spacing.m)
     }
 
     func makeUIView(context: Context) -> PDFView {
         let v = FitPagePDFView()
+        // Before the document: PDFKit asks for page overlays as it creates the page views.
+        v.pageOverlayViewProvider = context.coordinator
         v.document = document
         v.displayMode = .singlePageContinuous
         v.displayDirection = .vertical
         v.displaysPageBreaks = true
         v.pageShadowsEnabled = true
-        v.backgroundColor = UIColor(theme.colors.bar)
+        v.backgroundColor = UIColor(theme.colors.canvas)
         v.autoScales = true
         v.maxScaleFactor = 8
         context.coordinator.attach(to: v)
@@ -43,7 +46,7 @@ struct PDFViewer: UIViewRepresentable {
         c.onUserMove = onUserMove
         c.onDoubleTap = onDoubleTap
         c.style = style
-        v.backgroundColor = UIColor(theme.colors.bar)
+        v.backgroundColor = UIColor(theme.colors.canvas)
         if v.document !== document {
             v.document = document
             c.applied = nil
@@ -66,19 +69,23 @@ struct PDFViewer: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate, @MainActor PDFPageOverlayViewProvider {
         struct Style {
-            var fill = UIColor.yellow.withAlphaComponent(0.4), outline = UIColor.orange, figureFill = UIColor.clear
-            var wordOutline: CGFloat = 1, figureOutline: CGFloat = 3, moveDuration: TimeInterval = 0.35
+            var spotlight = SpotlightOverlayView.Style()
+            var moveDuration: TimeInterval = 0.35
             var maxZoom: CGFloat = 3, margin: CGFloat = 8
         }
         weak var view: PDFView?
-        var style = Style()
+        var style = Style() {
+            didSet { for o in overlays.values { o.style = style.spotlight } }
+        }
         var applied: PDFFocus?
         var bottomObscured: CGFloat = 0
         var onUserMove: () -> Void = {}
         var onDoubleTap: () -> Void = {}
-        private var annotations: [(PDFPage, PDFAnnotation)] = []
+        /// What is spotlit, and the overlay views PDFKit currently shows (one per visible page).
+        private var spotlit: (page: PDFPage, spotlight: Spotlight)?
+        private var overlays: [ObjectIdentifier: SpotlightOverlayView] = [:]
 
         func attach(to v: PDFView) {
             view = v
@@ -120,45 +127,41 @@ struct PDFViewer: UIViewRepresentable {
 
         func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
 
-        // MARK: Highlights
+        // MARK: Spotlight
+
+        func pdfView(_ view: PDFView, overlayViewFor page: PDFPage) -> UIView? {
+            let o = overlays[ObjectIdentifier(page)] ?? SpotlightOverlayView()
+            configure(o, for: page)
+            overlays[ObjectIdentifier(page)] = o
+            return o
+        }
+
+        func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: UIView, for page: PDFPage) {
+            overlays[ObjectIdentifier(page)] = nil
+        }
+
+        private func configure(_ o: SpotlightOverlayView, for page: PDFPage) {
+            o.style = style.spotlight
+            o.pageSize = page.bounds(for: .cropBox).size
+            o.spotlight = spotlit?.page === page ? spotlit?.spotlight : nil
+        }
 
         func clearHighlights() {
-            for (p, a) in annotations { p.removeAnnotation(a) }
-            annotations = []
+            spotlit = nil
+            for o in overlays.values { o.spotlight = nil }
+            (view as? FitPagePDFView)?.spotlightRegions = 0
         }
 
         private func drawHighlights(_ h: Highlight, on page: PDFPage) {
-            clearHighlights()
-            let pb = page.bounds(for: .cropBox)
-            func toPage(_ b: NormalizedBox) -> CGRect {
-                CGRect(x: pb.minX + b.x * pb.width, y: pb.minY + (1 - b.y - b.h) * pb.height,
-                       width: b.w * pb.width, height: b.h * pb.height)
-            }
             switch h.kind {
-            case .words(let rects):
-                for r in rects {
-                    let rect = toPage(r).insetBy(dx: -1.5, dy: -1)
-                    let a = PDFAnnotation(bounds: rect, forType: .square, withProperties: nil)
-                    a.color = style.outline
-                    a.interiorColor = style.fill
-                    let border = PDFBorder()
-                    border.lineWidth = style.wordOutline
-                    a.border = border
-                    page.addAnnotation(a)
-                    annotations.append((page, a))
-                }
-            case .box(let b):
-                let a = PDFAnnotation(bounds: toPage(b), forType: .square, withProperties: nil)
-                a.color = style.outline
-                a.interiorColor = style.figureFill
-                let border = PDFBorder()
-                border.lineWidth = style.figureOutline
-                a.border = border
-                page.addAnnotation(a)
-                annotations.append((page, a))
-            case .wholePage:
-                break
+            case .words(let rects): spotlit = (page, Spotlight(regions: rects, shape: .lines))
+            case .box(let b): spotlit = (page, Spotlight(regions: [b], shape: .figure))
+            case .wholePage: spotlit = nil
             }
+            for (id, o) in overlays {
+                o.spotlight = spotlit.flatMap { ObjectIdentifier($0.page) == id ? $0.spotlight : nil }
+            }
+            (view as? FitPagePDFView)?.spotlightRegions = spotlit?.spotlight.regions.count ?? 0
         }
 
         // MARK: Zoom
@@ -272,8 +275,19 @@ final class FitPagePDFView: PDFView {
     var fitWholePage = true {
         didSet {
             if fitWholePage { setNeedsLayout() }
-            accessibilityValue = fitWholePage ? "Whole page" : "Zoomed"
+            updateAccessibilityValue()
         }
+    }
+
+    /// Number of spotlit regions on the evidence page (0 = nothing spotlit). PDFKit's page overlays
+    /// aren't in the accessibility tree, so UI tests read it from the value ("Zoomed, spotlight 1").
+    var spotlightRegions = 0 {
+        didSet { updateAccessibilityValue() }
+    }
+
+    private func updateAccessibilityValue() {
+        let zoom = fitWholePage ? "Whole page" : "Zoomed"
+        accessibilityValue = spotlightRegions > 0 ? "\(zoom), spotlight \(spotlightRegions)" : zoom
     }
 
     override init(frame: CGRect) {
