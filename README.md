@@ -11,6 +11,7 @@ Settle a board-game rules dispute mid-game: ask about the rulebook PDF, get the 
 | Path | What |
 |---|---|
 | `docs/spec.html` | Product spec: decisions, screens S1–S12, style, answer contract, architecture, milestones, decision log |
+| [Architecture whiteboard](https://claude.ai/artifact/Wv4rbfpuJmvZqPFjT8nyA1) | Living diagram of modules and dependencies (private Claude whiteboard) |
 | `docs/design/` | `screens.js` + `screens.css` = the single source for screen mockups (used by the spec and `screens.html`); `explorations/` = superseded design work |
 | `docs/m1-report.md` | M1 assumption check: results and recommendation |
 | `docs/m2-notes.md` | M2 iOS viewer: how to run, what was verified, component map, proposed spec changes |
