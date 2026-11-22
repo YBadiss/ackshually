@@ -2,14 +2,14 @@ import SwiftUI
 
 @main
 struct AckshuallyApp: App {
-    @State private var model = ViewerModel()
+    @State private var library = LibraryModel(viewer: ViewerModel())
     @State private var voice = AskController()
 
     var body: some Scene {
         WindowGroup {
-            ViewerScreen(model: model, voice: voice)
+            LibraryScreen(library: library, voice: voice)
                 .themed()
-                .task { LaunchOptions.apply(to: model) }
+                .task { LaunchOptions.apply(to: library) }
         }
     }
 }

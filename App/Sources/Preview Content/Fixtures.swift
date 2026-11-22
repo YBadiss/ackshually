@@ -107,7 +107,7 @@ enum Fixtures {
 
     static func model(_ state: ModelState = .answered, detent: SheetDetent = .medium) -> ViewerModel {
         let m = ViewerModel()
-        m.open(rulebookURL, remember: false)
+        m.open(rulebookURL)
         var live = LiveAnswer(question: "what happens to my energy at end of turn if I have the battery", answer: answer)
         switch state {
         case .idle:

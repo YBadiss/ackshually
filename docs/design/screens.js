@@ -15,18 +15,18 @@ const c3 = (peek)=>`<div class="card${peek?' peek':''}"><div class="h"><b>3 · Y
 // Follow-up + thumbs: their own row under the shelf (2026-11-21), not a closing "Result" card.
 const footer = `<div class="fb" style="margin:6px 11px 0"><span style="flex:4;text-align:left;padding-left:8px;color:var(--muted)">Ask a follow-up</span><span>👍</span><span>👎</span></div>`;
 const dots = n => `<div class="dots">${[0,1,2].map(i=>`<i${i===n?' class="on"':''}></i>`).join('')}</div>`;
-const covers = ['#3a6ea5','#c9572b','#2f8f83','#b8892b'];
 
 const S = [
- {t:'1 · My Games', ms:'Home · M3 (M2 opens the last PDF)', li:['<b>Tap a game</b> → viewer, resumes last session','<b>＋</b> → file picker / share-sheet import','<b>Swipe left</b> → Export · Delete'],
+ {t:'1 · My Games', ms:'Home · M2 (sessions + export in M3)', li:['App <b>opens here</b>; most recently used first','<b>Tap a game</b> → viewer, Back returns here','<b>＋</b> → file picker, opens the new game','<b>Swipe left</b> → Delete'],
   h:`<div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="home">
-   <div class="logo">ackshually</div><div class="tag">Well, according to p.14…</div>
-   <div class="game"><div class="cover" style="background:${covers[0]}"></div><div><b>Power Grid</b><span>3 sessions · Nov 14</span></div></div>
-   <div class="game"><div class="cover" style="background:${covers[1]}"></div><div style="flex:1"><b>Root — Law of Root</b><span>Preparing…</span><div class="prog"><i></i></div></div></div>
-   <div class="game" style="padding-right:92px"><div class="cover" style="background:${covers[2]}"></div><div><b>Azul</b><span>1 session</span></div><div class="swipeacts"><span style="background:#8a735c">Export</span><span style="background:#a2412b">Delete</span></div></div>
-   <div class="game"><div class="cover" style="background:${covers[3]}"></div><div><b>Dune Imperium</b><span>No sessions yet</span></div></div>
-   </div><div class="ask">Add a rulebook PDF<span class="mic">＋</span></div>
-   <div class="gest" style="top:250px;left:56px">← swipe</div>`},
+   <div style="display:flex;justify-content:space-between;color:var(--accent);font-size:13px;margin:2px 0 4px"><span>⚙︎</span><span>＋</span></div>
+   <div style="font-size:19px;font-weight:700;margin-bottom:8px">My Games</div>
+   <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Power plant rush</b><span>Opened 2 minutes ago</span></div><span style="color:var(--muted)">›</span></div>
+   <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Azul</b><span>Opened yesterday</span></div><span style="color:var(--muted)">›</span></div>
+   <div class="game" style="padding-right:56px"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div><b>Root</b><span>Opened 4 days ago</span></div><div class="swipeacts"><span style="background:#a2412b">Delete</span></div></div>
+   <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Dune Imperium</b><span>Opened 3 weeks ago</span></div><span style="color:var(--muted)">›</span></div>
+   </div>
+   <div class="gest" style="top:232px;left:56px">← swipe</div>`},
 
  {t:'2 · New game, preparing', ms:'M2 basic · M3 background OCR', li:['PDF <b>readable instantly</b>','Asking is <b>never blocked</b>','Status line only if pages need OCR'],
   h:`${chrome('Azul')}<div class="page"><h5>Overview</h5><p>Introduced by the Moors, azulejos were tile works…</p><div class="fig" style="height:90px"></div><p>Players take turns drafting tiles from the factory displays…</p></div>

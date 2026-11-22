@@ -34,16 +34,26 @@ final class LoadedRulebook: @unchecked Sendable {
     }
 }
 
-/// M2 "library": the app opens straight into the last PDF (S1 game list is M3).
-/// Imported PDFs are copied into Application Support so they survive relaunch.
+/// Files behind My Games (S1): imported PDFs are copied into Application Support/Rulebooks so
+/// they survive relaunch, and `library.json` next to them lists them (`LibraryIndex`, in Core).
 enum Library {
-    private static let lastKey = "lastRulebookPath"
     static let sampleFileName = "power-plant-rush.pdf"
+    /// M2 remembered only the last rulebook; read once to migrate it into the index.
+    private static let legacyLastKey = "lastRulebookPath"
 
     static var folder: URL {
         let u = URL.applicationSupportDirectory.appending(path: "Rulebooks", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
+    }
+
+    static var indexURL: URL { folder.appending(path: "library.json") }
+
+    static func url(for fileName: String) -> URL { folder.appending(path: fileName) }
+
+    /// The entry name for a file inside the folder; nil for files elsewhere (launch arguments).
+    static func fileName(in url: URL) -> String? {
+        url.deletingLastPathComponent().standardizedFileURL.path == folder.standardizedFileURL.path ? url.lastPathComponent : nil
     }
 
     /// Copies a file picked with the importer (security-scoped) into the app's folder.
@@ -62,15 +72,61 @@ enum Library {
         return u
     }
 
-    /// Stored relative to the folder when inside it (container paths change between installs).
-    static func remember(_ url: URL) {
-        let path = url.path.hasPrefix(folder.path) ? url.lastPathComponent : url.path
-        UserDefaults.standard.set(path, forKey: lastKey)
+    static func deleteFile(named fileName: String) {
+        try? FileManager.default.removeItem(at: url(for: fileName))
     }
 
-    static var last: URL? {
-        guard let p = UserDefaults.standard.string(forKey: lastKey) else { return nil }
-        let u = p.hasPrefix("/") ? URL(fileURLWithPath: p) : folder.appending(path: p)
-        return FileManager.default.fileExists(atPath: u.path) ? u : nil
+    // MARK: Index
+
+    /// The saved index, minus games whose file is gone. On the first launch after M2 (no index
+    /// yet, or an unreadable one) it is rebuilt from the PDFs already in the folder.
+    static func loadIndex() -> LibraryIndex {
+        var index: LibraryIndex
+        do {
+            index = try LibraryIndex.load(from: indexURL) ?? migratedIndex()
+        } catch {
+            index = migratedIndex()
+        }
+        index.prune { FileManager.default.fileExists(atPath: url(for: $0).path) }
+        save(index)
+        return index
+    }
+
+    static func save(_ index: LibraryIndex) {
+        try? index.save(to: indexURL)
+    }
+
+    /// Empties My Games: the index and every imported copy (`-emptyLibrary YES`).
+    static func reset() -> LibraryIndex {
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        for f in files { try? FileManager.default.removeItem(at: f) }
+        let empty = LibraryIndex()
+        save(empty)
+        return empty
+    }
+
+    /// Title shown in My Games and the viewer bar (same rule as `LoadedRulebook.title`).
+    static func title(of url: URL) -> String {
+        let t = (PDFDocument(url: url)?.documentAttributes?[PDFDocumentAttribute.titleAttribute] as? String)?
+            .trimmingCharacters(in: .whitespaces)
+        return LoadedRulebook.prettyTitle(from: url, pdfTitle: t)
+    }
+
+    /// Every PDF already imported becomes a game; the M2 "last rulebook" is the most recent.
+    /// The sample only counts if it was the last one opened (launch arguments also write it here).
+    private static func migratedIndex() -> LibraryIndex {
+        let d = UserDefaults.standard
+        let last = d.string(forKey: legacyLastKey).map { URL(fileURLWithPath: $0).lastPathComponent }
+        d.removeObject(forKey: legacyLastKey)
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        var index = LibraryIndex()
+        for f in files where f.pathExtension.lowercased() == "pdf" {
+            let name = f.lastPathComponent
+            if name == sampleFileName, name != last { continue }
+            let modified = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .now
+            index.record(fileName: name, title: title(of: f), at: name == last ? .now : modified)
+        }
+        return index
     }
 }

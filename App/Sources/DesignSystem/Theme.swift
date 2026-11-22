@@ -57,6 +57,8 @@ struct Theme: Sendable {
         var field: CGFloat = 20
         /// Grouped sections (inset-grouped rows, like Settings).
         var group: CGFloat = 22
+        /// Rulebook covers in My Games (a printed page, barely rounded).
+        var cover: CGFloat = 4
     }
 
     struct Spacing: Sendable {
@@ -85,12 +87,16 @@ struct Theme: Sendable {
         var figureOutline: CGFloat = 2.4
         /// Space between the cited text and its outline, in PDF page points.
         var highlightPadding: CGFloat = 2.5
+        /// Cover width in My Games rows (grows with Dynamic Type; height follows the page).
+        var coverWidth: CGFloat = 44
+
 
         func scaled(_ f: CGFloat) -> Sizes {
             var s = self
             s.cardMinHeight *= f
             s.dot *= min(f, 1.4)
             s.waveHeight *= f
+            s.coverWidth *= min(f, 1.8)
             return s
         }
     }
@@ -110,6 +116,9 @@ struct Theme: Sendable {
         var field = Font.body
         var waiting = Font.subheadline.weight(.semibold)
         var feedback = Font.title3
+        /// My Games rows: game name and "Opened …".
+        var gameTitle = Font.body.weight(.semibold)
+        var gameDetail = Font.subheadline
     }
 
     /// Relative layout rules (fractions, thresholds), never absolute frames.

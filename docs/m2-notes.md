@@ -1,7 +1,7 @@
 # M2 notes: iOS viewer
 
-**Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch). Built on `Core/`.
-**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). The first-build notes further down still describe behaviour; their screenshots show the old look.
+**Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch); S1 My Games added 2026-11-22. Built on `Core/`.
+**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). **Then: My Games (S1)**, the app opens on a list of games, see [My Games](#my-games-s1). The first-build notes further down still describe behaviour; their screenshots show the old look.
 
 ## Run it
 
@@ -11,10 +11,10 @@ open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; run
 ```
 
 - **Answers go through the server.** The app token is built into the app: `cp App/Config/Secrets.example.xcconfig App/Config/Secrets.xcconfig`, paste the token after `ACKSHUALLY_APP_TOKEN =`, build. Settings then says *Answers by ackshually server*. Without it, Settings → Developer takes a token override or your own Anthropic API key (direct, as before; the simulator also reads `ANTHROPIC_API_KEY` from the launch environment). With none of them the sample still gets the scripted **demo answer**, and asking about another rulebook opens Settings with the question kept. See [Server route](#server-route).
-- **Rulebook.** ⋯ → Open a rulebook PDF… (file importer; the PDF is copied into Application Support and reopened on the next launch), or ⋯ → Sample rulebook (Core's fake "Power Plant Rush").
+- **Rulebook.** My Games → ＋ (file importer; the PDF is copied into Application Support/Rulebooks, listed in `library.json` next to it, and opens right away), or "Try the Sample" on the empty list (Core's fake "Power Plant Rush").
 - **Device.** Pick your team under Signing & Capabilities, then run on the iPhone. Push-to-talk needs a real device; the simulator has no live mic input in automation.
-- **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf`, `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`. Details are in `App/Sources/App/LaunchOptions.swift`.
-- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. The scheme runs the app unit tests (`AckshuallyTests`, 8) and 17 UI tests: 13 on the sample (or PDFs/answers they generate) with demo answers, 4 against a local stub server ([Server route](#server-route)); the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
+- **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf` (push the viewer over My Games; Back returns to the list; never added to the library), `-emptyLibrary YES` (start with no games: clears the index and the imported copies), `-seedSample YES` (add the sample to My Games), `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`. Details are in `App/Sources/App/LaunchOptions.swift`.
+- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. The scheme runs the app unit tests (`AckshuallyTests`, 8) and 24 UI tests: 13 on the sample (or PDFs/answers they generate) with demo answers, 5 against a local stub server ([Server route](#server-route)), 6 for My Games ([My Games](#my-games-s1)); the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
 
 
 ## Server route
@@ -30,6 +30,49 @@ open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; run
 - **Debug-only launch arguments** for tests: `-serverURL http://127.0.0.1:N`, `-appToken fake-…`, `-isolatedCredentials YES` (separate Keychain items emptied at launch; ignores the real bundled token and the environment).
 
 Tests: app unit tests (new `AckshuallyTests` target, 8): precedence, the URLProtocol-stubbed request (server URL, `Bearer`, no `x-api-key`; direct sends `x-api-key`), 401/429/502/400 messages, Info.plist URL, no credential in `description`. Core `ServerRouteTests` (3): error type/message/retry-after through a stub. UI (`ServerRouteUITests`, 4, against `StubServer`, an in-runner HTTP stub on 127.0.0.1 with fake tokens): bundled token answers through the server and Answer Details/Settings say so; no bundled token → Settings → token override becomes the route and the kept question is answered; revoked token → Open Settings; per-minute and daily 429 messages. `testRealRulebookWithoutCredentialOpensSettings` replaces the API-key version.
+
+## My Games (S1)
+
+**Date:** 2026-11-22. S1 moved from M3 into M2 (spec §6, decision log §7). The app opens on **My Games**, not on the last rulebook.
+
+- **List.** Native `List` (inset grouped) in a `NavigationStack`, large title "My Games". Each row: cover (the PDF's first page), game name, "Opened 2 days ago" (relative date). Sorted by last opened. Settings (gear) and ＋ Add a Rulebook in the toolbar.
+- **Open.** A row is a `NavigationLink(value: GameRoute.game)`; the model loads the file into `ViewerModel` before the push and bumps the game's last-opened date. Opening the game that is already loaded keeps its answer (back, then tap the same game: the answer is still there).
+- **Add.** ＋ → `fileImporter` (PDF) → `Library.importPDF` → added to the index and opened right away. Re-importing the same file name replaces it and keeps one row.
+- **Delete.** Swipe left → Delete: the index entry, the imported copy and its cached covers. If that game was loaded in the viewer, the viewer is closed.
+- **Empty.** `ContentUnavailableView` "No Games Yet" with "Add a Rulebook" (glass prominent) and "Try the Sample".
+- **Persistence.** `Application Support/Rulebooks/library.json` (`LibraryIndex` in Core: entries with file name, title, added, last opened). File names are relative to the folder (container paths change between installs). Entries whose file is gone are dropped on launch. **Migration:** on the first launch without an index, every PDF already in the folder becomes a game, and M2's "last rulebook" (`lastRulebookPath` in UserDefaults, now removed) is the most recent; the sample only counts if it was that last rulebook (launch arguments also write it there).
+- **Covers.** `CoverCache` (an actor, so off the main thread) renders page 1 with PDFKit at the row's pixel width (rounded up to 64 px), keeps it in an `NSCache` and as PNG in `Caches/Covers`, keyed by file name + modification date + width.
+- **Menus.** App-wide items moved to the list: Settings is the gear; Open PDF / Sample rulebook became ＋ and "Try the Sample". The viewer's ⋯ now only holds this game's answer items (Show Answer, Answer Details, with the "Demo answers: no access token set" note as their header) and is hidden until there is an answer. Settings still opens right over the viewer when it is the fix: asking with no credential set up, and **Open Settings** on a 401 (`ServerRouteUITests.testRevokedTokenPointsToSettings` checks it opens from the pushed viewer and Done returns to the answer).
+- **iPad / wide: same stack, no `NavigationSplitView`.** The viewer already shows the answer in a trailing `.inspector` column on wide screens. A split view would add the list as a third column and leave the PDF about a third of the window; collapsing the sidebar by default would just recreate the stack. The list is a short, rarely visited screen, so the stack (list full width, viewer pushed full width with its inspector) is the simpler fit. `windowSize` is still measured at the root, outside the inspector.
+
+### Screenshots (sample rulebook, demo answers; `m2-screenshots/library/`)
+
+Empty · list · viewer (Back → My Games) · swipe to delete · dark · empty dark · AX XL
+<p>
+<img src="m2-screenshots/library/01-empty.png" width="140"> <img src="m2-screenshots/library/02-list.png" width="140"> <img src="m2-screenshots/library/03-viewer-from-list.png" width="140"> <img src="m2-screenshots/library/04-swipe-delete.png" width="140"> <img src="m2-screenshots/library/05-list-dark.png" width="140"> <img src="m2-screenshots/library/06-empty-dark.png" width="140"> <img src="m2-screenshots/library/07-list-ax-xl.png" width="140">
+</p>
+
+iPad: list · viewer with the answer inspector and Back
+<p><img src="m2-screenshots/library/08-ipad-list.png" width="300"> <img src="m2-screenshots/library/09-ipad-viewer.png" width="300"></p>
+
+### New components
+
+| Component | Preview states |
+|---|---|
+| `Library/LibraryScreen` (root stack, importer, Settings sheet, error alert) | games, empty, empty dark, SE, landscape, iPad, AX5, dark |
+| `Library/GameList` (rows, swipe delete, cover loading) | games, dark without covers |
+| `Library/GameRow`, `Library/GameCover` | cover / placeholder, long name, AX5, dark |
+| `Library/EmptyLibraryView` (moved from Viewer) | default, error AX5, dark |
+| `Library/LibraryToolbar` | via `LibraryScreen` |
+| Model: `LibraryModel` (index, path, covers, add / delete / open), `GameRoute`; Services: `Library` (folder, index file, migration), `CoverCache`; Core: `LibraryIndex`, `LibraryEntry` | `LibraryFixtures` (made-up game names, sample cover) |
+
+### Tests
+
+Core: `LibraryIndexTests` (7: sorting, open moves to top, re-import, remove / prune, ties, file round trip, corrupt file). UI: `LibraryUITests` (6, plus the Settings path in `ServerRouteUITests` updated for the list): empty state (+ Settings from the list), Try the Sample adds and opens it, open a game → ask → back → reopen keeps the answer, swipe to delete (and still gone after relaunch), relaunch opens on the list with the game, `-sample` pushes over the list without joining it. Found while running the suite: `-pdfPath … -ask` without a credential requested Settings before the viewer was pushed, so Settings never opened; `ViewerScreen` now reads `settingsRequested` with `onChange(…, initial: true)` (covered by `testRealRulebookWithoutCredentialOpensSettings`).
+
+### swiftui-pro review
+
+Fixed: the stack's path and the error alert used `Binding(get:set:)` in `body`; now `$library.navigationPath` (a writable model property that opens the game before pushing) and `alert(_:item:)` on `library.error`. Kept: the cover is a `UIImage` rendered by PDFKit (no SwiftUI PDF renderer).
 
 ## Answer polish (owner's Azul test)
 
@@ -249,7 +292,7 @@ The real-rulebook check (Power Grid) is not in these screenshots because the PDF
 
 ## Component map (App/Sources)
 
-Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `StepRow`, `BranchRow`, Core models) and closures. State lives in injected `@Observable` models: `ViewerModel` (document, streaming, current card, detent, branch, PDF focus, feedback), `AskController` (push-to-talk over `SpeechInput`) and `ViewerPresentation` (importer / settings, attached to whichever view is frontmost). Design tokens live in `Theme` (dynamic light/dark colors, Dynamic Type-scaled spacing and sizes), injected as `@Environment(\.theme)` by `.themed()`, which also sets the app tint. Previews use `Preview Content/Fixtures.swift`, built on Core's `FixtureRulebook`, so no API key is needed.
+Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `StepRow`, `BranchRow`, Core models) and closures. State lives in injected `@Observable` models: `ViewerModel` (document, streaming, current card, detent, branch, PDF focus, feedback), `AskController` (push-to-talk over `SpeechInput`) and `ViewerPresentation` (settings / Answer Details, attached to whichever view is frontmost) and `LibraryModel` (My Games: index, navigation path, covers; owns the `ViewerModel`). Design tokens live in `Theme` (dynamic light/dark colors, Dynamic Type-scaled spacing and sizes), injected as `@Environment(\.theme)` by `.themed()`, which also sets the app tint. Previews use `Preview Content/Fixtures.swift`, built on Core's `FixtureRulebook`, so no API key is needed.
 
 | Component | Screen | Preview states |
 |---|---|---|
@@ -272,10 +315,11 @@ Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `S
 | **Features/Viewer/** `PDFViewer` (PDFKit, highlights, zoom, gestures) | S5, S6, S8 | evidence zoom, whole page |
 | `HighlightOverlay` (glass pager, notes), `BackToStepPill` (glass) | S6, S8 | 2 passages, figure note, whole page, AX3/AX5, dark |
 | `AdaptiveViewerLayout` (sheet vs inspector vs landscape column; covered height for the PDF) | S3–S9 | iPhone 18 Pro, SE, Pro Max, landscape, iPad, AX5, dark, streaming, branch, collapsed, expanded, idle |
-| `ViewerScreen`, `ViewerMenu` (`ToolbarOverflowMenu`), `ViewerChrome`, `ViewerDialogs`, `EmptyLibraryView` (`ContentUnavailableView`), `ViewerPreview` | S2 | answered, empty, empty dark, error AX5 |
+| `ViewerScreen` (pushed from My Games), `ViewerMenu` (`ToolbarOverflowMenu`, answer items only), `ViewerChrome`, `ViewerDialogs`, `ViewerPreview` | S2 | answered, idle, removed dark |
+| **Features/Library/** `LibraryScreen` (root `NavigationStack`), `GameList`, `GameRow`, `GameCover`, `LibraryToolbar`, `EmptyLibraryView` (`ContentUnavailableView`) | S1 | games, empty, error AX5, SE, landscape, iPad, AX5, dark |
 | **Features/Settings/** `SettingsView`, `SettingsSheet` | dev | default, dark AX5 |
-| **Model/** `ViewerModel` (+`Content`), `AnswerState`, `ViewContent`, `ViewerPresentation`, `HighlightPlacer`, `AskController` | — | — |
-| **Services/** `DemoProvider` (now with step titles and a branch step), `Keychain`/`APIKeyStore`, `Library`, `SpeechInput` | — | — |
+| **Model/** `ViewerModel` (+`Content`), `AnswerState`, `ViewContent`, `ViewerPresentation`, `HighlightPlacer`, `AskController`, `LibraryModel`, `GameRoute` | — | — |
+| **Services/** `DemoProvider` (now with step titles and a branch step), `Keychain`/`APIKeyStore`, `Library` (folder, `library.json`, migration), `CoverCache`, `SpeechInput` | — | — |
 
 ## Known gaps / next
 

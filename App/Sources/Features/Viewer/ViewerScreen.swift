@@ -1,38 +1,34 @@
 import SwiftUI
 
-/// Root screen (M2 opens straight into the last PDF; S1 is M3): navigation bar with the ⋯ menu,
-/// the adaptive viewer, and the app dialogs. Owns no answer logic; that's `ViewerModel`.
+/// The viewer, pushed from My Games (Back returns to the list): navigation bar with the ⋯ menu,
+/// the adaptive viewer, and the viewer's dialogs. Owns no answer logic; that's `ViewerModel`.
 struct ViewerScreen: View {
     @Bindable var model: ViewerModel
     var voice: AskController
+    /// The whole window, measured by the root stack (outside the inspector, so opening it can't
+    /// flip the layout).
+    var windowSize: CGSize
     @State private var presentation = ViewerPresentation()
-    @State private var windowSize = CGSize.zero
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let rb = model.rulebook {
-                    AdaptiveViewerLayout(model: model, voice: voice, document: rb.pdf, presentation: presentation, windowSize: windowSize)
-                } else {
-                    EmptyLibraryView(error: model.openError, onOpen: { presentation.importing = true }, onSample: { model.openSample() })
-                }
+        Group {
+            if let rb = model.rulebook {
+                AdaptiveViewerLayout(model: model, voice: voice, document: rb.pdf, presentation: presentation, windowSize: windowSize)
+            } else {
+                ContentUnavailableView("Rulebook Removed", systemImage: "book.closed")
             }
-            .navigationTitle(model.rulebook?.title ?? "")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ViewerMenu(hasAnswer: model.answer != nil, answerShown: model.sheetVisible,
-                           isDemo: model.isDemo || CredentialStore.route == nil,
-                           onOpen: { presentation.importing = true },
-                           onSample: { model.openSample() },
-                           onShowAnswer: { withAnimation(.snappy) { model.showSheet() } },
-                           onDetails: { presentation.answerDetails = true },
-                           onSettings: { presentation.settings = true })
-            }
-            .viewerChrome()
         }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { windowSize = $0 }
+        .navigationTitle(model.rulebook?.title ?? "")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ViewerMenu(hasAnswer: model.answer != nil, answerShown: model.sheetVisible,
+                       isDemo: model.isDemo || CredentialStore.route == nil,
+                       onShowAnswer: { withAnimation(.snappy) { model.showSheet() } },
+                       onDetails: { presentation.answerDetails = true })
+        }
+        .viewerChrome()
         .viewerDialogs(presentation, model: model, active: !presentation.answerSheetPresented)
-        .onChange(of: model.settingsRequested) { _, requested in
+        .onChange(of: model.settingsRequested, initial: true) { _, requested in
             guard requested else { return }
             model.settingsRequested = false
             presentation.settings = true
@@ -40,6 +36,9 @@ struct ViewerScreen: View {
     }
 }
 
-#Preview { ViewerScreen(model: Fixtures.model(), voice: AskController()).themed() }
-#Preview("Empty") { ViewerScreen(model: ViewerModel(), voice: AskController()).themed() }
-#Preview("Empty, dark") { ViewerScreen(model: ViewerModel(), voice: AskController()).themed().preferredColorScheme(.dark) }
+#Preview { NavigationStack { ViewerScreen(model: Fixtures.model(), voice: AskController(), windowSize: CGSize(width: 402, height: 874)) }.themed() }
+#Preview("Idle") { NavigationStack { ViewerScreen(model: Fixtures.model(.idle), voice: AskController(), windowSize: CGSize(width: 402, height: 874)) }.themed() }
+#Preview("Removed, dark") {
+    NavigationStack { ViewerScreen(model: ViewerModel(), voice: AskController(), windowSize: CGSize(width: 402, height: 874)) }
+        .themed().preferredColorScheme(.dark)
+}

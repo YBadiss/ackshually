@@ -9,9 +9,6 @@ struct ViewerDialogs: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .fileImporter(isPresented: active ? $presentation.importing : .constant(false), allowedContentTypes: [.pdf]) { result in
-                if case .success(let url) = result { model.importPicked(url) }
-            }
             .sheet(isPresented: active ? $presentation.settings : .constant(false)) {
                 SettingsSheet { presentation.settings = false }
                     .themed()
