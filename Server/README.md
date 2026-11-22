@@ -71,13 +71,20 @@ request log and daily spend live in `/var/www/ackshually/data/ackshually.db`.
 4. Run the two workflows (Actions → Run workflow): **Server nginx**, then **Server**.
 5. Check: `curl https://ackshually.badyass.xyz/health` → `ok`.
 
-Add or revoke a device by editing `APP_TOKENS` in the env file and running `pm2 restart ackshually-server --update-env`
-(or re-running the Server workflow).
+### Add or revoke a device
+
+1. On your machine, in `Server/`: `npm run token -- <device>` (e.g. `ipad`). It prints the token (goes in the app;
+   only shown once) and a `<device>:<sha256>` entry.
+2. On the droplet, append the entry to `APP_TOKENS` (comma-separated) in
+   `/home/deploy/secrets/ackshually-server.env`, then `sudo -u deploy pm2 restart ackshually-server`.
+
+The server reads the env file only at startup, hence the restart (a plain one: PM2 keeps the PORT and DATA_FOLDER the
+deploy script set). To revoke a device, delete its entry and restart.
 
 ### Usage
 
 ```sh
-sqlite3 /var/www/ackshually/data/ackshually.db \
+sudo -u deploy sqlite3 /var/www/ackshually/data/ackshually.db \
   "SELECT day, client, COUNT(*), ROUND(SUM(cost_usd), 3) FROM requests GROUP BY day, client ORDER BY day DESC LIMIT 20"
 ```
 
