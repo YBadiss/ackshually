@@ -264,6 +264,7 @@
 
 <!-- ============================================================ -->
 <h2 id="arch">5 · Architecture</h2>
+<p>Living diagram of the app's parts and dependencies: <a href="https://claude.ai/artifact/Wv4rbfpuJmvZqPFjT8nyA1">architecture whiteboard</a> (private Claude whiteboard; ask the owner for access). Keep it in sync with the code; see <code>CLAUDE.md</code>.</p>
 <pre>Core/    Swift package, no UI (macOS + iOS)
          models · AnswerProvider protocol + ClaudeProvider · streaming field parser
          quote matcher (fuzzy) · box checks · [M3] Vision OCR prep · [M4] web fallback
@@ -330,6 +331,7 @@ Server/  Node 24 service at ackshually.badyass.xyz: holds the API key, checks an
   <tr><td>2026-11-22</td><td>The app answers through the server with an app token built into the app (git-ignored <code>Secrets.xcconfig</code>); Settings shows the route, and a collapsed Developer section holds a token override and "use my own Anthropic API key" (direct). Order: bundled token, override, API key</td><td>Owner: users must not have to enter a token. Extractable from the binary, acceptable for our devices and TestFlight until App Attest</td></tr>
   <tr><td>2026-11-21</td><td>LLM calls go through a small server (<code>Server/</code>, on the existing droplet) that holds the API key: a checked pass-through of Core's request, not a server-side answer engine</td><td>Keeps the key off the phone ahead of a real release; Core and the evals keep one code path, and retrieval stays on device (PDFKit)</td></tr>
   <tr><td>2026-11-22</td><td>App opens on the My Games list (S1), moved from M3 into M2: native <code>List</code> in a <code>NavigationStack</code> (also on iPad), the viewer is pushed; library index in Application Support; Settings moves to the list's toolbar</td><td>Opening straight into the last PDF made switching games a trip through ⋯; a split view would squeeze the PDF beside both the list and the answer inspector</td></tr>
+  <tr><td>2026-11-22</td><td>The architecture diagram lives on a Claude whiteboard linked from §5, updated whenever modules or dependencies change</td><td>Boxes and arrows can be edited one at a time and commented on, so the diagram can be kept current instead of redrawn</td></tr>
 </table></div>
 
 <!-- ============================================================ -->
