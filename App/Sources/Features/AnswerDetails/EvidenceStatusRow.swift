@@ -33,8 +33,9 @@ struct EvidenceStatusRow: View {
     private var statusText: String {
         guard let m = report.match else { return "Matching…" }
         switch m.result {
-        case .matched: return "Matched"
-        case .matchedOtherPage: return "Matched on p.\(m.matchedPage ?? report.page)"
+        case .matched: return m.layout == .fragments ? "Matched in \(m.fragments) pieces" : "Matched"
+        case .matchedOtherPage: return "Matched on p.\(m.matchedPage ?? report.page)" + (m.layout == .fragments ? ", in \(m.fragments) pieces" : "")
+        case .partial: return "Partly matched · \(m.coverage.formatted(.percent.precision(.fractionLength(0))))"
         case .matchedNotLocated: return "Matched, not located"
         case .notMatched: return "Not matched"
         case .figureBox: return "Figure box"
@@ -44,11 +45,13 @@ struct EvidenceStatusRow: View {
 
     private var symbol: String {
         guard let m = report.match else { return "hourglass" }
+        if m.result == .partial { return "circle.lefthalf.filled" }
         return m.isSpotlit ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
     }
 
     private var color: Color {
         guard let m = report.match else { return theme.colors.secondaryLabel }
+        if m.result == .partial { return theme.colors.inferred }
         return m.isSpotlit ? theme.colors.stated : theme.colors.inferred
     }
 }

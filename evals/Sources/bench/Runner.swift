@@ -5,7 +5,7 @@ struct HighlightResult: Codable {
     var step: Int
     var page: Int
     var quote: String?
-    var outcome: String          // matched | matched_other_page | not_matched | no_quote
+    var outcome: String          // matched | matched_other_page | partial | not_matched | no_quote
     var detail: String
     var matchedPage: Int?
     var errorRate: Double?
@@ -13,11 +13,33 @@ struct HighlightResult: Codable {
     var rects: Int?
     /// GlyphLocator's confidence in the located geometry (0–1).
     var geometryScore: Double?
+    /// continuous | fragments | partial (nil in runs before layout-tolerant matching).
+    var layout: String?
+    /// Share of the quote found (fragments / partial).
+    var coverage: Double?
+    var fragments: Int?
     var box: NormalizedBox?
     var boxCheck: String?
     /// IoU with expected box (if the question has one and the page matches).
     var boxIoU: Double?
     var boxCenterInExpected: Bool?
+}
+
+extension HighlightResult {
+    /// Records a matcher outcome (also used by `bench rescore`).
+    mutating func apply(_ m: MatchOutcome) {
+        detail = m.label
+        switch m {
+        case .matched(let qm): outcome = qm.layout == .partial ? "partial" : "matched"; matchedPage = qm.page; errorRate = qm.errorRate
+        case .matchedOtherPage(let qm, _): outcome = "matched_other_page"; matchedPage = qm.page; errorRate = qm.errorRate
+        case .notMatched(let best, _): outcome = "not_matched"; errorRate = best; matchedPage = nil
+        }
+        rects = m.match?.rects.count
+        geometryScore = m.match?.geometryScore
+        layout = m.match?.layout.rawValue
+        coverage = m.match?.coverage
+        fragments = m.match.map { $0.fragments.count }
+    }
 }
 
 /// Page selection outcome for one question (nil when the run sent full PDFs).
@@ -257,14 +279,7 @@ final class Runner {
             for e in s.evidence {
                 var h = HighlightResult(step: si, page: e.page, quote: e.quote, outcome: "no_quote", detail: "")
                 if let quote = e.quote {
-                    let m = matcher.match(quote: quote, page: e.page)
-                    h.detail = m.label
-                    switch m {
-                    case .matched(let qm): h.outcome = "matched"; h.matchedPage = qm.page; h.errorRate = qm.errorRate
-                    case .matchedOtherPage(let qm, _): h.outcome = "matched_other_page"; h.matchedPage = qm.page; h.errorRate = qm.errorRate
-                    case .notMatched(let best, _): h.outcome = "not_matched"; h.errorRate = best
-                    }
-                    if let qm = m.match { h.rects = qm.rects.count; h.geometryScore = qm.geometryScore }
+                    h.apply(matcher.match(quote: quote, page: e.page))
                 }
                 if let b = e.box {
                     h.box = b

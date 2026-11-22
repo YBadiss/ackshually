@@ -11,6 +11,9 @@ struct PDFViewer: UIViewRepresentable {
     var focus: PDFFocus?
     /// Height covered by the answer sheet / ask bar at the bottom, in points.
     var bottomObscured: CGFloat
+    /// Height of the chrome over the top of the page (quote pager, highlight note), below the
+    /// safe area: evidence is centered beneath it so a note never covers the spotlit lines.
+    var topObscured: CGFloat = 0
     var onUserMove: () -> Void
     var onDoubleTap: () -> Void
     @Environment(\.theme) private var theme
@@ -52,8 +55,9 @@ struct PDFViewer: UIViewRepresentable {
             c.applied = nil
             (v as? FitPagePDFView)?.fitWholePage = true
         }
-        let obscuredChanged = abs(c.bottomObscured - bottomObscured) > 1
+        let obscuredChanged = abs(c.bottomObscured - bottomObscured) > 1 || abs(c.topObscured - topObscured) > 1
         c.bottomObscured = bottomObscured
+        c.topObscured = topObscured
         if focus == nil, c.applied != nil {
             c.clearHighlights()
             c.applied = nil
@@ -81,6 +85,7 @@ struct PDFViewer: UIViewRepresentable {
         }
         var applied: PDFFocus?
         var bottomObscured: CGFloat = 0
+        var topObscured: CGFloat = 0
         var onUserMove: () -> Void = {}
         var onDoubleTap: () -> Void = {}
         /// What is spotlit, and the overlay views PDFKit currently shows (one per visible page).
@@ -203,7 +208,7 @@ struct PDFViewer: UIViewRepresentable {
             observeScrollGestures()
             drawHighlights(focus.highlight, on: page)
             let m = style.margin
-            let top = v.safeAreaInsets.top + m
+            let top = v.safeAreaInsets.top + max(m, topObscured + m / 2)
             let visible = CGRect(x: 0, y: top, width: bounds.width,
                                  height: max(bounds.height - top - bottomObscured - m, bounds.height * 0.2))
             let pageRect = page.bounds(for: .cropBox)

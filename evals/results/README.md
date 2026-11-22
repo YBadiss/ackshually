@@ -18,6 +18,8 @@ One row per kept run. All runs: 28 questions (`questions/m1.json`) over Power Gr
 | [restyle-sonnet-1h](2026-11-21-restyle-sonnet-1h/report.md) | 26/28 +2 partial (0 wrong, hand-checked) | 25/28 | 5.1 / 8.4 s | 5.9 / 8.8 s | 39% | $0.17 / $0.36 | Contract v2 (step titles, branch steps, steps before branches) + 1-hour cache TTL. Step 1 unchanged vs baseline (6.0 / 8.8 s). Cold question costs more (1h write = 2× input) but the cache now survives 5–60 min gaps |
 | [answer-polish-sonnet](2026-11-22-answer-polish-sonnet/report.md) | 25/28 +2 partial → **27/28 +1 partial (0 wrong)** after hand-check | 26/28 | 5.0 / 8.4 s | 5.6 / 9.2 s | 43% | $0.17 / $0.35 | Prompt: verdict ≤12 words (median 10, max 12), last step applies instead of restating (0 "Result" steps). Judge's rt-03 / rt-06 "partial/incorrect" were judge errors (Root p.12: the Eyrie rule tied clearings); pg-08 partial is fair (imprecise detail in the last step). Step 1 vs restyle-sonnet-1h: 5.6 vs 5.9 s median, 9.2 vs 8.8 s p90 |
 
+Offline re-scores (no new answers): [layout-tolerant-rescore](2026-11-22-layout-tolerant-rescore/README.md), every recorded run re-matched with fragment / partial matching and piecewise geometry: quotes spotlit **76% → 90%** (761 → 895 of 997 across runs; answer-polish-sonnet 71 → 78 of 86), matched as text 967 → 976 (+8 partial). All 48 new placements hand-checked: 0 wrong.
+
 Probe runs (not scored): [azul-highlight-probe](2026-11-22-azul-highlight-probe/report.md), the owner's Azul question + follow-ups + one Root question, with per-quote text match and geometry.
 
 Costs come from the per-model price table in `Core/.../Providers/Pricing.swift`.
@@ -34,3 +36,8 @@ Costs come from the per-model price table in `Core/.../Providers/Pricing.swift`.
 - **Keyword retrieval misses table-talk nicknames** ("cats", "birds", "my guys walk") for rules on generic pages (Root p.5 movement/rule). Without a fallback that is a wrong answer; the model says "inferred" unless told to say not_covered.
 - **Cost goes up, not down**: a different page subset per question gets no cache reuse, so warm questions cost ~$0.025–0.036 vs $0.009 with the cached full PDF (20 questions/PDF: $0.51–0.80 vs $0.25).
 - **Don't trust model page numbers on excerpts**: with a longer excerpt note the model cited the previous page several times; quotes are now checked against the selected pages' text.
+
+## What we learned (2026-11-22, layout-tolerant matching)
+- **Most "whole page" highlights were geometry, not text**: the quote matched but PDFKit's character boxes didn't fit one index mapping (ligatures like "ﬃ", glyphs stored after an interleaved sidebar). Locating word chunks piecewise placed about 115 of them; fragments (+9) and partial matches (+8) added the rest.
+- **Guard rails earned their keep**: two wrong placements in the first pass (invisible 2 pt card text, a fragment ending on a coincidental letter). Every new placement is now checked against `fixtures/match-set.json` (`bench match-set`).
+- What stays unmatched is mostly captions over artwork with decorative initials (Root p.5): Vision OCR (M3).

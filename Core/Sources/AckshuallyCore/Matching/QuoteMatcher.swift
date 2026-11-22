@@ -38,24 +38,93 @@ public struct NormalizedText: Sendable {
     }
 }
 
+/// How a quote was found in the page text (spec §4, "Placing a highlight").
+public enum MatchLayout: String, Sendable, Codable {
+    /// One contiguous run of the page text.
+    case continuous
+    /// Long fragments in the text layer that form one block on the page (multi-column pages
+    /// whose text layer interleaves lines from sidebars and boxes).
+    case fragments
+    /// Only part of the quote was found (at least one long fragment, in one block): that part is
+    /// highlighted rather than the whole page.
+    case partial
+}
+
+/// One piece of a layout-tolerant match.
+public struct MatchFragment: Sendable, Codable, Equatable {
+    /// Page text of the fragment.
+    public var text: String
+    /// Highlight rects, normalized 0–1, origin top-left (one per line).
+    public var rects: [NormalizedBox]
+    /// `GlyphLocator` correlation for this fragment.
+    public var geometryScore: Double?
+
+    public init(text: String, rects: [NormalizedBox], geometryScore: Double?) {
+        self.text = text
+        self.rects = rects
+        self.geometryScore = geometryScore
+    }
+}
+
 public struct QuoteMatch: Sendable, Codable {
     /// Page where it matched (1-based).
     public var page: Int
-    /// 0 = exact after normalization, otherwise edit distance / quote length.
+    /// 0 = exact after normalization, otherwise edit distance / quote length. For fragments:
+    /// (uncovered + bridged characters) / quote length.
     public var errorRate: Double
-    /// Highlight rects, normalized 0–1, origin top-left (one per line).
+    /// Highlight rects, normalized 0–1, origin top-left (one per line; all fragments' lines).
     public var rects: [NormalizedBox]
     public var matchedText: String
-    /// How well the character geometry was located (`GlyphLocator`, 0–1); nil = not located,
-    /// `rects` is empty and the app shows the whole page.
+    /// How well the character geometry was located (`GlyphLocator`, 0–1; for fragments the
+    /// weakest fragment); nil = not located, `rects` is empty and the app shows the whole page.
     public var geometryScore: Double?
+    /// Continuous, fragments or partial.
+    public var layout: MatchLayout
+    /// Share of the quote's normalized characters that were found (1 for continuous matches).
+    public var coverage: Double
+    /// Fragments only: the pieces, in quote order.
+    public var fragments: [MatchFragment]
+    /// Fragments only: how compact the block is (ink of the lines / bounding box, 0–1).
+    public var layoutScore: Double?
 
-    public init(page: Int, errorRate: Double, rects: [NormalizedBox], matchedText: String, geometryScore: Double? = nil) {
+    public init(page: Int, errorRate: Double, rects: [NormalizedBox], matchedText: String, geometryScore: Double? = nil,
+                layout: MatchLayout = .continuous, coverage: Double = 1, fragments: [MatchFragment] = [], layoutScore: Double? = nil) {
         self.page = page
         self.errorRate = errorRate
         self.rects = rects
         self.matchedText = matchedText
         self.geometryScore = geometryScore
+        self.layout = layout
+        self.coverage = coverage
+        self.fragments = fragments
+        self.layoutScore = layoutScore
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case page, errorRate, rects, matchedText, geometryScore, layout, coverage, fragments, layoutScore
+    }
+
+    /// Older records have no layout fields: they were continuous matches.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        page = try c.decode(Int.self, forKey: .page)
+        errorRate = try c.decode(Double.self, forKey: .errorRate)
+        rects = try c.decode([NormalizedBox].self, forKey: .rects)
+        matchedText = try c.decode(String.self, forKey: .matchedText)
+        geometryScore = try c.decodeIfPresent(Double.self, forKey: .geometryScore)
+        layout = try c.decodeIfPresent(MatchLayout.self, forKey: .layout) ?? .continuous
+        coverage = try c.decodeIfPresent(Double.self, forKey: .coverage) ?? 1
+        fragments = try c.decodeIfPresent([MatchFragment].self, forKey: .fragments) ?? []
+        layoutScore = try c.decodeIfPresent(Double.self, forKey: .layoutScore)
+    }
+
+    /// "", " (2 fragments, 100% of the quote)", " (61% of the quote)": appended to outcome labels.
+    public var layoutLabel: String {
+        switch layout {
+        case .continuous: return ""
+        case .fragments: return " (\(fragments.count) fragments, \(Int((coverage * 100).rounded()))% of the quote)"
+        case .partial: return " (\(Int((coverage * 100).rounded()))% of the quote)"
+        }
     }
 }
 
@@ -74,8 +143,8 @@ public enum MatchOutcome: Sendable, Codable {
 
     public var label: String {
         switch self {
-        case .matched: return "matched"
-        case .matchedOtherPage(let m, let c): return "matched on p.\(m.page) (claimed p.\(c))"
+        case .matched(let m): return m.layout == .partial ? "partial match" + m.layoutLabel : "matched" + m.layoutLabel
+        case .matchedOtherPage(let m, let c): return "matched on p.\(m.page) (claimed p.\(c))" + m.layoutLabel
         case .notMatched(_, let r): return "not matched (\(r))"
         }
     }
@@ -95,6 +164,9 @@ public final class QuoteMatcher: @unchecked Sendable {
     private let lock = NSLock()
     /// Max accepted (edit distance / quote length) for fuzzy matches.
     public var maxErrorRate: Double = 0.12
+    /// Fragment / partial matches and piecewise geometry (spec §4 step 2). Off = the continuous
+    /// matcher only (bench baseline: `bench rescore --continuous-only`).
+    public var layoutTolerant = true
 
     public init?(url: URL) {
         guard let d = PDFDocument(url: url) else { return nil }
@@ -138,6 +210,13 @@ public final class QuoteMatcher: @unchecked Sendable {
                 return p == claimed ? .matched(m) : .matchedOtherPage(m, claimedPage: claimed)
             }
         }
+        // Layout-tolerant: fragments forming one block, on the claimed page then its neighbours;
+        // a partial match only on the claimed page.
+        let words = FragmentMatcher.wordStarts(NormalizedText(quote))
+        for p in order.prefix(3) where layoutTolerant && p >= 1 && p <= pageCount {
+            guard let m = fragmentMatch(q, wordStarts: words, page: p, allowPartial: p == claimed) else { continue }
+            return p == claimed ? .matched(m) : .matchedOtherPage(m, claimedPage: claimed)
+        }
         if !(1...max(pageCount, 1)).contains(claimed) {
             return .notMatched(bestErrorRate: best, reason: "page \(claimed) out of range")
         }
@@ -161,6 +240,67 @@ public final class QuoteMatcher: @unchecked Sendable {
         return nil
     }
 
+    /// Share of the quote a fragment match must cover.
+    public var minFragmentCoverage = 0.85
+    /// A partial match needs one fragment at least this long (normalized chars) and this many words…
+    public var partialMinFragmentChars = 30
+    public var partialMinFragmentWords = 6
+    /// …and must cover at least this share of the quote.
+    public var partialMinCoverage = 0.3
+
+    /// Fragment match on one page (spec §4 step 2): fragments → located rects → one coherent block.
+    func fragmentMatch(_ q: [UInt32], wordStarts: [Bool], page: Int, allowPartial: Bool) -> QuoteMatch? {
+        guard let text = normalized(page: page), let p = document.page(at: page - 1) else { return nil }
+        let found = FragmentMatcher.fragments(q, wordStarts: wordStarts, in: text.chars)
+        guard !found.isEmpty else { return nil }
+        // A partial match is only possible with one long fragment; a full one only with enough coverage.
+        let total = found.reduce(0) { $0 + $1.quote.count }
+        let hasLong = found.contains {
+            $0.quote.count >= partialMinFragmentChars && FragmentMatcher.words(in: $0.quote, wordStarts) >= partialMinFragmentWords
+        }
+        guard Double(total) / Double(q.count) >= minFragmentCoverage || (allowPartial && hasLong) else { return nil }
+
+        let bounds = p.bounds(for: .cropBox)
+        let ns = text.original as NSString
+        // Each fragment's lines in page points, origin top-left (LayoutCheck) and normalized (QuoteMatch).
+        var located: [(fragment: FragmentMatcher.Fragment, points: [CGRect], match: MatchFragment)] = []
+        for f in found {
+            let r = text.originalRange(f.text)
+            // Not `selection(for:)`: its indexing is off (see GlyphLocator) and grabs neighbours.
+            let piece = ns.substring(with: r)
+            guard let l = GlyphLocator.locate(range: r, in: ns, bounds: { p.characterBounds(at: $0) }) else {
+                located.append((f, [], MatchFragment(text: piece, rects: [], geometryScore: nil)))
+                continue
+            }
+            let points = l.rects.map { CGRect(x: $0.minX - bounds.minX, y: bounds.maxY - $0.maxY, width: $0.width, height: $0.height) }
+            let boxes = points.map {
+                NormalizedBox(x: $0.minX / bounds.width, y: $0.minY / bounds.height, w: $0.width / bounds.width, h: $0.height / bounds.height)
+            }
+            located.append((f, points, MatchFragment(text: piece, rects: boxes, geometryScore: l.score)))
+        }
+        let blocks = LayoutCheck.blocks(located.map(\.points), page: bounds.size)
+        func covered(_ b: LayoutCheck.Block) -> Int { located[b.fragments].reduce(0) { $0 + $1.fragment.quote.count } }
+        guard let best = blocks.max(by: { covered($0) < covered($1) }) else { return nil }
+        let parts = Array(located[best.fragments])
+        let coverage = Double(covered(best)) / Double(q.count)
+        let layout: MatchLayout
+        if coverage >= minFragmentCoverage && parts.count > 1 {
+            layout = .fragments
+        } else {
+            let long = parts.contains {
+                $0.fragment.quote.count >= partialMinFragmentChars
+                    && FragmentMatcher.words(in: $0.fragment.quote, wordStarts) >= partialMinFragmentWords
+            }
+            guard allowPartial, long, coverage >= partialMinCoverage else { return nil }
+            layout = .partial
+        }
+        let errors = parts.reduce(0) { $0 + $1.fragment.errors }
+        return QuoteMatch(page: page, errorRate: min(1, (1 - coverage) + Double(errors) / Double(q.count)),
+                          rects: parts.flatMap(\.match.rects), matchedText: parts.map(\.match.text).joined(separator: " … "),
+                          geometryScore: parts.compactMap(\.match.geometryScore).min(), layout: layout, coverage: coverage,
+                          fragments: parts.map(\.match), layoutScore: best.density)
+    }
+
     private func buildMatch(page: Int, text: NormalizedText, range: Range<Int>, err: Double) -> QuoteMatch {
         let ns = text.originalRange(range)
         var rects: [NormalizedBox] = []
@@ -170,7 +310,7 @@ public final class QuoteMatcher: @unchecked Sendable {
             let bounds = p.bounds(for: .cropBox)
             matched = p.selection(for: ns)?.string ?? (text.original as NSString).substring(with: ns)
             // Not `selection(for:).selectionsByLine()`: its geometry is misindexed (see GlyphLocator).
-            if let located = GlyphLocator.locate(range: ns, in: text.original as NSString, bounds: { p.characterBounds(at: $0) }) {
+            if let located = GlyphLocator.locate(range: ns, in: text.original as NSString, piecewise: layoutTolerant, bounds: { p.characterBounds(at: $0) }) {
                 score = located.score
                 for r in located.rects {
                     rects.append(NormalizedBox(

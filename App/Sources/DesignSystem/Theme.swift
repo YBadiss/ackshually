@@ -59,6 +59,9 @@ struct Theme: Sendable {
         var group: CGFloat = 22
         /// Rulebook covers in My Games (a printed page, barely rounded).
         var cover: CGFloat = 4
+        /// Glass note over the PDF ("Passage not found…"); a capsule when one line, a rounded
+        /// rectangle when large text wraps it.
+        var note: CGFloat = 16
     }
 
     struct Spacing: Sendable {

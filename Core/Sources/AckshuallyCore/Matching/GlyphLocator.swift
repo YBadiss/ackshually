@@ -32,8 +32,10 @@ public enum GlyphLocator {
 
     /// - Parameters:
     ///   - range: UTF-16 range in `string` (the matched quote).
+    ///   - piecewise: when no single mapping fits, try word chunks (`piecewise(…)`).
     ///   - bounds: geometry by geometry index (`PDFPage.characterBounds(at:)`).
-    public static func locate(range: NSRange, in string: NSString, bounds: (Int) -> CGRect) -> Located? {
+    public static func locate(range: NSRange, in string: NSString, piecewise allowPiecewise: Bool = true,
+                              bounds: (Int) -> CGRect) -> Located? {
         guard range.length > 0, range.location >= 0, range.location + range.length <= string.length else { return nil }
         var newlines = [Int](repeating: 0, count: range.location + range.length + 1)
         for i in 0..<(range.location + range.length) {
@@ -75,7 +77,10 @@ public enum GlyphLocator {
         let usual = Mapping(skipsNewlines: true, offset: 0)
         let usualScore = score(usual, all)
         if usualScore >= minScore, usualScore >= globalScore - 0.08 { (global, globalScore) = (usual, usualScore) }
-        guard globalScore >= minScore else { return nil }
+        guard globalScore >= minScore else {
+            guard allowPiecewise else { return nil }
+            return piecewise(range: range, in: string, candidates: candidates, score: score, best: best, map: map, box: box)
+        }
 
         // Per line of the quote: keep the global mapping unless a nearby one fits that line clearly better.
         var segments: [[Int]] = [[]]
@@ -97,6 +102,84 @@ public enum GlyphLocator {
         }
         let lines = lineRects(chars)
         return lines.isEmpty ? nil : Located(rects: lines, score: globalScore)
+    }
+
+    /// Chunks (whole words) used by the piecewise fallback, in non-space characters.
+    static let chunkMinChars = 16
+    /// Correlation a chunk needs on its own: stricter than `minScore`, chunks are short.
+    static let chunkMinScore = 0.75
+    /// The piecewise result must place at least this share of the range's characters.
+    static let piecewiseMinShare = 0.4
+    /// Piecewise lines shorter than this (PDF points) are rejected: text-layer text drawn tiny
+    /// or hidden under artwork (Root p.9's ambush card) that readers can't see.
+    static let piecewiseMinLineHeight: CGFloat = 4
+
+    /// Fallback when no single mapping fits the whole range: the mapping changes inside it (a
+    /// ligature with one glyph for "ffi", glyphs stored out of order after an interleaved sidebar;
+    /// Root p.15). Split into word chunks, anchor on the best-correlating chunk, then grow to the
+    /// neighbouring chunks only while each one correlates on its own *and* lands right after the
+    /// previous one on the page (same line to the right, or the start of a following line).
+    /// Chunks that don't fit end the growth in that direction: those words get no box.
+    private static func piecewise(range: NSRange, in string: NSString, candidates: [Mapping],
+                                  score: (Mapping, [Int]) -> Double,
+                                  best: ([Int], [Mapping]) -> (Mapping, Double),
+                                  map: (Mapping, Int) -> Int, box: (Int) -> CGRect) -> Located? {
+        // Chunks of whole words, ≥ chunkMinChars non-space characters each (the rest joins the last one).
+        var chunks: [[Int]] = [], cur: [Int] = []
+        var nonSpace = 0
+        for i in range.location..<(range.location + range.length) {
+            let c = string.character(at: i)
+            if isNewline(c) || isSpace(c) {
+                if nonSpace >= chunkMinChars { chunks.append(cur); cur = []; nonSpace = 0 }
+                continue
+            }
+            cur.append(i); nonSpace += 1
+        }
+        if !cur.isEmpty {
+            if nonSpace < chunkMinChars, !chunks.isEmpty { chunks[chunks.count - 1] += cur } else { chunks.append(cur) }
+        }
+        let total = chunks.reduce(0) { $0 + $1.count }
+        guard total >= 2 * chunkMinChars, chunks.count >= 2 else { return nil }
+
+        let fits = chunks.map { best($0, candidates) }
+        guard let anchor = fits.indices.max(by: { fits[$0].1 < fits[$1].1 }), fits[anchor].1 >= chunkMinScore else { return nil }
+        func boxes(_ ci: Int, _ m: Mapping) -> [CGRect] {
+            chunks[ci].map { box(map(m, $0)) }.filter { $0.width > 0 && $0.height > 0 }
+        }
+        func local(_ ci: Int, near m: Mapping) -> (Mapping, Double) {
+            best(chunks[ci], (-8...8).map { Mapping(skipsNewlines: m.skipsNewlines, offset: m.offset + $0) })
+        }
+        /// `b` starts where `a` ends: same line to the right, or a following line further left.
+        func follows(_ a: [CGRect], _ b: [CGRect]) -> Bool {
+            guard let x = a.last, let y = b.first else { return false }
+            let h = max(x.height, y.height)
+            if abs(x.midY - y.midY) < 0.6 * h { return y.minX >= x.minX && y.minX - x.maxX <= 3 * h }
+            return y.midY < x.midY && x.midY - y.midY <= 2.5 * h && y.minX < x.maxX   // PDF space: below = smaller y
+        }
+        var placed: [Int: (Mapping, Double, [CGRect])] = [anchor: (fits[anchor].0, fits[anchor].1, boxes(anchor, fits[anchor].0))]
+        var ci = anchor + 1
+        while ci < chunks.count, let prev = placed[ci - 1] {
+            let (m, sc) = local(ci, near: prev.0)
+            let b = boxes(ci, m)
+            guard sc >= chunkMinScore, follows(prev.2, b) else { break }
+            placed[ci] = (m, sc, b); ci += 1
+        }
+        ci = anchor - 1
+        while ci >= 0, let next = placed[ci + 1] {
+            let (m, sc) = local(ci, near: next.0)
+            let b = boxes(ci, m)
+            guard sc >= chunkMinScore, follows(b, next.2) else { break }
+            placed[ci] = (m, sc, b); ci -= 1
+        }
+        let located = placed.keys.reduce(0) { $0 + chunks[$1].count }
+        guard Double(located) >= piecewiseMinShare * Double(total) else { return nil }
+        let chars = placed.keys.sorted().flatMap { k in
+            chunks[k].filter { !isSpace(string.character(at: $0)) }.map { box(map(placed[k]!.0, $0)) }
+        }.filter { $0.width > 0 && $0.height > 0 }
+        let lines = lineRects(chars)
+        guard lines.allSatisfy({ $0.height >= piecewiseMinLineHeight }) else { return nil }
+        let weighted = placed.reduce(0.0) { $0 + $1.value.1 * Double(chunks[$1.key].count) } / Double(located)
+        return lines.isEmpty ? nil : Located(rects: lines, score: weighted)
     }
 
     struct Mapping: Equatable {

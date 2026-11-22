@@ -34,6 +34,7 @@
 		2F683CA449F288F7733E0BEF /* ViewContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39FB0035879E208D9EBC713A /* ViewContent.swift */; };
 		3371E54143E1DA753F5AC41F /* Library.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469823BF59E548894DE55433 /* Library.swift */; };
 		3C65AD03EE9CFA4562D6999B /* Confidence+Display.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F75EEDE2D8232C05D2DCC3C /* Confidence+Display.swift */; };
+		3EB73843D7C45CCBB6DC8655 /* HighlightNoteKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C620F7FEC65F42EDF5A712 /* HighlightNoteKind.swift */; };
 		3FA1CB73A923D53AB84F5855 /* AckshuallyCore in Frameworks */ = {isa = PBXBuildFile; productRef = 45760D326FC539B2EB57EF05 /* AckshuallyCore */; };
 		432F6B9EC57CA29E6CF6D3DC /* AnswerPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B3F918CEE024633D9AB0C9 /* AnswerPlacement.swift */; };
 		435A192F68044B1FEC67AD24 /* EvidenceStatusRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 322674B5782604DE3D7E6376 /* EvidenceStatusRow.swift */; };
@@ -155,6 +156,7 @@
 		456F3E1EC64266ED9D2E0725 /* LibraryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryScreen.swift; sourceTree = "<group>"; };
 		469823BF59E548894DE55433 /* Library.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Library.swift; sourceTree = "<group>"; };
 		48A0A31C2749255184A72282 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		49C620F7FEC65F42EDF5A712 /* HighlightNoteKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightNoteKind.swift; sourceTree = "<group>"; };
 		4C80A442DE2E5BF2430C36C5 /* SpotlightOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightOverlayView.swift; sourceTree = "<group>"; };
 		556D04C283543677B38CB9F5 /* AskFieldBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskFieldBackground.swift; sourceTree = "<group>"; };
 		59B8C215EE77A5851A1020CF /* HighlightPlacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightPlacer.swift; sourceTree = "<group>"; };
@@ -265,6 +267,7 @@
 			children = (
 				7E394E7AAE8A38A32D19DB3C /* AdaptiveViewerLayout.swift */,
 				DFF11A1E4D6F537C1201C323 /* BackToStepPill.swift */,
+				49C620F7FEC65F42EDF5A712 /* HighlightNoteKind.swift */,
 				7565E829215E08E02461A87E /* HighlightOverlay.swift */,
 				FA0D6EFEED4E7B8CFD771CA6 /* PDFViewer.swift */,
 				ED74A94117B32284EBD55C02 /* Spotlight.swift */,
@@ -651,6 +654,7 @@
 				C334A046034021A8BD204C9A /* GameRoute.swift in Sources */,
 				CE231570CD49293822F0B02D /* GameRow.swift in Sources */,
 				729BD4CD8CD9EE6D8970D20C /* GroupedSection.swift in Sources */,
+				3EB73843D7C45CCBB6DC8655 /* HighlightNoteKind.swift in Sources */,
 				6C4E36CD61F7D98949FEDEB0 /* HighlightOverlay.swift in Sources */,
 				28A560F45C6B14B697E8DD66 /* HighlightPlacer.swift in Sources */,
 				6BD20FD146A9CCDE1187908A /* HoldToTalkPanel.swift in Sources */,

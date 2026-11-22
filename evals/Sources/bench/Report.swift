@@ -62,6 +62,9 @@ enum Report {
         md += "| Verdict correct — **LLM judge** | \(pct(correct, asked.count)) (+\(partial) partial; \(asked.count - judged.count) not judged) |\n"
         md += "| Evidence page correct (where expected pages known) | \(pct(pageKnown.filter { $0 }.count, pageKnown.count)) |\n"
         md += "| Quotes matched on claimed page | \(pct(matched, quotes.count)) (+\(other) found on another page) |\n"
+        let viaFragments = quotes.filter { $0.outcome == "matched" && $0.layout == "fragments" }.count
+        let partials = quotes.filter { $0.outcome == "partial" }.count
+        md += "| Quotes matched through fragments (layout-tolerant) / partial | \(viaFragments) / \(partials) |\n"
         md += "| Answers with every quote matched | \(pct(qWithAllMatched, ok.count)) |\n"
         md += "| Figure boxes sane (inside page, not degenerate/whole page) | \(pct(boxOK, boxes.count)) |\n"
         if !boxScored.isEmpty {

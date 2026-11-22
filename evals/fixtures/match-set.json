@@ -1,0 +1,432 @@
+{
+  "description": "Quote-matcher regression set on the real rulebooks (git-ignored PDFs; games whose PDF is missing are skipped). Quotes are short passages the model wrote, or that earlier bench runs failed to match or locate. expect: continuous | fragments | partial | other_page | not_matched; located: the highlight has rects. Every located entry was hand-checked for the right place (see docs/m2-notes.md).",
+  "pdfs": {
+    "powergrid": "assets/rulebooks/powergrid.pdf",
+    "root": "assets/rulebooks/root-learning.pdf",
+    "azul": "assets/rulebooks/azul.pdf",
+    "dune": "assets/rulebooks/dune-imperium.pdf"
+  },
+  "quotes": [
+    {
+      "game": "root",
+      "page": 15,
+      "quote": "Spend two supporters matching a sympathetic clearing. Remove all enemy pieces there and place the matching base.",
+      "expect": "fragments",
+      "located": true,
+      "note": "owner's case: Revolt, interleaved with the turn-order box"
+    },
+    {
+      "game": "root",
+      "page": 15,
+      "quote": "you’ll have to remove half your officers and discard all supporters matching the suit of that base—even your bird supporters!",
+      "expect": "fragments",
+      "located": true,
+      "note": "owner's case: line interleaved with a sidebar"
+    },
+    {
+      "game": "root",
+      "page": 9,
+      "quote": "At start of battle, defender may play to deal two immediate hits, unless attacker plays a matching ambush card.",
+      "expect": "continuous",
+      "located": false,
+      "note": "text layer of a card drawn ~2 pt tall under artwork: must stay 'not located' (whole page), not slivers"
+    },
+    {
+      "game": "powergrid",
+      "page": 5,
+      "quote": "If the player does not want to offer a power plant for auction, they must opt out of this phase.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "powergrid",
+      "page": 4,
+      "quote": "During the first round of the game each player must buy 1 power plant.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "powergrid",
+      "page": 5,
+      "quote": "The player pays their highest bid to the bank and takes the power plant",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "powergrid",
+      "page": 6,
+      "quote": "Earning cash: Starting with the first player, every player indicates how many cities in their network they wish",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "root",
+      "page": 12,
+      "quote": "The Eyrie are the Lords of the Forest. They rule a clearing even when tied for presence.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "root",
+      "page": 12,
+      "quote": "They rule a clearing even when tied for presence.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "root",
+      "page": 6,
+      "quote": "Birds Are Wild: The birds live in the treetops across the whole Woodland, so you can",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "dune",
+      "page": 16,
+      "quote": "you may deploy up to two more troops from your garrison.",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "dune",
+      "page": 6,
+      "quote": "At the end of a round, if any player has reached 10 or more Victory Points (or if the Conflict Deck is empty), the game ends",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-haiku-json"
+    },
+    {
+      "game": "powergrid",
+      "page": 5,
+      "quote": "Pass the auction\r\nIf the player does not want to offer a power plant for auction, they must opt out of this phase.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "powergrid",
+      "page": 7,
+      "quote": "In Step 2, every city can be part of the networks of two players (two different houses may stand in each city). \r\nThe building cost for the second house is 15 Elektro.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "powergrid",
+      "page": 10,
+      "quote": "The Trust cannot win – it only \r\noffers many possibilities to place obstacles in the way of the players.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "root",
+      "page": 6,
+      "quote": "Mouse Bird\r\nBirds Are Wild: The birds live in the treetops across the whole Woodland, so you can \r\nalways treat a bird card as a mouse, fox, or rabbit card.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "root",
+      "page": 5,
+      "quote": "Move Example\r\n\u001fey don’t rule this \r\nclearing either, so they \r\ncannot move here.",
+      "expect": "partial",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "root",
+      "page": 10,
+      "quote": "Hawks for Hire: After taking three actions, \r\nyou may take any number of extra actions \r\nby spending one bird card per extra action.",
+      "expect": "fragments",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "root",
+      "page": 5,
+      "quote": "Buildings\r\n\u001fey do rule this \r\nclearing, so they \r\ncan move here.\r\n\u001f",
+      "expect": "not_matched",
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "azul",
+      "page": 6,
+      "quote": "CREDITS\r\nEnd of the game\r\nThe game ends right after the Wall-tiling phase in which at least \r\none player has completed at least one horizontal line of \r\n5 consecutive tiles on her wall.",
+      "expect": "partial",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "dune",
+      "page": 12,
+      "quote": "The player with the highest strength wins the Conflict \r\nand gains the top reward on the Conflict card.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "dune",
+      "page": 6,
+      "quote": "At the end of a \r\nround, if any player has reached 10 or more Victory Points (or if the Conflict Deck is empty), the game ends, and whoever has the \r\nmost Victory Points wins.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "dune",
+      "page": 13,
+      "quote": "Phase 4: Makers\r\nPhase 5: Recall\r\nEndgame\r\nFirst, you may play and resolve any \r\nEndgame Intrigue cards you have.",
+      "expect": "partial",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "dune",
+      "page": 9,
+      "quote": "Player Turn – Agent Turn\r\nIn an Agent turn, you play one card from your hand face up in \r\nfront of you, using it to send an Agent from your Leader to an \r\nunoccupied space on the game board.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-citations (native citation)"
+    },
+    {
+      "game": "powergrid",
+      "page": 7,
+      "quote": "In Step 2, every city can be part of the networks of two players (two different houses may stand in each city). The building cost for the second house is 15 Elektro.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json"
+    },
+    {
+      "game": "root",
+      "page": 10,
+      "quote": "you may take any number of extra actions by spending one bird card per extra action.",
+      "expect": "fragments",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json"
+    },
+    {
+      "game": "root",
+      "page": 11,
+      "quote": "She moves two warriors from a mouse clearing, which she rules, to a rabbit clearing, which she doesn't.",
+      "expect": "fragments",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json"
+    },
+    {
+      "game": "dune",
+      "page": 12,
+      "quote": "The player with the highest strength wins the Conflict and gains the top reward on the Conflict card.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json"
+    },
+    {
+      "game": "dune",
+      "page": 11,
+      "quote": "Each troop you have in the Conflict is worth 2 strength. (Troops in your garrison or supply contribute nothing.)",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json"
+    },
+    {
+      "game": "dune",
+      "page": 11,
+      "quote": "You must have at least one troop in the Conflict to have any strength. If your last troop is ever removed, your strength becomes 0, and can’t be increased by any means, including swords on cards you revealed.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json"
+    },
+    {
+      "game": "root",
+      "page": 24,
+      "quote": "It is not a warrior and does not add to rule.",
+      "expect": "not_matched",
+      "note": "from 2026-11-21-m1-opus-json-oldjudge"
+    },
+    {
+      "game": "root",
+      "page": 10,
+      "quote": "you may take any number of extra actions by spending one bird card per extra action",
+      "expect": "fragments",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json-oldjudge"
+    },
+    {
+      "game": "dune",
+      "page": 17,
+      "quote": "you may deploy to the Conflict any number of troops you recruit this turn (including troops recruited by the card you played). In addition, you may deploy up to two more troops from your garrison.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-opus-json-oldjudge"
+    },
+    {
+      "game": "powergrid",
+      "page": 7,
+      "quote": "In Step 2, every city can be part of the networks of two players (two different houses may stand in each city).",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-sonnet-json"
+    },
+    {
+      "game": "powergrid",
+      "page": 4,
+      "quote": "If two or more players are tied for the most cities, the first player is the player among them with the biggest power plant.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-sonnet-json"
+    },
+    {
+      "game": "powergrid",
+      "page": 6,
+      "quote": "The players do not have to choose their starting cities in the first round. They may start their networks in later rounds",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-m1-sonnet-json"
+    },
+    {
+      "game": "root",
+      "page": 5,
+      "quote": "They don’t rule this clearing either, so they cannot move here.",
+      "expect": "partial",
+      "located": true,
+      "note": "from 2026-11-21-restyle-sonnet-1h"
+    },
+    {
+      "game": "root",
+      "page": 5,
+      "quote": "They do rule this clearing, so they can move here.",
+      "expect": "not_matched",
+      "note": "from 2026-11-21-restyle-sonnet-1h"
+    },
+    {
+      "game": "azul",
+      "page": 4,
+      "quote": "Move the rightmost tile of each complete line to the space of the same color in the corresponding line of your wall.",
+      "expect": "fragments",
+      "located": true,
+      "note": "from 2026-11-21-restyle-sonnet-1h"
+    },
+    {
+      "game": "dune",
+      "page": 17,
+      "quote": "you may deploy to the Conflict any number of troops you recruit this turn (including troops recruited by the card you played).",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-restyle-sonnet-1h"
+    },
+    {
+      "game": "powergrid",
+      "page": 4,
+      "quote": "During the frst round of the game each player must buy 1 power plant.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-speed-k3"
+    },
+    {
+      "game": "powergrid",
+      "page": 12,
+      "quote": "Every city can only be part of the network of a single player. The building cost for the first house is 10 Elektro.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-speed-k3"
+    },
+    {
+      "game": "root",
+      "page": 11,
+      "quote": "She moves two warriors from a mouse clearing, which she rules, to a rabbit clearing, which she doesn’t.",
+      "expect": "fragments",
+      "located": true,
+      "note": "from 2026-11-21-speed-k3"
+    },
+    {
+      "game": "powergrid",
+      "page": 8,
+      "quote": "In Step 3, every city can be part of the networks of three players (three different houses may stand in each city).",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "azul",
+      "page": 2,
+      "quote": "If you have picked up more tiles than you can place in your chosen pattern line, you must place the excess tiles in the floor line",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "azul",
+      "page": 3,
+      "quote": "Any tiles you have picked that you cannot or do not want to place according to the rules, you must place in your floor line",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "azul",
+      "page": 3,
+      "quote": "She may even choose to place both tiles in the floor line (C).",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "dune",
+      "page": 10,
+      "quote": "Each sword you revealed during your Reveal turn is worth 1 strength.",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "dune",
+      "page": 10,
+      "quote": "You must have at least one troop in the Conflict to have any strength.",
+      "expect": "other_page",
+      "located": false,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "dune",
+      "page": 10,
+      "quote": "your strength becomes 0, and can’t be increased by any means, including swords on cards you revealed.",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "dune",
+      "page": 16,
+      "quote": "you may deploy to the Conflict any number of troops you recruit this turn (including troops recruited by the card you played)",
+      "expect": "other_page",
+      "located": true,
+      "note": "from 2026-11-21-speed-k4-headings"
+    },
+    {
+      "game": "powergrid",
+      "page": 5,
+      "quote": "If the player does not want to ofer a power plant for auction, they must opt out of this phase.",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-speed-k6"
+    },
+    {
+      "game": "dune",
+      "page": 10,
+      "quote": "plus up to two more troops from your garrison. (Any troops you recruit but choose not to deploy to the Conflict are placed in your garrison as usual.)",
+      "expect": "continuous",
+      "located": true,
+      "note": "from 2026-11-21-speed-k6"
+    }
+  ]
+}
