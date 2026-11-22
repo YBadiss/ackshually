@@ -34,6 +34,22 @@ final class ViewerUITests: XCTestCase {
         start.press(forDuration: 0.05, thenDragTo: end)
     }
 
+    /// Writes a spec §4 answer for `-demoAnswer` (the sample rulebook's pages 3–4 hold the quotes).
+    private func demoAnswer(verdict: String, steps: [(title: String, text: String, page: Int, quote: String)]) throws -> String {
+        let json: [String: Any] = [
+            "restated_question": "What happens to unused energy?", "verdict": verdict, "confidence": "stated",
+            "steps": steps.map { ["title": $0.title, "text": $0.text, "evidence": [["page": $0.page, "quote": $0.quote, "box": NSNull()]]] },
+            "branches": [], "assumptions": [], "needs_web": false,
+        ]
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("demo-\(UUID().uuidString).json")
+        try JSONSerialization.data(withJSONObject: json).write(to: url)
+        return url.path
+    }
+
+    private static let longText = Array(repeating: "A player who owns a Battery keeps up to 2 unused energy at the end of the turn instead of discarding them, and any additional energy is discarded as normal.", count: 3).joined(separator: " ")
+    private static let goodQuote = "you must discard all unused energy"
+    private static let missingQuote = "players may trade energy freely during the auction phase of the game"
+
     private var dots: XCUIElement { app.descendants(matching: .any)["cardDots"].firstMatch }
     private var verdict: XCUIElement { app.staticTexts["verdict"] }
 
@@ -53,15 +69,15 @@ final class ViewerUITests: XCTestCase {
         XCTAssertTrue(carousel.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 6), "Stop turns into Close when done")
         shot("s5-step1")
-        XCTAssertTrue(waitForCard("Card 1 of 4"))
+        XCTAssertTrue(waitForCard("Card 1 of 3"))
         carousel.swipeLeft()
         // A simulator swipe right after the stream settles occasionally doesn't register: retry once.
-        if !waitForCard("Card 2 of 4") { carousel.swipeLeft() }
-        XCTAssertTrue(waitForCard("Card 2 of 4"))
+        if !waitForCard("Card 2 of 3") { carousel.swipeLeft() }
+        XCTAssertTrue(waitForCard("Card 2 of 3"))
         shot("s6-step2")
         // Tap the right peek → next card.
         carousel.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
-        XCTAssertTrue(waitForCard("Card 3 of 4"))
+        XCTAssertTrue(waitForCard("Card 3 of 3"))
         shot("s6-step3")
     }
 
@@ -69,7 +85,7 @@ final class ViewerUITests: XCTestCase {
         launch(["-present", "YES", "-card", "1"])
         let window = app.windows.firstMatch
         XCTAssertTrue(verdict.waitForExistence(timeout: 5))
-        XCTAssertTrue(waitForCard("Card 2 of 4"))
+        XCTAssertTrue(waitForCard("Card 2 of 3"))
         sleep(1)
         // S8: the PDF stays pannable under the sheet (background interaction) → Back to Step.
         XCTAssertFalse(app.buttons["backToStep"].exists)
@@ -81,7 +97,7 @@ final class ViewerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["backToStep"].waitForNonExistence(timeout: 2))
         // Tapping the PDF never changes steps.
         window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
-        XCTAssertTrue(waitForCard("Card 2 of 4"))
+        XCTAssertTrue(waitForCard("Card 2 of 3"))
         // Double-tap: evidence ↔ full page.
         window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).doubleTap()
         sleep(1)
@@ -94,11 +110,11 @@ final class ViewerUITests: XCTestCase {
         // S9: a branch row switches the cards to the branch's own steps; Main Answer returns.
         app.buttons["branch-0"].tap()
         XCTAssertTrue(app.buttons["mainAnswer"].waitForExistence(timeout: 2))
-        XCTAssertTrue(waitForCard("Card 1 of 2"))
+        XCTAssertTrue(waitForCard("Card 1 of 1"))
         XCTAssertEqual(verdict.label, "Discard all 3.")
         shot("s9-branch")
         app.buttons["mainAnswer"].tap()
-        XCTAssertTrue(waitForCard("Card 1 of 4"))
+        XCTAssertTrue(waitForCard("Card 1 of 3"))
         // S7: drag the system sheet down to the collapsed detent: the cards go off screen.
         drag(verdict, toY: 0.98)
         sleep(1)
@@ -115,17 +131,22 @@ final class ViewerUITests: XCTestCase {
         shot("s9-expanded")
         // Tapping a step row jumps back to that card at medium.
         app.buttons["stepRow-1"].tap()
-        XCTAssertTrue(waitForCard("Card 2 of 4"))
+        XCTAssertTrue(waitForCard("Card 2 of 3"))
     }
 
     func testFollowUpKeepsContext() {
         launch(["-present", "YES"])
         let carousel = app.scrollViews["carousel"]
         XCTAssertTrue(carousel.waitForExistence(timeout: 5))
-        for _ in 0..<3 { carousel.swipeLeft(); usleep(400_000) }
-        XCTAssertTrue(waitForCard("Card 4 of 4"))
+        for _ in 0..<2 { carousel.swipeLeft(); usleep(400_000) }
+        // The last card is the last step: no closing "Result" card repeating the verdict.
+        XCTAssertTrue(waitForCard("Card 3 of 3"))
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "stepCard").allElementsBoundByIndex.contains { $0.label.hasPrefix("Result") })
+        // Follow-up and thumbs live in their own row under the shelf.
         let field = app.textFields["followUpField"]
         XCTAssertTrue(field.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons.matching(identifier: "thumbsUp").allElementsBoundByIndex.contains { $0.isHittable })
+        XCTAssertGreaterThan(field.frame.minY, carousel.frame.maxY)
         shot("s6-last-card")
         field.tap()
         field.typeText("And with two Batteries?\n")
@@ -163,7 +184,7 @@ final class ViewerUITests: XCTestCase {
         app.terminate()
         launch(["-present", "YES"])
         XCTAssertTrue(verdict.waitForExistence(timeout: 5))
-        XCTAssertEqual(pdf.value as? String, "Zoomed")
+        XCTAssertTrue((pdf.value as? String ?? "").hasPrefix("Zoomed"))
         app.buttons["closeAnswer"].tap()
         XCTAssertTrue(XCTWaiter().wait(for: [XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "value == %@", "Whole page"), object: pdf)], timeout: 3) == .completed)
@@ -197,5 +218,142 @@ final class ViewerUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["apiKeyField"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(verdict.exists)
         XCTAssertFalse(app.descendants(matching: .any)["demoNote"].firstMatch.exists)
+    }
+
+    // MARK: Regressions found by hand on 2026-11-21 (owner, Azul): answer polish
+
+    /// Step card text must never render outside its card (4-*.png), at default and AX text sizes;
+    /// all cards share one height and long text offers "More", which opens that step expanded.
+    func testCardTextStaysInsideCard() throws {
+        let path = try demoAnswer(verdict: "Keep 2, discard 1.", steps: [
+            ("Short", "Unused energy is discarded.", 3, Self.goodQuote),
+            ("Long", Self.longText, 4, "keeps up to 2 unused energy instead of discarding them"),
+            ("Medium", "Anything above 2 is still discarded, so 1 of your 3 energy goes back to the supply.", 3, Self.goodQuote),
+        ])
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityL"] {
+            launch(["-present", "YES", "-demoAnswer", path, "-UIPreferredContentSizeCategoryName", size])
+            XCTAssertTrue(app.scrollViews["carousel"].waitForExistence(timeout: 5))
+            sleep(1)
+            let cards = app.descendants(matching: .any).matching(identifier: "stepCard").allElementsBoundByIndex
+            XCTAssertEqual(cards.count, 3, size)
+            let heights = Set(cards.map { Int($0.frame.height.rounded()) })
+            XCTAssertEqual(heights.count, 1, "all cards share one height (\(size)): \(heights)")
+            for card in cards {
+                for text in card.descendants(matching: .staticText).matching(identifier: "stepCardText").allElementsBoundByIndex {
+                    XCTAssertTrue(card.frame.insetBy(dx: -1, dy: -1).contains(text.frame),
+                                  "text \(text.frame) outside card \(card.frame) at \(size)")
+                }
+            }
+            shot("cards-equal-height-\(size)")
+            app.terminate()
+        }
+        launch(["-present", "YES", "-demoAnswer", path, "-card", "1"])
+        let more = app.buttons["cardMore"].firstMatch
+        XCTAssertTrue(more.waitForExistence(timeout: 5))
+        more.tap()
+        XCTAssertTrue(app.buttons["stepRow-1"].waitForExistence(timeout: 3))
+        sleep(1)
+        XCTAssertTrue(app.buttons["stepRow-1"].isHittable, "More opens the expanded answer at that step")
+        shot("card-more-expanded")
+    }
+
+    /// A long verdict is capped at three lines on the sheet (owner: "5 bold lines"); expanded shows it all.
+    func testLongVerdictIsCappedUntilExpanded() throws {
+        let long = "You still must pick tiles, and any you can't or don't want to place go to your floor line, costing you minus points. Taking is not optional, and the starting player marker counts as a floor tile too."
+        let path = try demoAnswer(verdict: long, steps: [("Rule", "Unused energy is discarded.", 3, Self.goodQuote)])
+        launch(["-present", "YES", "-demoAnswer", path])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        sleep(1)
+        let capped = verdict.frame.height
+        XCTAssertEqual(verdict.label, long, "VoiceOver still gets the whole verdict")
+        app.terminate()
+        launch(["-present", "YES", "-demoAnswer", path, "-detent", "expanded"])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        sleep(1)
+        XCTAssertGreaterThan(verdict.frame.height, capped * 1.3, "expanded shows the whole verdict")
+        // Three title3 lines are well under 4.2 × the proof line's height.
+        let proof = app.descendants(matching: .any)["proofLine"].firstMatch
+        XCTAssertLessThan(capped, proof.frame.height * 4.2)
+    }
+
+    /// The cited passage is spotlit (2-/3-*.png: highlight invisible); a quote that doesn't match
+    /// says so on the PDF instead of silently showing the page.
+    func testSpotlightAndExplicitMiss() throws {
+        let path = try demoAnswer(verdict: "Discard it.", steps: [
+            ("Rule", "Unused energy is discarded.", 3, Self.goodQuote),
+            ("Missing", "This quote is not in the book.", 3, Self.missingQuote),
+        ])
+        launch(["-present", "YES", "-demoAnswer", path])
+        let pdf = app.descendants(matching: .any)["pdfView"].firstMatch
+        XCTAssertTrue(pdf.waitForExistence(timeout: 5))
+        XCTAssertTrue(XCTWaiter().wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value CONTAINS %@", "spotlight"), object: pdf)], timeout: 3) == .completed,
+                      "\(pdf.value ?? "nil")")
+        XCTAssertFalse(app.descendants(matching: .any)["highlightNote"].firstMatch.exists)
+        shot("spotlight-step1")
+        app.terminate()
+        launch(["-present", "YES", "-demoAnswer", path, "-card", "1"])
+        let note = app.descendants(matching: .any)["highlightNote"].firstMatch
+        XCTAssertTrue(note.waitForExistence(timeout: 5))
+        XCTAssertTrue(note.label.contains("not found"), note.label)
+        XCTAssertFalse((pdf.value as? String ?? "").contains("spotlight"), "\(pdf.value ?? "nil")")
+        shot("spotlight-miss-note")
+    }
+
+    /// ⋯ → Answer Details lists every cited passage with its match status, and copies the JSON.
+    func testAnswerDetailsListsMatchStatus() throws {
+        let path = try demoAnswer(verdict: "Discard it.", steps: [
+            ("Rule", "Unused energy is discarded.", 3, Self.goodQuote),
+            ("Missing", "This quote is not in the book.", 3, Self.missingQuote),
+        ])
+        launch(["-present", "YES", "-demoAnswer", path])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        app.navigationBars.buttons["More"].firstMatch.tap()
+        app.buttons["Answer Details"].tap()
+        let first = app.descendants(matching: .any)["evidence-1.1"].firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 3))
+        XCTAssertTrue(first.label.hasPrefix("Matched"), first.label)
+        let second = app.descendants(matching: .any)["evidence-2.1"].firstMatch
+        XCTAssertTrue(second.label.hasPrefix("Not matched"), second.label)
+        XCTAssertEqual(app.staticTexts["detailsSummary"].label, "1 of 2 passages highlighted")
+        shot("answer-details")
+        app.buttons["copyAnswerJSON"].tap()
+        XCTAssertTrue(app.buttons["Copied"].waitForExistence(timeout: 2))
+    }
+
+    /// Landscape (1-landscape-same-color.png): the navigation bar must be clearly darker than the
+    /// answer column next to it.
+    func testNavigationBarIsDarkerThanAnswerColumn() throws {
+        launch(["-present", "YES"])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        XCTAssertTrue(verdict.isHittable)
+        let bar = app.navigationBars.firstMatch.frame
+        let column = verdict.frame
+        let shot = XCUIScreen.main.screenshot().image
+        let window = app.windows.firstMatch.frame
+        let barLuma = try XCTUnwrap(luma(shot, at: CGPoint(x: column.minX + 2, y: bar.maxY - 6), window: window))
+        let panelLuma = try XCTUnwrap(luma(shot, at: CGPoint(x: column.minX - 4, y: column.maxY + 30), window: window))
+        XCTAssertLessThan(barLuma, panelLuma - 0.04, "bar \(barLuma) vs panel \(panelLuma)")
+        self.shot("landscape-bar-darker")
+    }
+
+    /// Relative luminance (0–1) of the pixel at a window point. Screen captures stay in portrait
+    /// pixel order in landscape-left: window (x, y) is image (width − y, x).
+    private func luma(_ image: UIImage, at p: CGPoint, window: CGRect) -> CGFloat? {
+        guard let cg = image.cgImage else { return nil }
+        let portraitImage = cg.width < cg.height
+        let landscapeWindow = window.width > window.height
+        let q = portraitImage && landscapeWindow ? CGPoint(x: window.height - p.y, y: p.x) : p
+        let scale = CGFloat(cg.width) / (portraitImage && landscapeWindow ? window.height : window.width)
+        let x = Int(q.x * scale), y = Int(q.y * scale)
+        guard x >= 0, y >= 0, x < cg.width, y < cg.height,
+              let cropped = cg.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)) else { return nil }
+        var px = [UInt8](repeating: 0, count: 4)
+        let ctx = CGContext(data: &px, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        ctx?.draw(cropped, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        return (0.2126 * CGFloat(px[0]) + 0.7152 * CGFloat(px[1]) + 0.0722 * CGFloat(px[2])) / 255
     }
 }

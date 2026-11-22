@@ -2,7 +2,8 @@ import SwiftUI
 import AckshuallyCore
 
 /// Answer header (S4/S5): bold verdict, then one proof line. Text hierarchy, no chips.
-/// The restated question shows only while arriving and when `showsQuestion` (expanded / inspector).
+/// The restated question shows only while arriving and when `showsQuestion` (expanded / inspector);
+/// otherwise the verdict is capped at `layout.verdictMaxLines`.
 /// Trailing: Stop while streaming, otherwise the standard close button.
 struct AnswerHeader: View {
     var content: HeaderContent
@@ -56,7 +57,10 @@ struct AnswerHeader: View {
         Text(content.verdict ?? "")
             .font(theme.font.verdict)
             .foregroundStyle(theme.colors.label)
+            // At most 3 lines on the sheet's smaller detents; the full verdict when expanded.
+            .lineLimit(showsQuestion ? nil : theme.layout.verdictMaxLines)
             .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel(content.verdict ?? "")
             .accessibilityAddTraits(.isHeader)
             .accessibilityIdentifier("verdict")
         if let c = content.confidence {
@@ -98,6 +102,8 @@ struct AnswerHeader: View {
             AnswerHeader(content: Fixtures.headerInferred)
             AnswerHeader(content: Fixtures.headerNotCovered)
             AnswerHeader(content: Fixtures.headerBranchActive)
+            AnswerHeader(content: Fixtures.headerLongVerdict)
+            AnswerHeader(content: Fixtures.headerLongVerdict, showsQuestion: true)
             AnswerHeader(content: Fixtures.headerFailed)
         }
         .padding()

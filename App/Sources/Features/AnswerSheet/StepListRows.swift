@@ -13,10 +13,13 @@ struct StepListRows: View {
                 Button { onSelect(row.index) } label: { label(row) }
                     .accessibilityAddTraits(current == row.index ? .isSelected : [])
                     .accessibilityIdentifier("stepRow-\(row.index)")
+                    .id(Self.scrollID(row.index))
             }
         }
         .buttonStyle(.plain)
     }
+
+    static func scrollID(_ index: Int) -> String { "stepRow-\(index)" }
 
     private func label(_ row: StepRow) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: theme.spacing.l) {

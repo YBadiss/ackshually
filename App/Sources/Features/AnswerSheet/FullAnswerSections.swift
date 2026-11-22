@@ -9,7 +9,7 @@ struct FullAnswerSections: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.spacing.xl) {
-            StepListRows(rows: model.stepRows, current: model.focusedMainStep, onSelect: select)
+            StepListRows(rows: model.stepRows, current: model.focusedRow, onSelect: select)
             if let a = model.answer?.assumptions, !a.isEmpty { AssumptionRows(assumptions: a) }
             if model.answer?.complete == true {
                 GroupedSection(title: "Was this right?") {
@@ -22,7 +22,7 @@ struct FullAnswerSections: View {
     }
 
     private func select(_ i: Int) {
-        model.selectStep(i)
+        model.selectRow(i)
         if collapsesOnSelect { withAnimation(.snappy) { model.detent = .medium } }
     }
 }

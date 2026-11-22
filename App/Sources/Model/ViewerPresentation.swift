@@ -9,6 +9,8 @@ import Observation
 final class ViewerPresentation {
     var importing = false
     var settings = false
+    /// ⋯ → Answer Details (evidence match status, Copy JSON).
+    var answerDetails = false
     /// Set by the viewer layout while the compact answer sheet is presented.
     var answerSheetPresented = false
 }

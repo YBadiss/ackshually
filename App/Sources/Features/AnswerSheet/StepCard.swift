@@ -1,12 +1,16 @@
 import SwiftUI
 
 /// One card of the carousel (S5/S6), styled as a system shelf card (App Store / Music):
-/// rounded, no border or shadow. Caption = step title + page, then one or two sentences.
-/// Also renders the loading placeholder, the last "Result" card (with thumbs), a branch
-/// without steps and (M4) a web-finding card.
+/// rounded, no border or shadow. Caption = step title + page, then the step text, capped at
+/// `layout.cardMaxLines` with "More" when longer. Also renders the loading placeholder, a branch
+/// without steps and (M4) a web-finding card. The carousel gives every card the same height
+/// (`height`, the tallest card's content) and reads each card's own height via `onContentHeight`.
 struct StepCard: View {
     var content: StepCardContent
-    var onRate: (Bool) -> Void = { _ in }
+    /// Shared shelf height; nil = the card's own.
+    var height: CGFloat?
+    var onMore: () -> Void = {}
+    var onContentHeight: (CGFloat) -> Void = { _ in }
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -21,18 +25,12 @@ struct StepCard: View {
                 }
             case .loading:
                 CardCaption(title: "Reading…", trailing: nil)
-                body("Unused energy is discarded at the end of your turn, as the rules say.")
+                Text("Unused energy is discarded at the end of your turn, as the rules say.")
+                    .font(theme.font.cardBody)
                     .redacted(reason: .placeholder)
-            case let .result(_, text, rating):
-                CardCaption(title: "Result", trailing: nil)
-                Text(text).font(theme.font.cardStrong).foregroundStyle(theme.colors.label)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: theme.spacing.xs)
-                FeedbackButtons(rating: rating, onRate: onRate)
             case let .branch(condition, verdict):
                 CardCaption(title: "If \(condition.lowercasedFirst)", trailing: nil)
-                Text(verdict).font(theme.font.cardStrong).foregroundStyle(theme.colors.label)
-                    .fixedSize(horizontal: false, vertical: true)
+                body(verdict, font: theme.font.cardStrong)
                 Text("No rulebook passage for this case.")
                     .font(theme.font.footnote).foregroundStyle(theme.colors.secondaryLabel)
             case let .web(_, w):
@@ -45,15 +43,16 @@ struct StepCard: View {
                 Text(w.role).font(theme.font.footnote).foregroundStyle(theme.colors.secondaryLabel)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: theme.size.cardMinHeight, alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onContentHeight($0) }
+        .frame(maxWidth: .infinity, minHeight: max(height ?? 0, theme.size.cardMinHeight), alignment: .topLeading)
         .padding(.horizontal, theme.spacing.xl).padding(.vertical, theme.spacing.l)
         .background(theme.colors.card, in: .rect(cornerRadius: theme.radius.card))
         .accessibilityElement(children: .contain)
     }
 
-    private func body(_ text: String) -> some View {
-        Text(text).font(theme.font.cardBody).foregroundStyle(theme.colors.label)
-            .fixedSize(horizontal: false, vertical: true)
+    private func body(_ text: String, font: Font? = nil) -> some View {
+        TruncatingText(text: text, lineLimit: theme.layout.cardMaxLines, font: font ?? theme.font.cardBody, onMore: onMore)
     }
 
     static func pageText(_ pages: [Int]) -> String? {

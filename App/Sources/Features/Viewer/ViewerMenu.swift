@@ -9,6 +9,7 @@ struct ViewerMenu: ToolbarContent {
     var onOpen: () -> Void
     var onSample: () -> Void
     var onShowAnswer: () -> Void
+    var onDetails: () -> Void
     var onSettings: () -> Void
 
     var body: some ToolbarContent {
@@ -17,8 +18,13 @@ struct ViewerMenu: ToolbarContent {
                 Button("Open a Rulebook PDF…", systemImage: "doc.badge.plus", action: onOpen)
                 Button("Sample Rulebook", systemImage: "book.closed", action: onSample)
             }
-            if hasAnswer, !answerShown {
-                Button("Show Answer", systemImage: "text.below.photo", action: onShowAnswer)
+            if hasAnswer {
+                Section {
+                    if !answerShown {
+                        Button("Show Answer", systemImage: "text.below.photo", action: onShowAnswer)
+                    }
+                    Button("Answer Details", systemImage: "list.bullet.rectangle", action: onDetails)
+                }
             }
             Section {
                 Button("Settings", systemImage: "gearshape", action: onSettings)

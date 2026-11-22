@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Observation
 
 struct ViewerDialogs: ViewModifier {
@@ -13,6 +14,12 @@ struct ViewerDialogs: ViewModifier {
             }
             .sheet(isPresented: active ? $presentation.settings : .constant(false)) {
                 SettingsSheet { presentation.settings = false }
+                    .themed()
+            }
+            .sheet(isPresented: active ? $presentation.answerDetails : .constant(false)) {
+                AnswerDetailsView(reports: model.evidenceReports,
+                                  onCopy: { UIPasteboard.general.string = model.answerDetails?.json },
+                                  onDone: { presentation.answerDetails = false })
                     .themed()
             }
     }
