@@ -166,7 +166,7 @@ final class ExcerptTests: XCTestCase {
 
     func testDefaultRequestIsUnchangedAndExcerptRequestCarriesNote() throws {
         let pdf = try Data(contentsOf: Self.url)
-        let p = ClaudeProvider(config: ClaudeConfig(apiKey: "x"))
+        let p = PageSelectingProvider(base: ClaudeProvider(config: ClaudeConfig(apiKey: "x")))
         let full = AnswerRequest(pdf: pdf, documentTitle: "T", question: "Q")
         XCTAssertEqual(full.pageSelection, .fullDocument)
         XCTAssertEqual(p.requestBody(for: full).serialized(), p.requestBody(for: full, excerpt: nil).serialized())
@@ -225,7 +225,7 @@ final class SelectionProviderTests: XCTestCase {
         return URLSession(configuration: c)
     }
 
-    func collect(_ p: ClaudeProvider, _ r: AnswerRequest) async throws -> [AnswerEvent] {
+    func collect(_ p: PageSelectingProvider, _ r: AnswerRequest) async throws -> [AnswerEvent] {
         var out: [AnswerEvent] = []
         for try await e in p.answer(r) { out.append(e) }
         return out
@@ -234,7 +234,7 @@ final class SelectionProviderTests: XCTestCase {
     func testNotCoveredOnExcerptFallsBackToFullPDFAndHidesDiscardedAttempt() async throws {
         MockAPI.requests = []
         let pdf = try Data(contentsOf: ExcerptTests.url)
-        let p = ClaudeProvider(config: ClaudeConfig(apiKey: "x", useFallbacks: false), session: session())
+        let p = PageSelectingProvider(base: ClaudeProvider(config: ClaudeConfig(apiKey: "x", useFallbacks: false), session: session()))
         let r = AnswerRequest(pdf: pdf, documentTitle: "T", question: "Does my battery keep unused energy?",
                               pageSelection: .automatic(PageSelectionOptions(topK: 1, neighbors: 0, fullIfCoverage: 1.1)))
         let events = try await collect(p, r)
@@ -253,7 +253,7 @@ final class SelectionProviderTests: XCTestCase {
     func testExcerptAnswerPagesAreMappedBack() async throws {
         MockAPI.requests = []
         let pdf = try Data(contentsOf: ExcerptTests.url)
-        let p = ClaudeProvider(config: ClaudeConfig(apiKey: "x", useFallbacks: false), session: session())
+        let p = PageSelectingProvider(base: ClaudeProvider(config: ClaudeConfig(apiKey: "x", useFallbacks: false), session: session()))
         // No fallback: the excerpt answer (which cites excerpt page 1) is kept and mapped to page 4.
         let r = AnswerRequest(pdf: pdf, documentTitle: "T", question: "Does my battery keep unused energy?",
                               pageSelection: .automatic(PageSelectionOptions(topK: 1, neighbors: 0, fullIfCoverage: 1.1,

@@ -122,14 +122,15 @@ struct TimeoutError: Error {}
 
 final class Runner {
     let opts: RunOptions
-    let provider: ClaudeProvider
+    /// Claude, plus page selection when `--pages auto` asks for it (`.fullDocument` passes straight through).
+    let provider: PageSelectingProvider
     let judge: Judge?
 
     init(opts: RunOptions, credential: Credential, judgeAPIKey: String) {
         self.opts = opts
-        provider = ClaudeProvider(config: ClaudeConfig(credential: credential, model: opts.model, effort: opts.effort, mode: opts.mode,
-                                                       useSchema: opts.useSchema, useFallbacks: opts.useFallbacks, baseURL: opts.baseURL,
-                                                       requestTimeout: opts.timeout))
+        provider = PageSelectingProvider(base: ClaudeProvider(config: ClaudeConfig(
+            credential: credential, model: opts.model, effort: opts.effort, mode: opts.mode, useSchema: opts.useSchema,
+            useFallbacks: opts.useFallbacks, baseURL: opts.baseURL, requestTimeout: opts.timeout)))
         // Through the server, the judge's request isn't one the server accepts: send it straight to Anthropic.
         let judgeURL = credential == .apiKey(judgeAPIKey) ? opts.baseURL : URL(string: "https://api.anthropic.com")!
         judge = opts.judgeModel.map { Judge(apiKey: judgeAPIKey, model: $0, baseURL: judgeURL) }
