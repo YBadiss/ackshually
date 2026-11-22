@@ -70,6 +70,19 @@ final class IncrementalJSONTests: XCTestCase {
         XCTAssertNil(blank.title)
     }
 
+    /// Owner feedback 2026-11-21: verdicts ran to 5 bold lines and the last step repeated the verdict.
+    func testPromptLimitsVerdictAndForbidsRepeatingIt() {
+        XCTAssertTrue(Prompts.common.contains("at most 12 words"))
+        XCTAssertTrue(Prompts.common.contains("never restate"))
+        XCTAssertTrue(Prompts.jsonSystem.contains("Never title a step \"Result\""))
+        // Schema field order (= streaming order) is unchanged.
+        let order = ["restated_question", "verdict", "confidence", "steps", "branches", "assumptions", "needs_web"]
+        let tail = Prompts.jsonSystem.components(separatedBy: "keys in this order:").last ?? ""
+        let positions = order.compactMap { tail.range(of: $0)?.lowerBound }
+        XCTAssertEqual(positions.count, order.count)
+        XCTAssertEqual(positions, positions.sorted())
+    }
+
     func testSchemaHasTitlesAndBranchSteps() {
         let body = ClaudeProvider(config: ClaudeConfig(apiKey: "x"))
             .requestBody(for: AnswerRequest(pdf: Data([1]), documentTitle: "T", question: "Q")).serialized()

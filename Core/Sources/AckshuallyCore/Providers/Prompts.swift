@@ -17,14 +17,19 @@ enum Prompts {
     Rules for the answer:
     - Restate the question in one short sentence, including the concrete situation, so the player can \
     tell immediately if you misunderstood.
-    - Give the verdict first: one or two short sentences that settle the dispute.
+    - Give the verdict first: ONE short sentence of at most 12 words that settles the dispute (it is \
+    read aloud at the table). No reasons, page numbers or caveats in the verdict: those belong in the steps.
     - confidence: "stated" if the rulebook says it explicitly; "inferred" if it follows from the rules \
     but is not written; "not_covered" if the rulebook does not settle it.
     - If the answer depends on facts the player did not give, give the most likely verdict and list \
     the alternatives as branches (condition → verdict).
-    - Steps follow the logic of the ruling (general rule, then exceptions, then conclusion), not page \
+    - Steps follow the logic of the ruling (general rule, then exceptions, then application), not page \
     order. Use as many steps as needed, usually 2–4. Always check for exceptions, special cases and \
     clarifications elsewhere in the book before concluding.
+    - The last step applies the rules to the player's concrete situation (what exactly happens: which \
+    pieces go where, how many points, what comes next). It must add something; never restate or \
+    paraphrase the verdict.
+    - Each step's text is one or two short sentences.
     - Page numbers are the physical page index in the PDF file, starting at 1 for the first page of \
     the file. Do NOT use the page numbers printed on the pages.
     - In follow-up questions, use the earlier conversation as context.
@@ -33,7 +38,7 @@ enum Prompts {
     static let jsonSystem = common + """
 
     - Each step has a title: 2–4 words naming what it establishes ("General rule", "Battery exception", \
-    "Result"), no page numbers.
+    "Your 3 energy"), no page numbers. Never title a step "Result", "Conclusion" or "Verdict".
     - Each branch has its own steps (usually one) citing the evidence for that case, in the same format.
     - Each step cites evidence: the page and a quote copied verbatim from that page's text — one \
     contiguous span of 5–30 words, no ellipses, no paraphrase, no added punctuation.
