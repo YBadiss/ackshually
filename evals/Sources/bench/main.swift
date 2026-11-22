@@ -78,7 +78,8 @@ case "match":
     let r = m.match(quote: args[2], page: page)
     print(r.label)
     if let q = r.match {
-        print(String(format: "error rate %.3f, %d rect(s)", q.errorRate, q.rects.count))
+        print(String(format: "error rate %.3f, %d rect(s), geometry %@", q.errorRate, q.rects.count,
+                     q.geometryScore.map { String(format: "%.2f", $0) } ?? "not located"))
         for b in q.rects { print(String(format: "  x=%.3f y=%.3f w=%.3f h=%.3f", b.x, b.y, b.w, b.h)) }
         print("text: \(q.matchedText)")
     }

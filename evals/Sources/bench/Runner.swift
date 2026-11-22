@@ -9,6 +9,10 @@ struct HighlightResult: Codable {
     var detail: String
     var matchedPage: Int?
     var errorRate: Double?
+    /// Highlight rects located on the page (0 = text matched but not located: the app shows the page).
+    var rects: Int?
+    /// GlyphLocator's confidence in the located geometry (0–1).
+    var geometryScore: Double?
     var box: NormalizedBox?
     var boxCheck: String?
     /// IoU with expected box (if the question has one and the page matches).
@@ -260,6 +264,7 @@ final class Runner {
                     case .matchedOtherPage(let qm, _): h.outcome = "matched_other_page"; h.matchedPage = qm.page; h.errorRate = qm.errorRate
                     case .notMatched(let best, _): h.outcome = "not_matched"; h.errorRate = best
                     }
+                    if let qm = m.match { h.rects = qm.rects.count; h.geometryScore = qm.geometryScore }
                 }
                 if let b = e.box {
                     h.box = b
