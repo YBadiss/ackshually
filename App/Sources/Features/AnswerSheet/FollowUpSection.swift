@@ -15,11 +15,10 @@ struct FollowUpSection: View {
                 .accessibilityAddTraits(.isHeader)
             AskField(text: $model.draft, voice: voice, placeholder: "Ask a follow-up", style: .inline, onSend: model.ask)
         }
-        .padding(.horizontal, theme.spacing.l)
     }
 }
 
 #Preview {
     FollowUpSection(model: Fixtures.model(), voice: AskController())
-        .padding(.vertical).themeBackground(\.sheet).themed()
+        .padding().themeBackground(\.sheet).themed()
 }

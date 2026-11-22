@@ -3,6 +3,10 @@ import SwiftUI
 /// The whole answer in one scrolling column, wired to the injected `ViewerModel`. The sheet
 /// reveals it top-down (collapsed → header, medium → + step cards and branches, large → + steps,
 /// assumptions, feedback, follow-up); the inspector shows all of it.
+/// Margins are the scroll view's content margins (`spacing.sheetMargin` at the sides,
+/// `spacing.sheetTop` under the sheet's grabber); only the step shelf runs edge to edge.
+/// While an answer streams, the shelf (a loading card) and the follow-up row are laid out from
+/// the first token, so the sheet can be sized once and the content fills in place.
 struct AnswerContent: View {
     @Bindable var model: ViewerModel
     var voice: AskController
@@ -13,6 +17,9 @@ struct AnswerContent: View {
 
     private nonisolated static let space = "answerContent"
     private var answered: Bool { model.header?.state == .answered }
+    /// Shelf and footer row: once answered, and as placeholders while the answer streams.
+    private var showsShelf: Bool { answered || model.isBusy }
+    private var topMargin: CGFloat { placement == .inspector ? theme.spacing.xl : theme.spacing.sheetTop }
     /// A rejected credential: the error header offers Settings.
     private var settingsAction: (() -> Void)? {
         guard model.failureOpensSettings else { return nil }
@@ -27,32 +34,36 @@ struct AnswerContent: View {
                         AnswerHeader(content: h, showsQuestion: placement.isExpanded,
                                      onStop: stop, onRetry: model.retry,
                                      onSettings: settingsAction, onClose: close)
-                            .padding(.horizontal, theme.spacing.xl)
                             .id("top")
                             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.space)).maxY } action: {
-                                metrics.collapsed = $0
+                                metrics.collapsed = $0 + topMargin
+                                onMetrics(metrics)
                             }
                     }
-                    if answered {
+                    if showsShelf {
                         AnswerShelf(model: model)
+                            // Edge to edge: the cards peek from the sheet's sides.
+                            .padding(.horizontal, -theme.spacing.sheetMargin)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
                     // Sheet below large: follow-up + thumbs in their own row (expanded / inspector
-                    // have them in the full sections below).
-                    if model.canFollowUp, !placement.isExpanded {
+                    // have them in the full sections below). Shown, disabled, while streaming.
+                    if model.canFollowUp || model.isBusy, !placement.isExpanded {
                         AnswerFooterRow(draft: $model.draft, voice: voice, rating: model.currentRating,
                                         onRate: model.rate, onSend: model.ask)
+                            .disabled(!model.canFollowUp)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
                     if answered, !model.branchRows.isEmpty {
                         BranchRows(rows: model.branchRows, onSelect: selectBranch)
-                            .padding(.horizontal, theme.spacing.l)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
-                    // The medium detent ends here; what follows shows when expanded.
+                    // The medium detent ends here; what follows shows when expanded. The stack's
+                    // spacing above this marker is the bottom margin of the medium detent.
                     Color.clear.frame(height: 0)
                         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.space)).minY } action: {
-                            metrics.medium = $0 - theme.spacing.xl
+                            metrics.medium = $0 + topMargin
+                            onMetrics(metrics)
                         }
                     if answered {
                         FullAnswerSections(model: model, collapsesOnSelect: placement != .inspector)
@@ -63,10 +74,11 @@ struct AnswerContent: View {
                     }
                     if model.isDemo, answered { DemoNote() }
                 }
-                .padding(.top, theme.spacing.xl)
-                .padding(.bottom, theme.spacing.xxl)
                 .coordinateSpace(.named(Self.space))
             }
+            .contentMargins(.horizontal, theme.spacing.sheetMargin, for: .scrollContent)
+            .contentMargins(.top, topMargin, for: .scrollContent)
+            .contentMargins(.bottom, theme.spacing.xxl, for: .scrollContent)
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize)
             .onChange(of: placement.isExpanded) { _, expanded in
@@ -80,7 +92,6 @@ struct AnswerContent: View {
                 model.clearExpandedRow()
             }
         }
-        .onChange(of: metrics, initial: true) { _, m in onMetrics(m) }
         .accessibilityIdentifier("answerSheet")
     }
 

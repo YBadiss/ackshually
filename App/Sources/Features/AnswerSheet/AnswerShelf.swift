@@ -10,9 +10,16 @@ struct AnswerShelf: View {
         if !items.isEmpty {
             VStack(spacing: theme.spacing.m) {
                 StepCarousel(items: items, selection: $model.cardID, onMore: showMore)
+                    // Fresh measurements (shelf height) per answer and per branch.
+                    .id(ShelfKey(answer: model.answer?.id, branch: model.activeBranch))
                 CardDots(count: items.count, index: items.firstIndex { $0.id == model.currentCard } ?? 0)
             }
         }
+    }
+
+    private struct ShelfKey: Hashable {
+        var answer: UUID?
+        var branch: Int?
     }
 
     private func showMore(_ card: CardID) {

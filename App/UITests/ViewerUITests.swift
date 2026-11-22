@@ -298,8 +298,9 @@ final class ViewerUITests: XCTestCase {
         app.terminate()
         launch(["-present", "YES", "-demoAnswer", path, "-card", "1"])
         let note = app.descendants(matching: .any)["highlightNote"].firstMatch
-        XCTAssertTrue(note.waitForExistence(timeout: 5))
-        XCTAssertTrue(note.label.contains("not found"), note.label)
+        // Wait on the label itself: the note can exist a moment before its text settles.
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label CONTAINS %@", "not found"), object: note)], timeout: 5), .completed, note.label)
         XCTAssertFalse((pdf.value as? String ?? "").contains("spotlight"), "\(pdf.value ?? "nil")")
         shot("spotlight-miss-note")
     }
@@ -396,6 +397,80 @@ final class ViewerUITests: XCTestCase {
         let panelLuma = try XCTUnwrap(luma(shot, at: CGPoint(x: column.minX - 4, y: column.maxY + 30), window: window))
         XCTAssertLessThan(barLuma, panelLuma - 0.04, "bar \(barLuma) vs panel \(panelLuma)")
         self.shot("landscape-bar-darker")
+    }
+
+    // MARK: Regressions found by hand on 2026-11-22 (owner, iPhone 18 Pro): sheet breathing, jumps
+
+    /// While an answer streams, the sheet must stay put: content fills in place. Before the fix the
+    /// detents were re-measured from the content on every streamed event, so the sheet shrank under
+    /// the verdict and grew back each time (the "panel hides and reappears" bug).
+    func testSheetStaysPutWhileAnswerStreams() {
+        // A slower stream (3×) so the sheet can be sampled many times between events.
+        launch(["-ask", "what happens to my energy at end of turn if I have the battery", "-demoPace", "3"])
+        let sheet = app.descendants(matching: .any)["answerSheet"].firstMatch
+        let close = app.buttons["closeAnswer"]
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+        let appeared = Date()
+        var streaming: [(t: TimeInterval, exists: Bool, top: CGFloat)] = []
+        var after: [(exists: Bool, top: CGFloat)] = []
+        var doneAt: Date?
+        while Date().timeIntervalSince(appeared) < 40 {
+            let t = Date().timeIntervalSince(appeared)
+            let exists = sheet.exists
+            let top = exists ? sheet.frame.minY : .infinity
+            // Completion swaps Stop for Close in the same update that may grow the sheet, so a
+            // sample only counts as "while streaming" if Close still isn't there after taking it.
+            if doneAt == nil, close.exists { doneAt = Date() }
+            if let d = doneAt {
+                after.append((exists, top))
+                if Date().timeIntervalSince(d) > 1.5 { break }
+            } else {
+                streaming.append((t, exists, top))
+            }
+        }
+        XCTAssertNotNil(doneAt, "the demo answer completes")
+        // Skip the presentation animation (the sheet rises once), then it must not move.
+        let settled = streaming.filter { $0.t > 1.5 }
+        XCTAssertGreaterThan(settled.count, 5, "enough samples while streaming")
+        XCTAssertTrue(settled.allSatisfy(\.exists), "the sheet never disappears while streaming")
+        let tops = settled.map(\.top)
+        let ref = tops.first ?? 0
+        XCTAssertTrue(tops.allSatisfy { abs($0 - ref) <= 1 }, "sheet top moved while streaming: \(tops.map { Int($0) })")
+        // Once complete it may grow once to fit late content (branches), but never shrinks or hides.
+        XCTAssertTrue(after.allSatisfy { $0.exists && $0.top <= ref + 1 }, "after completion: \(after.map { Int($0.top) })")
+        shot("streamed-medium")
+    }
+
+    /// The sheet's content sits inside standard margins: the verdict and the close button clear the
+    /// grabber and the rounded corners, and cards / rows keep off the sheet's sides, at every detent.
+    func testSheetContentHasStandardMargins() {
+        // The floating sheet at the lower detents can be drawn very slightly scaled down, so
+        // margins are checked at 95 % of their design value.
+        let edge: CGFloat = 20 * 0.95, top: CGFloat = 24 * 0.95
+        for detent in ["collapsed", "medium", "expanded"] {
+            launch(["-present", "YES", "-detent", detent])
+            XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+            sleep(1)
+            let sheet = app.descendants(matching: .any)["answerSheet"].firstMatch.frame
+            let close = app.buttons["closeAnswer"].frame
+            XCTAssertGreaterThanOrEqual(verdict.frame.minY - sheet.minY, top, "verdict clears the grabber (\(detent))")
+            XCTAssertGreaterThanOrEqual(close.minY - sheet.minY, edge, "close button clears the top edge (\(detent))")
+            XCTAssertGreaterThanOrEqual(sheet.maxX - close.maxX, edge, "close button clears the corner (\(detent))")
+            XCTAssertGreaterThanOrEqual(verdict.frame.minX - sheet.minX, edge, "verdict margin (\(detent))")
+            if detent != "collapsed" {
+                let card = app.descendants(matching: .any).matching(identifier: "stepCard").firstMatch.frame
+                XCTAssertGreaterThanOrEqual(card.minX - sheet.minX, edge, "card margin (\(detent))")
+                if detent == "medium" {
+                    let field = app.descendants(matching: .any)["followUpField"].firstMatch
+                    let thumbsDown = app.buttons["thumbsDown"].firstMatch
+                    XCTAssertTrue(field.exists && thumbsDown.exists)
+                    XCTAssertGreaterThanOrEqual(field.frame.minX - sheet.minX, edge, "follow-up field margin")
+                    XCTAssertGreaterThanOrEqual(sheet.maxX - thumbsDown.frame.maxX, edge, "thumbs margin")
+                }
+            }
+            shot("margins-\(detent)")
+            app.terminate()
+        }
     }
 
     /// Relative luminance (0–1) of the pixel at a window point. Screen captures stay in portrait

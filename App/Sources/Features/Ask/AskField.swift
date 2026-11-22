@@ -47,8 +47,12 @@ struct AskField: View {
         .modifier(AskFieldBackground(style: style, expanded: holding))
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .onChange(of: text) { _, t in
-            // Vertical text fields insert Return as a newline instead of submitting.
-            if t.contains("\n") { text = t.replacingOccurrences(of: "\n", with: " "); send() }
+            // Vertical text fields insert Return as a newline instead of submitting. Send the
+            // cleaned text without writing it back first: two writes in one frame made SwiftUI
+            // log "onChange(of: String) action tried to update multiple times per frame".
+            guard t.contains("\n") else { return }
+            let cleaned = t.replacingOccurrences(of: "\n", with: " ")
+            if !submit(cleaned) { text = cleaned }
         }
         .onChange(of: voice.transcript) { _, _ in if let t = voice.dictatedText() { text = t } }
         .onChange(of: voice.speech.isRecording) { _, rec in if !rec { voice.recordingStopped() } }
@@ -92,12 +96,17 @@ struct AskField: View {
         .accessibilityIdentifier("send")
     }
 
-    private func send() {
-        let q = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return }
+    private func send() { submit(text) }
+
+    /// Sends `raw`; false when there is nothing to send.
+    @discardableResult
+    private func submit(_ raw: String) -> Bool {
+        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return false }
         voice.stopDictation()
         focused = false
         onSend(q)
+        return true
     }
 }
 

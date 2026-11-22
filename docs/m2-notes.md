@@ -1,12 +1,7 @@
 # M2 notes: iOS viewer
 
-<<<<<<< HEAD
 **Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch); S1 My Games added 2026-11-22. Built on `Core/`.
-**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). **Then: My Games (S1)**, the app opens on a list of games, see [My Games](#my-games-s1). The first-build notes further down still describe behaviour; their screenshots show the old look.
-=======
-**Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch). Built on `Core/`.
-**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (2026-11-22): layout-tolerant matching**, see [below](#layout-tolerant-matching-root-p15). The first-build notes further down still describe behaviour; their screenshots show the old look.
->>>>>>> a783736 (Layout-tolerant quote matching: fragments, partial highlights, quote pager)
+**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). **Then: My Games (S1)**, the app opens on a list of games, see [My Games](#my-games-s1). **Then: layout-tolerant matching**, see [below](#layout-tolerant-matching-root-p15). **Then: answer sheet breathing, no jumps while streaming, console triage**, see [Sheet breathing](#sheet-breathing-streaming-jumps-console). The first-build notes further down still describe behaviour; their screenshots show the old look.
 
 ## Run it
 
@@ -18,11 +13,58 @@ open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; run
 - **Answers go through the server.** The app token is built into the app: `cp App/Config/Secrets.example.xcconfig App/Config/Secrets.xcconfig`, paste the token after `ACKSHUALLY_APP_TOKEN =`, build. Settings then says *Answers by ackshually server*. Without it, Settings → Developer takes a token override or your own Anthropic API key (direct, as before; the simulator also reads `ANTHROPIC_API_KEY` from the launch environment). With none of them the sample still gets the scripted **demo answer**, and asking about another rulebook opens Settings with the question kept. See [Server route](#server-route).
 - **Rulebook.** My Games → ＋ (file importer; the PDF is copied into Application Support/Rulebooks, listed in `library.json` next to it, and opens right away), or "Try the Sample" on the empty list (Core's fake "Power Plant Rush").
 - **Device.** Pick your team under Signing & Capabilities, then run on the iPhone. Push-to-talk needs a real device; the simulator has no live mic input in automation.
-- **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf` (push the viewer over My Games; Back returns to the list; never added to the library), `-emptyLibrary YES` (start with no games: clears the index and the imported copies), `-seedSample YES` (add the sample to My Games), `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`. Details are in `App/Sources/App/LaunchOptions.swift`.
+- **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf` (push the viewer over My Games; Back returns to the list; never added to the library), `-emptyLibrary YES` (start with no games: clears the index and the imported copies), `-seedSample YES` (add the sample to My Games), `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`, `-demoPace N` (stretch the demo stream N×). Details are in `App/Sources/App/LaunchOptions.swift`.
 - **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. The scheme runs the app unit tests (`AckshuallyTests`, 8) and 24 UI tests: 13 on the sample (or PDFs/answers they generate) with demo answers, 5 against a local stub server ([Server route](#server-route)), 6 for My Games ([My Games](#my-games-s1)); the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
 
 
-<<<<<<< HEAD
+## Sheet breathing, streaming jumps, console
+
+**Date:** 2026-11-22. Three problems the owner found on the iPhone 18 Pro simulator after the answer polish.
+
+**1. Content too close to the edges.** The verdict sat ~15 pt under the sheet's top edge (almost under the grabber), the close button sat in the rounded corner, and rows were 12–16 pt from the sides. Now two theme tokens drive the margins: `spacing.sheetMargin` (20 pt, the system sheet / inset-grouped margin) and `spacing.sheetTop` (28 pt, clears the grabber; 16 pt in the inspector, which has none). Both scale a little with Dynamic Type. They are applied once, as the answer column's `.contentMargins`, instead of per-row paddings. Only the step shelf runs edge to edge (its first card lines up with the text).
+
+**2. The sheet jumped while an answer streamed.** Cause: the detents are sized from the content (collapsed = header, medium = + shelf, follow-up row, branches), and they were **re-measured on every streamed event**. The "arriving" header (question + placeholders) is taller than the answered one, the shelf only appeared once the verdict came, the follow-up row only at the end, and the cards grew with each step. So the medium detent changed size several times per answer. When the verdict replaced the placeholders, the sheet even shrank below the verdict before growing back. That is the "hides and reappears" (frames: sheet top 671 → 732 → 495). Changing the height of the *selected* `.height` detent also changes its identity, so the system sheet snapped to another detent for a moment. That was the remaining dip at completion (659 → 348). It wasn't the spotlight overlay or `PDFView` zooms: they move at the same moments because a step arriving both re-centers the PDF and resized the sheet. Fix:
+- From the first token the column lays out the shelf with a **loading card as tall as a full card** (`LoadingCardBody`: 5 lines + the More row) and the **follow-up row, disabled** until the answer is done.
+- `AnswerMetrics.next(measured:streaming:)`: detent heights are taken from the first layout and **frozen while streaming**, then **grow-only** while the sheet is up (branch rows come last). The shelf keeps its tallest height for the same answer (`StepCarousel.tallestSeen`).
+- When the selected detent's height does change (completion), the old detent stays in the set (`AnswerSheet.stale`) until the next selection change, so the sheet glides instead of snapping.
+- The demo stream now follows the contract's order (steps, then branches) and takes `-demoPace`.
+
+Trade-off: a streamed answer's cards keep the full card height until the sheet closes, even when the steps are short (a `-present` answer is sized to its content).
+
+**3. Console messages.** Read with `xcrun simctl spawn <udid> log stream --level debug --predicate 'process == "Ackshually"'` while the UI tests drove the app (streaming, detents, follow-up, ⋯ menu, rotation). To separate ours from the system's, the ⋯ menu was also run in a throwaway build showing only a bare `NavigationStack` with a stock `ToolbarOverflowMenu` (and with a plain `Menu`), none of our views.
+
+| Message | Whose | Why it's harmless / what we did |
+|---|---|---|
+| `onChange(of: AnswerMetrics) action tried to update multiple times per frame` | **ours, fixed** | `AnswerContent` funnelled two geometry readings (header bottom, medium marker) through one `onChange`; each geometry action now reports directly. |
+| `onChange(of: String) action tried to update multiple times per frame` | **ours, fixed** | `AskField` turned Return into "write the cleaned text, then send (which clears it)": two writes in one frame. It now sends the cleaned text directly. |
+| `onChange(of: Settle) action tried to update multiple times per frame` | **ours, left** | `AdaptiveViewerLayout`'s `.task(id:)` that re-centers the PDF once the sheet stops moving: the sheet's top and the container change in the same frame. SwiftUI coalesces it and the re-center still runs once. A restartable timer removed the message but fed a UIKit observation feedback loop on follow-ups, so it was dropped. |
+| `Decomposition of 'bounds'/'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running` (red, fault) | system | UIKit's own debug assertion when the toolbar's ⋯ menu morphs open/closed; 4 per open/close, identical in the bare `NavigationStack` + `ToolbarOverflowMenu` / `Menu` probe. Never logged while streaming, dragging the sheet or zooming the PDF. |
+| `cannot add handler to 0 from 0 - dropping` | system | Core Animation, at launch and on system transitions; also in the bare probe. |
+| `non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"` | system | UIKit's pointer (trackpad) service isn't available to an iPhone simulator app; once per launch, also in the bare probe. |
+| `[C:1] Ignoring activation message because no connection exists for 1` | system | BoardServices XPC connection bookkeeping (the same `[C:n]` connection tags as the PointerUI lines); not reproduced in our runs. |
+| `Sandbox extension request for asset set: com.apple.linguisticdata failed` / `Failed to grant sandbox extension` | system | The keyboard's language-model assets on the simulator. |
+| `… may only be set for UIKBDynamicRenderFactory, changes not saved` | system | Software keyboard rendering on the simulator. |
+| `CHHapticPattern … Failed to read pattern library data` / `Error creating CHHapticPattern` | system | Keyboard haptics; the simulator has no haptics. |
+| `Failed to get or decode unavailable reasons` (GenerativeModels) | system | System frameworks probing Apple Intelligence availability. |
+| `fopen failed for data file` (libCoreFSCache), `Failed to send CA Event for app launch measurements` | system | Metal shader cache / launch metrics on the simulator. |
+| TextRecognition / espresso / CoreRecognition lines (debug) | system | PDFKit's Live Text analysing rendered pages. |
+| `Automation type mismatch`, `NSPredicate … _evaluationBlocked`, `Unknown client: Ackshually` | test runner | XCUITest / accessibility automation only; not in normal runs. |
+| `[app.ackshually.viewer:answer] …` (debug) | **ours, intended** | The answer JSON and match logging from the answer polish. |
+
+Nothing is hidden globally (no `OS_ACTIVITY_MODE`): our `os.Logger` output stays visible.
+
+### Screenshots (sample rulebook, demo answers; `m2-screenshots/breathing/`)
+
+Before: collapsed · medium · expanded
+<p><img src="m2-screenshots/breathing/before-collapsed.png" width="140"> <img src="m2-screenshots/breathing/before-medium.png" width="140"> <img src="m2-screenshots/breathing/before-expanded.png" width="140"></p>
+
+After: collapsed · medium · expanded · streaming (placeholder card, disabled follow-up row) · largest text
+<p><img src="m2-screenshots/breathing/after-collapsed.png" width="140"> <img src="m2-screenshots/breathing/after-medium.png" width="140"> <img src="m2-screenshots/breathing/after-expanded.png" width="140"> <img src="m2-screenshots/breathing/after-streaming.png" width="140"> <img src="m2-screenshots/breathing/after-medium-ax5.png" width="140"></p>
+
+### Tests
+
+UI: `testSheetStaysPutWhileAnswerStreams` (samples the sheet's frame through a demo stream slowed with `-demoPace 3`: it never disappears and doesn't move while streaming; after completion it may grow, never dip; failed before the fix: 671 → 732 → 495, and the completion dip 659 → 348 before the stale-detent fix); `testSheetContentHasStandardMargins` (verdict / close button / cards / follow-up row clear the grabber, corners and sides at every detent; failed before: verdict 15 pt from the top). Unit: `AnswerMetricsTests` (first measurement taken, frozen while streaming, grow-only after). The two `onChange` fixes have no test (console-only).
+
 ## Server route
 
 **Date:** 2026-11-22. The app now answers through `Server/` at `ackshually.badyass.xyz` instead of calling Anthropic with a key from Settings.
@@ -79,7 +121,7 @@ Core: `LibraryIndexTests` (7: sorting, open moves to top, re-import, remove / pr
 ### swiftui-pro review
 
 Fixed: the stack's path and the error alert used `Binding(get:set:)` in `body`; now `$library.navigationPath` (a writable model property that opens the game before pushing) and `alert(_:item:)` on `library.error`. Kept: the cover is a `UIImage` rendered by PDFKit (no SwiftUI PDF renderer).
-=======
+
 ## Layout-tolerant matching (Root p.15)
 
 **Date:** 2026-11-22. The owner asked about Root ("Learning to Play") p.15. The model quoted the rulebook word for word, and the app still said *Passage not found · showing the whole page*. The page's text layer interleaves the main column with the turn-order box and a sidebar: `» Revolt: Spend two supporters matching a sympathetic clearing. Remove all enemy\n»\n2nd\nSpread Sympathy…` and only then `pieces there and place the matching base.` The old matcher wanted one contiguous run (best error 26% and 32% for the owner's two quotes).
@@ -108,7 +150,6 @@ Both owner quotes now match as 2 fragments (100%). The first is fully boxed. The
 - Core: `FragmentMatchTests` (10) on a generated PDF whose two columns interleave in the text layer. Covers: fragments match, scattered halves rejected by geometry, common words don't assemble a quote, partial (claimed page only), continuous unchanged, whole-word trimming, old JSON. 50 Core tests in total.
 - UI: `testPartialMatchNoteAndQuotePager` checks, at L and AX L: the partial note, the spotlight, "Quote 1 of 2" → "Quote 2 of 2", pager and note don't overlap, and Answer Details says "Partly matched".
 **swiftui-pro review:** one fix: the note's kind moved out of `HighlightOverlay` into its own file (`Viewer/HighlightNoteKind`), one type per file. Kept: the strings stay plain `String`s like the rest of the app (no String Catalog yet).
->>>>>>> a783736 (Layout-tolerant quote matching: fragments, partial highlights, quote pager)
 
 ## Answer polish (owner's Azul test)
 
@@ -340,7 +381,7 @@ Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `S
 | `WaitingBar` (glass) | S3→S4 | default, AX5 dark |
 | **Features/AnswerSheet/** `AnswerHeader` (+ `FailureHeader`) | S4, S5, S9 | arriving (redacted), streaming, stated, with question, inferred, not covered, branch, failed, AX5, dark |
 | `ProofLine` (+ `Confidence+Display`) | S5, S7 | stated, inferred, not covered, AX5 dark |
-| `StepCard`, `CardCaption` | S5, S6, S10 | step, figure, loading, long (More), branch without steps, web, AX5, dark |
+| `StepCard`, `CardCaption`, `LoadingCardBody` | S5, S6, S10 | step, figure, loading, long (More), branch without steps, web, AX5, dark |
 | `StepCarousel`, `CardDots` | S5, S6 | iPhone, SE width, AX5, dark |
 | `FeedbackButtons` | S6, S9 | none, up, down |
 | `BranchRows`, `StepListRows`, `AssumptionRows` | S5, S9 | none active, active, AX5, dark |

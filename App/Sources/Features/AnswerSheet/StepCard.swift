@@ -25,9 +25,7 @@ struct StepCard: View {
                 }
             case .loading:
                 CardCaption(title: "Reading…", trailing: nil)
-                Text("Unused energy is discarded at the end of your turn, as the rules say.")
-                    .font(theme.font.cardBody)
-                    .redacted(reason: .placeholder)
+                LoadingCardBody()
             case let .branch(condition, verdict):
                 CardCaption(title: "If \(condition.lowercasedFirst)", trailing: nil)
                 body(verdict, font: theme.font.cardStrong)

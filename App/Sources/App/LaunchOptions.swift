@@ -10,6 +10,7 @@ import AckshuallyCore
 ///   -seedSample YES            add the sample to My Games, like "Try the Sample" (persisted)
 ///   -demo YES                  scripted answers, no API calls (also when no key is set)
 ///   -demoAnswer /abs/a.json    scripted Answer JSON (spec §4 contract) for the demo provider
+///   -demoPace 3                stretch the demo stream's delays (UI tests sample the sheet while it streams)
 ///   -ask "question"            ask right away
 ///   -present YES               show the demo answer instantly (no streaming)
 ///   -detent collapsed|medium|expanded,  -card N (0-based step),  -branch N
