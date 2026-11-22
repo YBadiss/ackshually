@@ -20,6 +20,8 @@ struct AdaptiveViewerLayout: View {
     @State private var container = Container()
     @State private var sheetTop: CGFloat?
     @State private var askHeight: CGFloat = 0
+    /// Height of the quote pager + highlight note over the PDF (keeps evidence below them).
+    @State private var overlayHeight: CGFloat = 0
     @State private var covered: CGFloat = 0
 
     struct Container: Equatable {
@@ -129,16 +131,18 @@ struct AdaptiveViewerLayout: View {
     // MARK: PDF
 
     private var pdf: some View {
-        PDFViewer(document: document, focus: model.focus, bottomObscured: covered,
+        PDFViewer(document: document, focus: model.focus, bottomObscured: covered, topObscured: overlayHeight,
                   onUserMove: { model.userMovedPDF = true },
                   onDoubleTap: { model.toggleZoom() })
             .overlay(alignment: .top) {
                 if model.focus != nil, model.sheetVisible {
                     HighlightOverlay(evidenceIndex: model.evidenceIndex, evidenceCount: model.currentStep?.evidence.count ?? 0,
                                      note: model.currentHighlight?.note ?? (model.currentHighlight?.kind == .wholePage ? HighlightPlacer.notFoundNote : nil),
-                                     isMiss: model.currentHighlight.map { !$0.match.isSpotlit } ?? false,
+                                     noteKind: model.currentHighlight.map { HighlightNoteKind($0.match) } ?? .info,
                                      onNext: { model.nextEvidence() })
                         .padding(.top, theme.spacing.s)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { overlayHeight = $0 }
+                        .onDisappear { overlayHeight = 0 }
                 }
             }
     }

@@ -304,6 +304,61 @@ final class ViewerUITests: XCTestCase {
         shot("spotlight-miss-note")
     }
 
+    /// Half of this quote is on p.3 ("at the end of your turn you must discard all unused energy"),
+    /// the rest is invented: Core finds the long fragment and the app spotlights that part.
+    private static let partialQuote = "At the end of your turn you must discard all unused energy, and players may then trade it freely with each other."
+
+    /// One step citing two passages: a partial match, then an exact one.
+    private func twoQuoteAnswer() throws -> String {
+        let json: [String: Any] = [
+            "restated_question": "What happens to unused energy?", "verdict": "Discard it.", "confidence": "stated",
+            "steps": [["title": "Rule", "text": "Unused energy is discarded.",
+                       "evidence": [["page": 3, "quote": Self.partialQuote, "box": NSNull()],
+                                    ["page": 3, "quote": Self.goodQuote, "box": NSNull()]]]],
+            "branches": [], "assumptions": [], "needs_web": false,
+        ]
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("demo-\(UUID().uuidString).json")
+        try JSONSerialization.data(withJSONObject: json).write(to: url)
+        return url.path
+    }
+
+    /// A partially found quote is spotlit with "Part of the passage highlighted" (not the whole
+    /// page); the pager says what it pages through ("Quote 1 of 2 ›") and never overlaps the note,
+    /// at default and accessibility text sizes.
+    func testPartialMatchNoteAndQuotePager() throws {
+        let path = try twoQuoteAnswer()
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityL"] {
+            launch(["-present", "YES", "-demoAnswer", path, "-UIPreferredContentSizeCategoryName", size])
+            let pdf = app.descendants(matching: .any)["pdfView"].firstMatch
+            let note = app.descendants(matching: .any)["highlightNote"].firstMatch
+            let pager = app.buttons["evidencePager"]
+            XCTAssertTrue(note.waitForExistence(timeout: 5))
+            XCTAssertTrue(note.label.contains("Part of the passage highlighted"), note.label)
+            XCTAssertTrue((pdf.value as? String ?? "").contains("spotlight"), "partial match is spotlit: \(pdf.value ?? "nil")")
+            XCTAssertTrue(pager.exists)
+            XCTAssertEqual(pager.label, "Quote 1 of 2")
+            XCTAssertFalse(note.frame.intersects(pager.frame), "note \(note.frame) overlaps pager \(pager.frame) at \(size)")
+            XCTAssertGreaterThanOrEqual(note.frame.minX, 0)
+            XCTAssertLessThanOrEqual(note.frame.maxX, app.windows.firstMatch.frame.maxX)
+            shot("partial-note-\(size)")
+            pager.tap()
+            XCTAssertTrue(XCTWaiter().wait(for: [XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "label == %@", "Quote 2 of 2"), object: pager)], timeout: 3) == .completed, pager.label)
+            XCTAssertFalse(note.exists, "an exact match needs no note")
+            app.terminate()
+        }
+        // Answer Details names the partial match and its coverage.
+        launch(["-present", "YES", "-demoAnswer", path])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
+        app.navigationBars.buttons["More"].firstMatch.tap()
+        app.buttons["Answer Details"].tap()
+        let partial = app.descendants(matching: .any)["evidence-1.1"].firstMatch
+        XCTAssertTrue(partial.waitForExistence(timeout: 3))
+        XCTAssertTrue(partial.label.hasPrefix("Partly matched"), partial.label)
+        XCTAssertEqual(app.staticTexts["detailsSummary"].label, "2 of 2 passages highlighted")
+        shot("answer-details-partial")
+    }
+
     /// ⋯ → Answer Details lists every cited passage with its match status, and copies the JSON.
     func testAnswerDetailsListsMatchStatus() throws {
         let path = try demoAnswer(verdict: "Discard it.", steps: [

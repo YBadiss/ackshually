@@ -6,9 +6,11 @@ enum HighlightPlacer {
     /// Note shown on the PDF when a quote didn't match: absence of a spotlight is never silent.
     static let notFoundNote = "Passage not found · showing the whole page"
     static let notLocatedNote = "Passage is on this page · couldn't mark it"
+    /// Note when only part of the quote was found and spotlit (spec §4: partial beats whole page).
+    static let partialNote = "Part of the passage highlighted"
 
-    /// Spec §4 order, M2 subset: quote match → box (if sane) → whole page, with a note saying which.
-    /// Layout-tolerant matching and the repair call are later work.
+    /// Spec §4 order, M2 subset: quote match (continuous, then fragments, then partial) → box (if
+    /// sane) → whole page, with a note saying which. Vision OCR and the repair call are later work.
     static func place(_ e: Evidence, matcher: QuoteMatcher) -> Highlight {
         let pageCount = max(matcher.pageCount, 1)
         let page = min(max(e.page, 1), pageCount)
@@ -16,14 +18,15 @@ enum HighlightPlacer {
         if let q = e.quote, !q.trimmingCharacters(in: .whitespaces).isEmpty {
             let outcome = matcher.match(quote: q, page: page)
             if let m = outcome.match {
-                var info = MatchInfo(result: m.page == page ? .matched : .matchedOtherPage, detail: outcome.label,
-                                     matchedPage: m.page, errorRate: m.errorRate, geometryScore: m.geometryScore, rects: m.rects.count)
+                var info = MatchInfo(result: m.layout == .partial ? .partial : m.page == page ? .matched : .matchedOtherPage,
+                                     detail: outcome.label, matchedPage: m.page, errorRate: m.errorRate, geometryScore: m.geometryScore,
+                                     rects: m.rects.count, layout: m.layout, coverage: m.coverage, fragments: m.fragments.count)
                 if m.rects.isEmpty {
                     info.result = .matchedNotLocated
                     info.detail = "matched, position not located"
                     return Highlight(page: m.page, kind: .wholePage, note: notLocatedNote, match: info)
                 }
-                return Highlight(page: m.page, kind: .words(m.rects), match: info)
+                return Highlight(page: m.page, kind: .words(m.rects), note: m.layout == .partial ? partialNote : nil, match: info)
             }
             if case .notMatched(let best, let reason) = outcome {
                 quoteInfo = MatchInfo(result: .notMatched, detail: "not matched (\(reason))", errorRate: best)

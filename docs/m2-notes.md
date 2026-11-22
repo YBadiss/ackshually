@@ -1,7 +1,12 @@
 # M2 notes: iOS viewer
 
+<<<<<<< HEAD
 **Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch); S1 My Games added 2026-11-22. Built on `Core/`.
 **Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). **Then: My Games (S1)**, the app opens on a list of games, see [My Games](#my-games-s1). The first-build notes further down still describe behaviour; their screenshots show the old look.
+=======
+**Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch). Built on `Core/`.
+**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (2026-11-22): layout-tolerant matching**, see [below](#layout-tolerant-matching-root-p15). The first-build notes further down still describe behaviour; their screenshots show the old look.
+>>>>>>> a783736 (Layout-tolerant quote matching: fragments, partial highlights, quote pager)
 
 ## Run it
 
@@ -17,6 +22,7 @@ open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; run
 - **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. The scheme runs the app unit tests (`AckshuallyTests`, 8) and 24 UI tests: 13 on the sample (or PDFs/answers they generate) with demo answers, 5 against a local stub server ([Server route](#server-route)), 6 for My Games ([My Games](#my-games-s1)); the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
 
 
+<<<<<<< HEAD
 ## Server route
 
 **Date:** 2026-11-22. The app now answers through `Server/` at `ackshually.badyass.xyz` instead of calling Anthropic with a key from Settings.
@@ -73,6 +79,36 @@ Core: `LibraryIndexTests` (7: sorting, open moves to top, re-import, remove / pr
 ### swiftui-pro review
 
 Fixed: the stack's path and the error alert used `Binding(get:set:)` in `body`; now `$library.navigationPath` (a writable model property that opens the game before pushing) and `alert(_:item:)` on `library.error`. Kept: the cover is a `UIImage` rendered by PDFKit (no SwiftUI PDF renderer).
+=======
+## Layout-tolerant matching (Root p.15)
+
+**Date:** 2026-11-22. The owner asked about Root ("Learning to Play") p.15. The model quoted the rulebook word for word, and the app still said *Passage not found · showing the whole page*. The page's text layer interleaves the main column with the turn-order box and a sidebar: `» Revolt: Spend two supporters matching a sympathetic clearing. Remove all enemy\n»\n2nd\nSpread Sympathy…` and only then `pieces there and place the matching base.` The old matcher wanted one contiguous run (best error 26% and 32% for the owner's two quotes).
+
+**Core (`Matching/`):**
+- `FragmentMatcher` covers the quote with long exact runs of the page text (seeds ≥ 10 characters, gaps ≤ 3 characters bridged, trimmed to whole words; a fragment needs ≥ 20 normalized characters and ≥ 4 words).
+- `GlyphLocator` locates each fragment.
+- `LayoutCheck` then accepts the fragments only as **one block**: each fragment continues the previous one on the same line or the next lines (≤ 1.6 line heights; same column or a wrap back left), and the block covers ≤ 20% of the page.
+- ≥ 85% coverage → `layout: .fragments`. Otherwise one long fragment (≥ 30 characters, ≥ 6 words) covering ≥ 30% → `.partial`, on the claimed page only.
+- `QuoteMatch` gained `layout`, `coverage`, `fragments` (text, rects and score for each) and `layoutScore`. Old JSON decodes as continuous.
+- `GlyphLocator` gained a **piecewise fallback** for when no single index mapping fits. The owner's second quote needed it: after "oﬃcers" the glyph index shifts by two, and the end of the line ("…ard") is stored after the sidebar's glyphs. The fallback anchors on the best-correlating word chunk (≥ 16 characters, r ≥ 0.75), then grows while each neighbouring chunk correlates *and* continues the previous one on the page. It keeps ≥ 40% of the characters, and lines under 4 pt are rejected.
+- `QuoteMatcher.layoutTolerant = false` restores the old behaviour (bench baseline).
+
+Both owner quotes now match as 2 fragments (100%). The first is fully boxed. The second is boxed except "half your officers and discard", whose glyphs are out of order.
+
+**App:**
+- A partial match is spotlit like any other and the PDF note says *Part of the passage highlighted* (`highlighter` symbol).
+- Answer Details shows *Matched in N pieces* / *Partly matched · 52 %*, and the copied JSON and the debug log include the layout.
+- The pager reads **Quote 1 of 2 ›** (VoiceOver: "Quote 1 of 2", hint "Shows the next quote for this step").
+- Pager and note share a row when both fit (`ViewThatFits`); otherwise the pager sits above the note, which wraps in a rounded glass shape (`radius.note`).
+- The PDF centers evidence below that chrome (`PDFViewer.topObscured`). At accessibility text sizes the medium sheet still leaves too little page above it to show the evidence (sheet layout is out of scope here).
+
+**Eval (offline, no API key here):** `bench rescore` re-matched every recorded run. Quotes spotlit went from 76% to 90% (761 → 895 of 997). Every new placement was rendered and checked by hand; table and numbers are in [evals/results/2026-11-22-layout-tolerant-rescore](../evals/results/2026-11-22-layout-tolerant-rescore/README.md). The first pass had two wrong placements, both fixed before the numbers above (invisible 2 pt card text; a fragment ending on a coincidental letter). `bench match-set` (`evals/fixtures/match-set.json`, 53 short quotes) now pins the expected outcome of the owner's two quotes and of every quote earlier runs failed to match or locate. It skips games whose PDF is missing.
+
+**Tests:**
+- Core: `FragmentMatchTests` (10) on a generated PDF whose two columns interleave in the text layer. Covers: fragments match, scattered halves rejected by geometry, common words don't assemble a quote, partial (claimed page only), continuous unchanged, whole-word trimming, old JSON. 50 Core tests in total.
+- UI: `testPartialMatchNoteAndQuotePager` checks, at L and AX L: the partial note, the spotlight, "Quote 1 of 2" → "Quote 2 of 2", pager and note don't overlap, and Answer Details says "Partly matched".
+**swiftui-pro review:** one fix: the note's kind moved out of `HighlightOverlay` into its own file (`Viewer/HighlightNoteKind`), one type per file. Kept: the strings stay plain `String`s like the rest of the app (no String Catalog yet).
+>>>>>>> a783736 (Layout-tolerant quote matching: fragments, partial highlights, quote pager)
 
 ## Answer polish (owner's Azul test)
 

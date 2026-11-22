@@ -67,7 +67,10 @@ Other subcommands:
 swift run bench report out/<dir>                          # rebuild report.md from results.jsonl
 swift run bench pages ../assets/rulebooks/azul.pdf         # which pages have a text layer (scans need OCR)
 swift run bench retrieve --k 3 --neighbors 0               # offline: pages page selection would send + recall (no API)
-swift run bench match ../assets/rulebooks/azul.pdf 6 "..."  # debug one quote → highlight
+swift run bench match ../assets/rulebooks/azul.pdf 6 "..."  # debug one quote → highlight (fragments, coverage; --render out/x.png)
+swift run bench match-set                                  # matcher regression set (fixtures/match-set.json, real PDFs; skips missing ones)
+swift run bench match-set --render out/handcheck           # … plus a crop of each placement, to check by eye (git-ignored)
+swift run bench rescore results/<dir> [--continuous-only]  # re-match a recorded run's quotes offline → out/rescore-<dir>/
 swift run bench fixture                                    # regenerate fixtures/fake-rulebook.pdf
 ```
 

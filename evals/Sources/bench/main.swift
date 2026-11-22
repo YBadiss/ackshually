@@ -14,6 +14,11 @@ usage:
   bench report DIR                 regenerate DIR/report.md from DIR/results.jsonl
   bench fixture [PATH]             (re)generate the fake test rulebook PDF
   bench match PDF PAGE "QUOTE"     debug the quote matcher on one quote
+  bench match-set [FILE] [--render DIR]
+                                   matcher regression set (default fixtures/match-set.json); exits 1 on
+                                   an unexpected outcome; --render: page images with the rects
+  bench rescore DIR [--out DIR] [--questions FILE] [--render DIR] [--continuous-only]
+                                   offline: re-match a recorded run's quotes with the current matcher
   bench pages PDF                  print per-page text-layer status
 
 defaults: --questions questions/m1.json --model claude-sonnet-5-5 --mode json --effort low
@@ -75,6 +80,7 @@ case "fixture":
     print("wrote \(url.path)")
 
 case "match":
+    let renderTo = option("--render").map(resolveLocal)
     guard args.count >= 3, let page = Int(args[1]), let m = QuoteMatcher(url: resolveLocal(args[0])) else { print(usage); exit(1) }
     let r = m.match(quote: args[2], page: page)
     print(r.label)
@@ -83,7 +89,33 @@ case "match":
                      q.geometryScore.map { String(format: "%.2f", $0) } ?? "not located"))
         for b in q.rects { print(String(format: "  x=%.3f y=%.3f w=%.3f h=%.3f", b.x, b.y, b.w, b.h)) }
         print("text: \(q.matchedText)")
+        if q.layout != .continuous {
+            print(String(format: "layout %@, coverage %.2f, block density %.2f", q.layout.rawValue, q.coverage, q.layoutScore ?? 0))
+            for f in q.fragments {
+                print("  fragment (\(f.rects.count) rect(s), geometry \(f.geometryScore.map { String(format: "%.2f", $0) } ?? "not located")): \(f.text.debugDescription)")
+            }
+        }
+        if let r = renderTo, let page = m.document.page(at: q.page - 1), !q.rects.isEmpty {
+            try MatchTools.render(page, boxes: q.rects, to: r)
+            print("rendered \(r.path)")
+        }
     }
+
+case "match-set":
+    let render = option("--render").map(resolveLocal)
+    let file = resolveLocal(args.first ?? "fixtures/match-set.json")
+    let failures = try MatchTools.runSet(file, renderDir: render)
+    exit(failures == 0 ? 0 : 1)
+
+case "rescore":
+    let questions = resolveLocal(option("--questions") ?? "questions/m1.json")
+    let render = option("--render").map(resolveLocal)
+    let continuousOnly = flag("--continuous-only")
+    let outArg = option("--out")
+    guard let d = args.first else { print(usage); exit(1) }
+    let dir = resolveLocal(d)
+    let out = outArg.map(resolveLocal) ?? benchDir.appendingPathComponent("out/rescore-\(dir.lastPathComponent)")
+    try MatchTools.rescore(dir, questions: questions, out: out, renderDir: render, continuousOnly: continuousOnly)
 
 case "pages":
     guard let p = args.first, let m = QuoteMatcher(url: resolveLocal(p)) else { print(usage); exit(1) }
