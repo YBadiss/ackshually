@@ -136,17 +136,20 @@
   <h3>S5 · The answer sheet <span class="mtag">M2</span></h3>
   <p>Two layers, no Back/Continue buttons:</p>
   <p>A system sheet with three detents (collapsed, medium, large); the PDF stays usable under it up to medium. No Back/Continue buttons:</p>
-  <ul><li><b>Answer header</b>, fixed while stepping: text hierarchy, no chips. Bold verdict, then one secondary proof line (<code>checkmark.seal Stated in the rules · p.12, p.14</code>). Close (or Stop while streaming) top-right.</li>
-  <li><b>Step cards</b>: a horizontal shelf of system cards; the next card peeks from the edge, which signals "swipe". Caption = step title + page, then one or two sentences. Page dots below.</li>
-  <li><b>Branch rows</b> under the cards (<code>Without a Battery … Discard all 3 ›</code>), grouped like Settings.</li></ul>
+  <ul><li><b>Answer header</b>, fixed while stepping: text hierarchy, no chips. Bold verdict (one short sentence; at most <b>3 lines</b> on the sheet, the full text when expanded), then one secondary proof line (<code>checkmark.seal Stated in the rules · p.12, p.14</code>). Close (or Stop while streaming) top-right.</li>
+  <li><b>Step cards</b>: a horizontal shelf of system cards; the next card peeks from the edge, which signals "swipe". Caption = step title + page, then one or two sentences. <b>All cards share one height</b>, the tallest card's content up to 5 lines of text; longer text truncates with <b>More</b>, which opens the expanded answer at that step. Text never runs outside its card at any Dynamic Type size. Page dots below.</li>
+  <li><b>Follow-up + 👍/👎 row</b> under the cards (follow-up field, thumbs), once the answer is complete. There is no closing "Result" card: it only repeated the verdict.</li>
+  <li><b>Branch rows</b> under that (<code>Without a Battery … Discard all 3 ›</code>), grouped like Settings.</li></ul>
 </div><div class="shot" data-screen="s5"></div></section>
 
 <section class="screen" id="s6"><div>
   <h3>S6 · Stepping <span class="mtag">M2</span></h3>
   <ul><li><b>Swipe left / tap the right peek</b> → next step. The PDF follows the card: page turn, zoom, highlight.</li>
   <li><b>Swipe right / tap the left peek</b> → previous step.</li>
-  <li><b>Last card</b>: the result + thumbs up / down, with the follow-up field under it.</li>
-  <li>A step can cite several passages (pager "1 of 2 ›" on the PDF) or a figure (box outline; if no usable box, the whole page + "see the diagram, lower half").</li></ul>
+  <li><b>Last card</b> = the last step, which applies the rules to the player's situation (never a restated verdict).</li>
+  <li><b>Spotlight</b>: the cited passage is outlined in the brick tint and the rest of the page is dimmed, so it can't be confused with the rulebook's own frames or lost on a cream page.</li>
+  <li>A step can cite several passages (pager "1 of 2 ›" on the PDF) or a figure (same spotlight around the box; if no usable box, the whole page + "see the diagram, lower half"). When a quote isn't found, the whole page shows with a note <i>Passage not found · showing the whole page</i>: no spotlight is never silent.</li>
+  <li>⋯ → <b>Answer Details</b> lists every cited passage (page, quote, matched / not matched and why) with <b>Copy JSON</b> (raw answer + match results), to investigate a missing highlight.</li></ul>
 </div><div class="shot" data-screen="s6"></div></section>
 
 <section class="screen" id="s7"><div>
@@ -200,20 +203,23 @@
 <li><b>Text hierarchy instead of decoration:</b> bold verdict (title3), then one secondary line of proof ("checkmark.seal Stated in the rules · p.3, p.4"; inferred: exclamationmark.triangle, not covered: questionmark.circle). The restated question shows only while waiting and in the expanded view. "Demo answer" is a footnote in the expanded view and a note in the ⋯ menu, never on the verdict.</li>
 <li><b>Step cards keep the peek</b>, styled as system cards (App Store / Music shelves): rounded, no borders or shadows; caption = step title + page.</li>
 <li><b>Branches, steps, feedback</b> are standard rows with chevrons / values.</li>
-<li><b>Warm, but restrained:</b> brick red as the app tint, warm-tinted bars, sheet and grouped backgrounds, warm highlighter on the PDF. Not plain white; not beige everywhere.</li>
+<li><b>Warm, but restrained:</b> brick red as the app tint, warm sheet and grouped backgrounds, a <b>clearly darker warm navigation bar</b> with a hairline under it (and between the PDF and the answer column), so bar, PDF and answer panel read as three surfaces. Evidence is a <b>spotlight</b> (dimmed page, brick outline), not a highlighter. Not plain white; not beige everywhere.</li>
 </ul>
 <h3>Tokens</h3>
 <p>All tokens live in <code>App/Sources/DesignSystem/Theme.swift</code> as light/dark pairs. Text, secondary text and separators are the system's own (<code>label</code>, <code>secondaryLabel</code>, <code>separator</code>) so hierarchy reads as iOS.</p>
 <div class="tbl"><table>
   <tr><th>Token</th><th>Light</th><th>Dark</th><th>Use</th></tr>
   <tr><td>tint</td><td><span class="swatch" style="background:#a2412b"></span><code>#a2412b</code></td><td><span class="swatch" style="background:#e2775c"></span><code>#e2775c</code></td><td>App tint (brick): buttons, symbols, selection</td></tr>
-  <tr><td>bar</td><td><span class="swatch" style="background:#f3ece1"></span><code>#f3ece1</code></td><td><span class="swatch" style="background:#1c1916"></span><code>#1c1916</code></td><td>Navigation bar, canvas around the PDF pages</td></tr>
+  <tr><td>navigationBar</td><td><span class="swatch" style="background:#e2d3bd"></span><code>#e2d3bd</code></td><td><span class="swatch" style="background:#0e0c0a"></span><code>#0e0c0a</code></td><td>Navigation bar: darker than sheet and canvas</td></tr>
+  <tr><td>chromeSeparator</td><td><span class="swatch" style="background:#c9b79e"></span><code>#c9b79e</code></td><td><span class="swatch" style="background:#3a332c"></span><code>#3a332c</code></td><td>Hairline under the bar and between the PDF and the answer column</td></tr>
+  <tr><td>canvas</td><td><span class="swatch" style="background:#f3ece1"></span><code>#f3ece1</code></td><td><span class="swatch" style="background:#1c1916"></span><code>#1c1916</code></td><td>Canvas around the PDF pages</td></tr>
   <tr><td>sheet</td><td><span class="swatch" style="background:#f6efe4"></span><code>#f6efe4</code></td><td><span class="swatch" style="background:#221e1a"></span><code>#221e1a</code></td><td>Answer sheet / inspector; a shade off the page so app and rulebook never blend</td></tr>
   <tr><td>groupedBackground</td><td><span class="swatch" style="background:#f3ece1"></span><code>#f3ece1</code></td><td><span class="swatch" style="background:#14110f"></span><code>#14110f</code></td><td>Empty state, Settings</td></tr>
   <tr><td>card</td><td><span class="swatch" style="background:#fffdf9"></span><code>#fffdf9</code></td><td><span class="swatch" style="background:#2f2a25"></span><code>#2f2a25</code></td><td>Step cards, grouped rows</td></tr>
   <tr><td>fieldFill</td><td><span class="swatch" style="background:#ede3d4"></span><code>#ede3d4</code></td><td><span class="swatch" style="background:#3a342d"></span><code>#3a342d</code></td><td>Follow-up field on the sheet (the floating ask field is Liquid Glass)</td></tr>
   <tr><td>stated / inferred / not covered</td><td colspan="2">systemGreen / systemOrange / secondaryLabel</td><td>Proof-line symbol</td></tr>
-  <tr><td>highlight</td><td colspan="2"><span class="swatch" style="background:#f2b134"></span><code>#f2b134</code> 42% fill, <code>#d39320</code> outline (the page stays white in dark mode)</td><td>Evidence on the PDF</td></tr>
+  <tr><td>spotlightDim</td><td><span class="swatch" style="background:#1a1410;opacity:.34"></span><code>#1a1410</code> 34%</td><td><span class="swatch" style="background:#000;opacity:.34"></span><code>#000000</code> 34%</td><td>Dims the evidence page outside the cited passage</td></tr>
+  <tr><td>highlightOutline</td><td><span class="swatch" style="background:#a2412b"></span><code>#a2412b</code></td><td><span class="swatch" style="background:#e2775c"></span><code>#e2775c</code></td><td>Outline of the cited lines (1.6 pt) / figure box (2.4 pt), in page points</td></tr>
 </table></div>
 <ul><li><b>One font:</b> SF (system) everywhere, Dynamic Type text styles. The rulebook keeps its own fonts.</li>
 <li><b>Corners:</b> step cards 18 · grouped sections 22 · follow-up field 20 (continuous); the sheet, buttons and glass use the system's shapes.</li>
@@ -245,9 +251,10 @@
   "assumptions": ["The Battery is already in play."],
   "needs_web": false
 }</pre>
+<p><b>Lengths:</b> the verdict is one sentence of at most ~12 words (no reasons or pages; those are the steps); each step is one or two short sentences; the last step applies the rules to the player's situation and never restates the verdict, and no step is titled "Result". The app also caps the verdict at 3 lines and card text at 5 lines (More).</p>
 <p><code>box</code> is <code>{x, y, w, h}</code> normalized 0–1, used for figures. <code>title</code> (2–4 words) is the card caption. A branch carries its own <code>steps</code> (usually one) so the cards can switch to it (S9). Both are required by the structured-output schema and optional when decoding, so older answers still load (no title → "Step N"; a branch without steps → one card).</p>
 <h4>Placing a highlight, in order</h4>
-<ol><li>Match <code>quote</code> to the page's words as a continuous passage (PDF text layer, or OCR words for scanned/outlined pages) → word-level highlight.</li>
+<ol><li>Match <code>quote</code> to the page's words as a continuous passage (PDF text layer, or OCR words for scanned/outlined pages) → word-level highlight. <i>Geometry: PDFKit's per-character boxes are indexed without the line breaks in the page text (plus some drift), so boxes are located by checking which index mapping makes box widths match the characters' widths; when none fits, show the whole page rather than a box in the wrong place (2026-11-21, Azul).</i></li>
 <li><b>Layout-tolerant match:</b> multi-column pages and text over art scramble the text layer's reading order. Find the region where the quote's words cluster by position instead of requiring them in sequence; if that fails, OCR the page with Vision (visual reading order) and retry. <i>M1: all 4 misses were this case, not model misquotes.</i></li>
 <li><b>Repair call</b> (background, cheap model): "this quote wasn't found on p.N; here is the page text; return the exact passage." The highlight appears a moment later.</li>
 <li>Otherwise draw <code>box</code> if it passes sanity checks.</li>
@@ -312,6 +319,11 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>Answer sheet is the system <code>.sheet</code>: detents sized from the content (collapsed = verdict + proof, medium = + cards and branches, large), background interaction up to medium, no swipe-to-dismiss (Close button)</td><td>Native look and drag feel; the system sheet now meets S7–S9: the PDF stays pinchable under it and the sheet reports its top edge, so evidence still centers above it</td></tr>
   <tr><td>2026-11-21</td><td>Wide screens use the standard <code>.inspector</code> column instead of a custom side panel; the layout is decided from the window width</td><td>Standard iPad pattern with a toolbar toggle; deciding from the PDF column's width made the inspector flip the layout</td></tr>
   <tr><td>2026-11-21</td><td>Header is text hierarchy (bold verdict + one proof line with an SF Symbol); branches, steps, feedback are grouped rows; SF Symbols replace emoji; ask field is a Liquid Glass bottom field with the mic inside</td><td>Spec §3 native direction; <code>.searchable</code> can't host hold-to-talk, so the field is a glass <code>TextField</code> placed like the iOS 26 bottom search field</td></tr>
+  <tr><td>2026-11-21</td><td>Darker warm navigation bar (<code>navigationBar</code> token, light + dark) with hairlines under the bar and beside the answer column</td><td>Owner, landscape on Azul: bar and answer panel were the same beige and read as one block</td></tr>
+  <tr><td>2026-11-21</td><td>Evidence is a spotlight: the page is dimmed outside the cited lines / figure box, which get a brick outline; drawn as a page overlay view, not PDF annotations; a quote that doesn't match says so on the PDF</td><td>Owner: the 42% yellow vanished on cream, decorated pages and Azul's red frames looked like our highlight. Root causes found: Azul's PDF forbids annotations (nothing was drawn at all) and PDFKit's character boxes are misindexed (fixed in Core)</td></tr>
+  <tr><td>2026-11-21</td><td>Verdict = one sentence, ≤12 words (prompt), capped at 3 lines on the sheet (UI)</td><td>Owner: five bold lines of verdict pushed the evidence off the sheet</td></tr>
+  <tr><td>2026-11-21</td><td>Step cards share one height (tallest content, ≤5 lines) with More → expanded answer at that step</td><td>Owner: long card text ran outside its card under STEPS</td></tr>
+  <tr><td>2026-11-21</td><td>No closing Result card; the last step applies the ruling (prompt); follow-up + thumbs in their own row under the shelf; ⋯ → Answer Details with Copy JSON</td><td>Owner: the last card repeated the verdict. Answer Details makes highlight misses inspectable from a real run</td></tr>
   <tr><td>2026-11-21</td><td>Answer contract: <code>steps[].title</code> and <code>branches[].steps</code> (required in the schema, optional when decoding)</td><td>Card captions need a title; S9's "cards switch to the branch" needs evidence per branch. Costs a few dozen tokens per branch before step 1 streams: watch the step-1 latency in the next bench run</td></tr>
 </table></div>
 
