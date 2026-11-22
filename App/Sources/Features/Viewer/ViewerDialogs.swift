@@ -17,7 +17,7 @@ struct ViewerDialogs: ViewModifier {
                     .themed()
             }
             .sheet(isPresented: active ? $presentation.answerDetails : .constant(false)) {
-                AnswerDetailsView(reports: model.evidenceReports,
+                AnswerDetailsView(reports: model.evidenceReports, route: model.routeLabel,
                                   onCopy: { UIPasteboard.general.string = model.answerDetails?.json },
                                   onDone: { presentation.answerDetails = false })
                     .themed()

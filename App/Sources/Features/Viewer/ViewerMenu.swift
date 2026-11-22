@@ -29,7 +29,7 @@ struct ViewerMenu: ToolbarContent {
             Section {
                 Button("Settings", systemImage: "gearshape", action: onSettings)
             } header: {
-                if isDemo { Text("Demo answers: no API key set") }
+                if isDemo { Text("Demo answers: no access token set") }
             }
         }
     }

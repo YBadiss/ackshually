@@ -4,13 +4,15 @@ import AckshuallyCore
 /// What "Copy JSON" copies: the raw answer plus how each quote matched.
 struct AnswerDetailsExport: Encodable {
     var question: String
+    /// server | direct | demo
+    var route: AnswerRoute.Kind?
     var answer: Answer?
     /// The model's literal output, when the answer came from Claude.
     var rawText: String?
     var evidence: [EvidenceReport]
 
     enum CodingKeys: String, CodingKey {
-        case question, answer, evidence
+        case question, route, answer, evidence
         case rawText = "raw_text"
     }
 

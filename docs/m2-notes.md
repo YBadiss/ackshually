@@ -1,7 +1,7 @@
 # M2 notes: iOS viewer
 
 **Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch). Built on `Core/`.
-**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). The first-build notes further down still describe behaviour; their screenshots show the old look.
+**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). The first-build notes further down still describe behaviour; their screenshots show the old look.
 
 ## Run it
 
@@ -10,12 +10,26 @@ cd App && xcodegen            # optional: regenerate from project.yml (XcodeGen 
 open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; runs on iPad and on Mac ("Designed for iPad")
 ```
 
-- **API key.** Use ⋯ (the toolbar overflow menu) → Settings → paste the key; it's stored in the Keychain. On the simulator you can also pass it at launch: `SIMCTL_CHILD_ANTHROPIC_API_KEY=sk-ant-… xcrun simctl launch booted app.ackshually.viewer`. Without a key, the app streams a scripted **demo answer**; the ⋯ menu says "Demo answers: no API key set" and the expanded answer ends with a "Demo answer" footnote.
+- **Answers go through the server.** The app token is built into the app: `cp App/Config/Secrets.example.xcconfig App/Config/Secrets.xcconfig`, paste the token after `ACKSHUALLY_APP_TOKEN =`, build. Settings then says *Answers by ackshually server*. Without it, Settings → Developer takes a token override or your own Anthropic API key (direct, as before; the simulator also reads `ANTHROPIC_API_KEY` from the launch environment). With none of them the sample still gets the scripted **demo answer**, and asking about another rulebook opens Settings with the question kept. See [Server route](#server-route).
 - **Rulebook.** ⋯ → Open a rulebook PDF… (file importer; the PDF is copied into Application Support and reopened on the next launch), or ⋯ → Sample rulebook (Core's fake "Power Plant Rush").
 - **Device.** Pick your team under Signing & Capabilities, then run on the iPhone. Push-to-talk needs a real device; the simulator has no live mic input in automation.
 - **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf`, `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`. Details are in `App/Sources/App/LaunchOptions.swift`.
-- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. 13 tests run on the sample (or PDFs/answers they generate) with demo answers; the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
+- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. The scheme runs the app unit tests (`AckshuallyTests`, 8) and 17 UI tests: 13 on the sample (or PDFs/answers they generate) with demo answers, 4 against a local stub server ([Server route](#server-route)); the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
 
+
+## Server route
+
+**Date:** 2026-11-22. The app now answers through `Server/` at `ackshually.badyass.xyz` instead of calling Anthropic with a key from Settings.
+
+- **Token built in.** `App/Config/Base.xcconfig` (the app target's config file in `project.yml`) sets `ACKSHUALLY_SERVER_URL` and an empty `ACKSHUALLY_APP_TOKEN`, then `#include? "Secrets.xcconfig"` (git-ignored; `Secrets.example.xcconfig` is committed). Both reach Info.plist (`AckshuallyServerURL`, `AckshuallyAppToken`) and only `ServerConfig` reads them. The project builds with the file missing or empty. The token is extractable from the binary: fine for our devices and TestFlight; App Attest before a public release; revoking = rotate on the server and rebuild.
+- **Order** (`CredentialStore`, `AnswerRoute.resolve`): bundled token → server; developer token override (Keychain) → server; own API key (Keychain, then `ANTHROPIC_API_KEY`) → Anthropic directly; none → Settings opens, question kept. `-noKey YES` ignores all three. The sample rulebook and `-demo YES` keep the demo provider.
+- **Settings:** one plain row (*Answers by ackshually server · Built into this app*), Demo Answers, a **Developer** disclosure (collapsed unless nothing is set up) with the token override and *Use My Own Anthropic API Key* (masked fields, paste works, Save/Replace/Remove).
+- **Errors** (`AnswerFailure`; Core's `ClaudeAPIError` now carries `errorType`, `message`, `retryAfter`): 401 → *The server didn't accept your access token… check it in Settings.* plus **Open Settings**; 429 with `retry-after` → *Too many questions at once. Try again in N seconds.*; 429 without → *Today's question limit is reached. Try again tomorrow.*; 502 → *The server couldn't reach Claude*; unreachable host → *Couldn't reach the ackshually server*.
+- **⋯ → Answer Details** starts with *Answered by: ackshually server · host* (or *Anthropic API (own key)*, *Demo answers*); Copy JSON includes `"route"`.
+- **Logging:** debug builds log `asking via server|direct|demo`; `AnswerRoute.description` never contains the credential, and no request headers are logged.
+- **Debug-only launch arguments** for tests: `-serverURL http://127.0.0.1:N`, `-appToken fake-…`, `-isolatedCredentials YES` (separate Keychain items emptied at launch; ignores the real bundled token and the environment).
+
+Tests: app unit tests (new `AckshuallyTests` target, 8): precedence, the URLProtocol-stubbed request (server URL, `Bearer`, no `x-api-key`; direct sends `x-api-key`), 401/429/502/400 messages, Info.plist URL, no credential in `description`. Core `ServerRouteTests` (3): error type/message/retry-after through a stub. UI (`ServerRouteUITests`, 4, against `StubServer`, an in-runner HTTP stub on 127.0.0.1 with fake tokens): bundled token answers through the server and Answer Details/Settings say so; no bundled token → Settings → token override becomes the route and the kept question is answered; revoked token → Open Settings; per-minute and daily 429 messages. `testRealRulebookWithoutCredentialOpensSettings` replaces the API-key version.
 
 ## Answer polish (owner's Azul test)
 

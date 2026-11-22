@@ -30,7 +30,12 @@ extension ViewerModel {
                    branches: a.branches, assumptions: a.assumptions, steps: a.steps, needsWeb: a.confidence != .stated)
         }
         let raw = turns.last { $0.question == a.question }?.rawAssistantText
-        return AnswerDetailsExport(question: a.question, answer: final, rawText: raw, evidence: evidenceReports)
+        return AnswerDetailsExport(question: a.question, route: route, answer: final, rawText: raw, evidence: evidenceReports)
+    }
+
+    /// Answer Details' "Answered by" row.
+    var routeLabel: String? {
+        route.map { $0 == .server ? "\($0.title) · \(ServerConfig.host)" : $0.title }
     }
 
     /// Debug builds: the raw answer when it completes and each quote's match as it resolves.

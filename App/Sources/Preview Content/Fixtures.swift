@@ -48,7 +48,16 @@ enum Fixtures {
     static let headerLongVerdict = HeaderContent(state: .answered, question: "If I can't place any color, what do I do?",
                                                  verdict: "You still must pick tiles, and any you can't or don't want to place go to your floor line, costing you minus points. Taking is not optional, and the starting player marker counts as a floor tile too.",
                                                  confidence: .inferred, pages: [3, 4, 5])
-    static let headerFailed = HeaderContent(state: .failed("The API key was rejected. Check it in Settings."),
+    // MARK: Settings
+
+    static let routeBundled = RouteStatus(active: .bundledToken, serverHost: "ackshually.badyass.xyz")
+    static let routeOverride = RouteStatus(active: .tokenOverride, serverHost: "ackshually.badyass.xyz", tokenOverrideSaved: true)
+    static let routeAPIKey = RouteStatus(active: .apiKey(fromEnvironment: false), serverHost: "ackshually.badyass.xyz", apiKeySaved: true)
+    static let routeNone = RouteStatus(active: .none, serverHost: "ackshually.badyass.xyz")
+
+    static let tokenRejected = "The server didn't accept your access token. It may be mistyped or revoked: check it in Settings."
+    static let dailyLimit = "Today's question limit is reached. Try again tomorrow."
+    static let headerFailed = HeaderContent(state: .failed(tokenRejected),
                                             question: "Can I keep energy?")
 
     // MARK: Cards

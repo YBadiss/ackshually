@@ -1,0 +1,11 @@
+// Build settings for the app target (project.yml → configFiles). Read at runtime by `ServerConfig`
+// through Info.plist (AckshuallyServerURL, AckshuallyAppToken).
+
+// "//" starts a comment in xcconfig files, hence "$()".
+ACKSHUALLY_SERVER_URL = https:/$()/ackshually.badyass.xyz
+
+// The app token that ships with the build. Empty here; set it in the git-ignored Secrets.xcconfig
+// (copy Secrets.example.xcconfig). Without it the app needs a token or API key in Settings.
+ACKSHUALLY_APP_TOKEN =
+
+#include? "Secrets.xcconfig"

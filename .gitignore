@@ -5,3 +5,4 @@ evals/out/
 assets/rulebooks/*.pdf
 **/xcuserdata/
 docs/feedback/
+App/Config/Secrets.xcconfig

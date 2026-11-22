@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Minimal generic-password Keychain wrapper for the dev-only API key.
+/// Minimal generic-password Keychain wrapper for the access token and the dev-only API key.
 enum Keychain {
     private static let service = "app.ackshually.viewer"
 
@@ -26,23 +26,5 @@ enum Keychain {
         add[kSecValueData as String] = Data(value.utf8)
         add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
         SecItemAdd(add as CFDictionary, nil)
-    }
-}
-
-/// Where the API key comes from: Keychain (settings screen) first, then the process environment
-/// (simulator: `SIMCTL_CHILD_ANTHROPIC_API_KEY=… xcrun simctl launch …`, or the Xcode scheme).
-enum APIKeyStore {
-    static let account = "anthropic-api-key"
-
-    static var keychainKey: String? { Keychain.get(account) }
-    static var environmentKey: String? {
-        let k = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (k?.isEmpty ?? true) ? nil : k
-    }
-    /// `-noKey YES` (UI tests) ignores any stored key, so the no-key paths are testable on a
-    /// simulator where a key was saved in Settings.
-    static var current: String? {
-        if UserDefaults.standard.bool(forKey: "noKey") { return nil }
-        return keychainKey ?? environmentKey
     }
 }
