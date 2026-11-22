@@ -22,6 +22,10 @@ targets:
       - path: Sources
     dependencies:
       - package: AckshuallyCore
+    # Server URL and the bundled app token (from the git-ignored Config/Secrets.xcconfig, optional).
+    configFiles:
+      Debug: Config/Base.xcconfig
+      Release: Config/Base.xcconfig
     info:
       path: Sources/App/Info.plist
       properties:
@@ -34,6 +38,8 @@ targets:
         NSSpeechRecognitionUsageDescription: Your spoken question is transcribed so it can be sent to the rules referee.
         LSSupportsOpeningDocumentsInPlace: true
         UIFileSharingEnabled: true
+        AckshuallyServerURL: $(ACKSHUALLY_SERVER_URL)
+        AckshuallyAppToken: $(ACKSHUALLY_APP_TOKEN)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.ackshually.viewer
@@ -43,6 +49,20 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
         ENABLE_PREVIEWS: YES
+  AckshuallyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Ackshually
+      # Already linked into the host app: import it, don't link a second copy.
+      - package: AckshuallyCore
+        link: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ackshually.viewer.tests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
   AckshuallyUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -60,6 +80,7 @@ schemes:
     build:
       targets:
         Ackshually: all
+        AckshuallyTests: [test]
         AckshuallyUITests: [test]
     test:
-      targets: [AckshuallyUITests]
+      targets: [AckshuallyTests, AckshuallyUITests]

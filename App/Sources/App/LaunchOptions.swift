@@ -9,10 +9,16 @@ import AckshuallyCore
 ///   -ask "question"            ask right away
 ///   -present YES               show the demo answer instantly (no streaming)
 ///   -detent collapsed|medium|expanded,  -card N (0-based step),  -branch N
+///   -noKey YES                 ignore every credential (bundled token, token override, API key)
+/// Debug builds only (UI tests; see `ServerConfig`, `CredentialStore`):
+///   -serverURL http://127.0.0.1:N   a local stub instead of the ackshually server
+///   -appToken fake-token            replaces the bundled token (never a real one)
+///   -isolatedCredentials YES        separate, emptied Keychain items; ignores the real bundled token
 @MainActor
 enum LaunchOptions {
     static func apply(to model: ViewerModel) {
         let d = UserDefaults.standard
+        CredentialStore.resetIsolatedIfRequested()
         if let p = d.string(forKey: "pdfPath") {
             // Launch-argument documents (UI tests, screenshots) are never remembered, so test runs
             // don't decide what the app opens on the next normal launch.

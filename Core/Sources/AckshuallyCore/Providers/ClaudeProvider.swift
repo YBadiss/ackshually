@@ -69,7 +69,28 @@ public enum CacheTTL: String, Sendable {
 public struct ClaudeAPIError: Error, CustomStringConvertible, Sendable {
     public let status: Int
     public let body: String
+    /// Seconds from the `retry-after` header (Anthropic's rate limits, the server's per-minute limit; the
+    /// server's daily cap sends none).
+    public let retryAfter: TimeInterval?
+
+    public init(status: Int, body: String, retryAfter: TimeInterval? = nil) {
+        self.status = status
+        self.body = body
+        self.retryAfter = retryAfter
+    }
+
     public var description: String { "HTTP \(status): \(body.prefix(500))" }
+
+    /// `error.type` and `error.message` of Anthropic's error shape (`{"type":"error","error":{…}}`), which the
+    /// server uses too. Nil when the body is something else (a proxy's HTML page, an empty body).
+    public var errorType: String? { errorField("type") }
+    public var message: String? { errorField("message") }
+
+    private func errorField(_ key: String) -> String? {
+        guard let obj = try? JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any],
+              let error = obj["error"] as? [String: Any] else { return nil }
+        return error[key] as? String
+    }
 }
 
 /// Full-PDF, single-call provider. The PDF block carries a cache breakpoint so follow-ups (and
@@ -198,7 +219,8 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
         if status != 200 {
             var body = ""
             for try await line in bytes.lines { body += line }
-            throw ClaudeAPIError(status: status, body: body)
+            let retryAfter = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "retry-after").flatMap(TimeInterval.init)
+            throw ClaudeAPIError(status: status, body: body, retryAfter: retryAfter)
         }
         var parser = SSEAnswerParser(mode: config.mode, model: config.model)
         for try await line in bytes.lines {

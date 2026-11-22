@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// Error state of the header: what happened and Try Again (the header's close button closes).
+/// `onSettings` (a rejected access token or API key) adds Open Settings as the main action.
 struct FailureHeader: View {
     var message: String
     var onRetry: () -> Void
+    var onSettings: (() -> Void)?
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -15,16 +17,30 @@ struct FailureHeader: View {
                 .font(theme.font.proof)
                 .foregroundStyle(theme.colors.secondaryLabel)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("Try Again", action: onRetry)
-                .buttonStyle(.borderedProminent)
-                .padding(.top, theme.spacing.xs)
+                .accessibilityIdentifier("failureMessage")
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: theme.spacing.m) { FailureActions(onRetry: onRetry, onSettings: onSettings) }
+                VStack(alignment: .leading, spacing: theme.spacing.s) { FailureActions(onRetry: onRetry, onSettings: onSettings) }
+            }
+            .padding(.top, theme.spacing.xs)
         }
     }
 }
 
-#Preview {
-    FailureHeader(message: "The API key was rejected. Check it in Settings.", onRetry: {})
-        .padding()
+#Preview("States") {
+    VStack(alignment: .leading, spacing: 32) {
+        FailureHeader(message: Fixtures.tokenRejected, onRetry: {}, onSettings: {})
+        FailureHeader(message: Fixtures.dailyLimit, onRetry: {})
+    }
+    .padding()
+    .themeBackground(\.sheet)
+    .themed()
+}
+
+#Preview("Dark, AX5") {
+    ScrollView { FailureHeader(message: Fixtures.tokenRejected, onRetry: {}, onSettings: {}).padding() }
         .themeBackground(\.sheet)
         .themed()
+        .preferredColorScheme(.dark)
+        .dynamicTypeSize(.accessibility5)
 }

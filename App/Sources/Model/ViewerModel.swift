@@ -33,6 +33,10 @@ final class ViewerModel {
     /// Thumbs up/down per answer, in memory for M2 (S11 storage is M3).
     private(set) var feedback: [UUID: Bool] = [:]
     private(set) var isDemo = false
+    /// Which route answered (or is answering) the current answer: Answer Details shows it.
+    private(set) var route: AnswerRoute.Kind?
+    /// The failure is fixed in Settings (rejected token or key): the error header offers it.
+    private(set) var failureOpensSettings = false
 
     private var task: Task<Void, Never>?
     private(set) var highlights: [String: Highlight] = [:]
@@ -75,16 +79,19 @@ final class ViewerModel {
         return a.complete || a.stopped || { if case .failed = phase { true } else { false } }()
     }
 
-    /// Set when a real rulebook is asked about without an API key; the screen opens Settings.
-    var needsAPIKey = false
+    /// Set when Settings should open: a real rulebook asked about without a credential, or a rejected
+    /// credential. The screen opens Settings and clears it.
+    var settingsRequested = false
+
+    func requestSettings() { settingsRequested = true }
 
     func ask(_ raw: String) {
         let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, let rb = rulebook else { return }
-        // Never answer a real rulebook with the scripted demo: keep the question and ask for a key.
-        guard let (provider, demo) = Self.makeProvider(for: rb) else {
+        // Never answer a real rulebook with the scripted demo: keep the question and ask for a credential.
+        guard let (provider, route) = Self.makeProvider(for: rb) else {
             draft = q
-            needsAPIKey = true
+            settingsRequested = true
             return
         }
         cancel()
@@ -100,7 +107,10 @@ final class ViewerModel {
         sheetVisible = false
         detent = .medium
 
-        isDemo = demo
+        isDemo = route == .demo
+        self.route = route
+        failureOpensSettings = false
+        Self.log.debug("asking via \(route.rawValue, privacy: .public)")
         let request = AnswerRequest(pdf: rb.data, documentTitle: rb.title, question: q, history: turns)
         task = Task { [weak self] in
             do {
@@ -110,7 +120,7 @@ final class ViewerModel {
                 }
             } catch {
                 guard let self, !Task.isCancelled else { return }
-                self.fail(Self.describe(error))
+                self.fail(AnswerFailure(error, route: route))
             }
         }
     }
@@ -155,8 +165,9 @@ final class ViewerModel {
         task = nil
     }
 
-    private func fail(_ message: String) {
-        phase = .failed(message)
+    private func fail(_ failure: AnswerFailure) {
+        failureOpensSettings = failure.opensSettings
+        phase = .failed(failure.message)
         sheetVisible = true
     }
 
@@ -190,7 +201,7 @@ final class ViewerModel {
                 logAnswer()
             } else {
                 answer = a
-                fail("The answer couldn't be read (\(r.parseError ?? "unknown error")).")
+                fail(AnswerFailure(message: "The answer couldn't be read (\(r.parseError ?? "unknown error"))."))
                 return
             }
         }
@@ -375,6 +386,7 @@ final class ViewerModel {
         answer = live
         self.phase = phase
         isDemo = demo
+        route = demo ? .demo : CredentialStore.route?.kind
         sheetVisible = true
         if let m = rulebook?.matcher {
             for e in (live.steps + live.branches.flatMap(\.steps)).flatMap(\.evidence) {
@@ -399,31 +411,16 @@ final class ViewerModel {
 
     // MARK: Provider
 
-    /// Claude when a key is set; the scripted demo only for the sample rulebook (or `-demo YES`);
-    /// nil for a real rulebook without a key.
-    static func makeProvider(for rulebook: LoadedRulebook) -> (AnswerProvider, demo: Bool)? {
+    /// Claude through the route the credentials give (token → server, else API key → direct); the scripted
+    /// demo only for the sample rulebook (or `-demo YES`); nil for a real rulebook without a credential.
+    static func makeProvider(for rulebook: LoadedRulebook) -> (AnswerProvider, route: AnswerRoute.Kind)? {
         let d = UserDefaults.standard
-        if !d.bool(forKey: "demo"), let key = APIKeyStore.current {
+        if !d.bool(forKey: "demo"), let route = CredentialStore.route {
             let model = d.string(forKey: "model") ?? "claude-sonnet-5-5"
-            return (ClaudeProvider(config: ClaudeConfig(apiKey: key, model: model, effort: "low", mode: .json)), false)
+            return (ClaudeProvider(config: route.claudeConfig(model: model)), route.kind)
         }
         guard rulebook.isSample || d.bool(forKey: "demo") else { return nil }
         let scripted = d.string(forKey: "demoAnswer").flatMap(DemoProvider.answer(fromFile:)) ?? DemoProvider.batteryAnswer
-        return (DemoProvider(answer: scripted), true)
-    }
-
-    static func describe(_ error: Error) -> String {
-        if let e = error as? ClaudeAPIError {
-            switch e.status {
-            case 401: return "The API key was rejected. Check it in Settings."
-            case 429: return "Rate limited. Try again in a moment."
-            case 529, 503: return "Claude is overloaded. Try again in a moment."
-            default: return e.description
-            }
-        }
-        if let u = error as? URLError {
-            return u.code == .notConnectedToInternet ? "No internet connection." : u.localizedDescription
-        }
-        return error.localizedDescription
+        return (DemoProvider(answer: scripted), .demo)
     }
 }

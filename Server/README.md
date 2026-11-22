@@ -88,8 +88,23 @@ sudo -u deploy sqlite3 /var/www/ackshually/data/ackshually.db \
   "SELECT day, client, COUNT(*), ROUND(SUM(cost_usd), 3) FROM requests GROUP BY day, client ORDER BY day DESC LIMIT 20"
 ```
 
+## The app's token
+
+The app sends `Authorization: Bearer <token>` to `https://ackshually.badyass.xyz` by default. The token is **built into
+the app**: `App/Config/Base.xcconfig` includes the git-ignored `App/Config/Secrets.xcconfig` (copy
+`Secrets.example.xcconfig`, paste a token from `npm run token -- <name>`), which feeds `ACKSHUALLY_APP_TOKEN` into
+Info.plist, where `ServerConfig` reads it. Without the file the app still builds; it then needs a token override or an
+API key in Settings → Developer.
+
+**Risk:** a bundled token is readable by anyone who has the app binary (it sits in Info.plist). That's acceptable for
+our own devices and TestFlight, not for a public release (App Attest, below). Revoking it means removing its hash
+from `APP_TOKENS`, generating a new one, and rebuilding the app with it; every install of the old build stops working.
+
+The app relies on the error shapes above: 401 → "check your access token in Settings"; 429 **with** `retry-after` →
+"try again in N seconds"; 429 **without** it → "today's limit is reached, try again tomorrow". Keep the daily cap free
+of `retry-after`, or the app shows the wrong message.
+
 ## Not yet
 
-- **App Attest** before a public release: today a token is a shared secret per device, fine for our own phones but
-  extractable from a public build. With App Attest the app gets a short-lived token only after Apple vouches for it.
-- The app still uses the API key from Settings; switching it to the server URL + token is the next change.
+- **App Attest** before a public release: today the token is a shared secret bundled with the build, fine for our own
+  phones and TestFlight but extractable from a public build. With App Attest the app gets a short-lived token only after Apple vouches for it.

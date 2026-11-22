@@ -21,7 +21,7 @@ struct ViewerScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ViewerMenu(hasAnswer: model.answer != nil, answerShown: model.sheetVisible,
-                           isDemo: model.isDemo || APIKeyStore.current == nil,
+                           isDemo: model.isDemo || CredentialStore.route == nil,
                            onOpen: { presentation.importing = true },
                            onSample: { model.openSample() },
                            onShowAnswer: { withAnimation(.snappy) { model.showSheet() } },
@@ -32,9 +32,9 @@ struct ViewerScreen: View {
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { windowSize = $0 }
         .viewerDialogs(presentation, model: model, active: !presentation.answerSheetPresented)
-        .onChange(of: model.needsAPIKey) { _, needs in
-            guard needs else { return }
-            model.needsAPIKey = false
+        .onChange(of: model.settingsRequested) { _, requested in
+            guard requested else { return }
+            model.settingsRequested = false
             presentation.settings = true
         }
     }

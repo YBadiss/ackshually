@@ -204,8 +204,9 @@ final class ViewerUITests: XCTestCase {
         shot("s7-collapsed-header-only")
     }
 
-    /// Asking about a real rulebook without an API key opens Settings; never the scripted demo.
-    func testRealRulebookWithoutKeyAsksForKey() throws {
+    /// Asking about a real rulebook without any credential (`-noKey` ignores a bundled token too) opens
+    /// Settings, with the developer options open; never the scripted demo.
+    func testRealRulebookWithoutCredentialOpensSettings() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("not-the-sample.pdf")
         let pdf = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792)).pdfData { ctx in
             ctx.beginPage()
@@ -215,7 +216,10 @@ final class ViewerUITests: XCTestCase {
         continueAfterFailure = false
         app.launchArguments = ["-pdfPath", url.path, "-noKey", "YES", "-ask", "Can I pass?"]
         app.launch()
-        XCTAssertTrue(app.descendants(matching: .any)["apiKeyField"].firstMatch.waitForExistence(timeout: 5))
+        let active = app.staticTexts["activeRoute"]
+        XCTAssertTrue(active.waitForExistence(timeout: 5))
+        XCTAssertEqual(active.label, "No answer service set up")
+        XCTAssertTrue(app.descendants(matching: .any)["apiKeyField"].firstMatch.exists)
         XCTAssertFalse(verdict.exists)
         XCTAssertFalse(app.descendants(matching: .any)["demoNote"].firstMatch.exists)
     }

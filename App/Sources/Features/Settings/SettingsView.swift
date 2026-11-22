@@ -1,36 +1,56 @@
 import SwiftUI
 
-/// Dev-only settings (M2): API key (stored in the Keychain by the caller), demo mode.
+/// Settings: which service answers (the bundled token, nothing to enter), demo mode, and a Developer
+/// disclosure with a token override and "use my own Anthropic API key". Keychain writes are the caller's.
 struct SettingsView: View {
-    var keySource: String
+    var status: RouteStatus
     @Binding var demo: Bool
-    var onSaveKey: (String) -> Void
-    var onClearKey: () -> Void
+    var onSave: (String, CredentialStore.Item) -> Void
+    var onRemove: (CredentialStore.Item) -> Void
     var onDone: () -> Void
-    @State private var key = ""
+    /// Seeded once: open when nothing is set up, so the way to fix it is on screen.
+    @State private var showsDeveloper: Bool
     @Environment(\.theme) private var theme
+
+    init(status: RouteStatus, demo: Binding<Bool>, onSave: @escaping (String, CredentialStore.Item) -> Void,
+         onRemove: @escaping (CredentialStore.Item) -> Void, onDone: @escaping () -> Void) {
+        self.status = status
+        _demo = demo
+        self.onSave = onSave
+        self.onRemove = onRemove
+        self.onDone = onDone
+        _showsDeveloper = State(initialValue: !status.isSetUp)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    SecureField("sk-ant-…", text: $key)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("apiKeyField")
-                    Button("Save Key") { onSaveKey(key.trimmingCharacters(in: .whitespacesAndNewlines)); key = "" }
-                        .disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    Button("Remove Saved Key", role: .destructive, action: onClearKey)
-                } header: {
-                    Text("Anthropic API Key")
+                    RouteStatusRow(status: status)
                 } footer: {
-                    Text("Current: \(keySource). Stored in the Keychain on this device only. On the simulator, ANTHROPIC_API_KEY from the launch environment also works.")
+                    if let footer = status.footer { Text(footer) }
                 }
                 .listRowBackground(theme.colors.card)
                 Section {
                     Toggle("Demo Answers", isOn: $demo)
                 } footer: {
-                    Text("Streams a scripted answer for the sample rulebook, with no API calls. Used for the sample when no key is set; your own rulebooks need an API key.")
+                    Text("Streams a scripted answer for the sample rulebook, with no API calls.")
+                }
+                .listRowBackground(theme.colors.card)
+                Section {
+                    DisclosureGroup("Developer", isExpanded: $showsDeveloper) {
+                        CredentialField(title: "Access Token Override", prompt: "ack_…", isSaved: status.tokenOverrideSaved,
+                                        fieldID: "tokenOverrideField", onSave: { onSave($0, .tokenOverride) },
+                                        onRemove: { onRemove(.tokenOverride) })
+                        CredentialField(title: "Use My Own Anthropic API Key", prompt: "sk-ant-…", isSaved: status.apiKeySaved,
+                                        fieldID: "apiKeyField", onSave: { onSave($0, .apiKey) },
+                                        onRemove: { onRemove(.apiKey) })
+                    }
+                    .accessibilityIdentifier("developerSection")
+                } footer: {
+                    if showsDeveloper {
+                        Text("For development. The token built into the app comes first, then a token override (sent to the ackshually server), then your own API key (calls Anthropic directly). Both are stored in this device's Keychain only.")
+                    }
                 }
                 .listRowBackground(theme.colors.card)
                 Section("Answer Engine") {
@@ -49,12 +69,16 @@ struct SettingsView: View {
     }
 }
 
-#Preview {
-    SettingsView(keySource: "none (demo answers)", demo: .constant(true), onSaveKey: { _ in }, onClearKey: {}, onDone: {})
+#Preview("Bundled token") {
+    SettingsView(status: Fixtures.routeBundled, demo: .constant(false), onSave: { _, _ in }, onRemove: { _ in }, onDone: {})
         .themed()
 }
-#Preview("Dark, AX5") {
-    SettingsView(keySource: "none (demo answers)", demo: .constant(true), onSaveKey: { _ in }, onClearKey: {}, onDone: {})
+#Preview("Nothing set up") {
+    SettingsView(status: Fixtures.routeNone, demo: .constant(false), onSave: { _, _ in }, onRemove: { _ in }, onDone: {})
+        .themed()
+}
+#Preview("Own key, dark, AX5") {
+    SettingsView(status: Fixtures.routeAPIKey, demo: .constant(true), onSave: { _, _ in }, onRemove: { _ in }, onDone: {})
         .themed()
         .preferredColorScheme(.dark)
         .dynamicTypeSize(.accessibility5)

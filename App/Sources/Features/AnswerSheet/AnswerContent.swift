@@ -13,6 +13,11 @@ struct AnswerContent: View {
 
     private nonisolated static let space = "answerContent"
     private var answered: Bool { model.header?.state == .answered }
+    /// A rejected credential: the error header offers Settings.
+    private var settingsAction: (() -> Void)? {
+        guard model.failureOpensSettings else { return nil }
+        return { model.requestSettings() }
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -20,7 +25,8 @@ struct AnswerContent: View {
                 VStack(alignment: .leading, spacing: theme.spacing.xl) {
                     if let h = model.header {
                         AnswerHeader(content: h, showsQuestion: placement.isExpanded,
-                                     onStop: stop, onRetry: model.retry, onClose: close)
+                                     onStop: stop, onRetry: model.retry,
+                                     onSettings: settingsAction, onClose: close)
                             .padding(.horizontal, theme.spacing.xl)
                             .id("top")
                             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.space)).maxY } action: {
