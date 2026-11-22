@@ -8,6 +8,7 @@ usage:
             [--timeout SEC] [--no-schema] [--no-fallbacks] [--out DIR] [--resume DIR] [--base-url URL]
             [--pages all|auto] [--k N] [--neighbors N] [--max-pages N] [--excerpt pdf|text]
             [--full-if-coverage X] [--min-confidence X] [--no-page-fallback]
+            (env ACKSHUALLY_APP_TOKEN + --base-url: answer through the ackshually server)
   bench retrieve [--questions FILE] [--k N] [--neighbors N] [--explain QID,..]
                                    offline: pages page selection would send, retrieval recall
   bench report DIR                 regenerate DIR/report.md from DIR/results.jsonl
@@ -170,10 +171,19 @@ case "run":
         try FileManager.default.createDirectory(at: fixturePath.deletingLastPathComponent(), withIntermediateDirectories: true)
         try FixtureRulebook.write(to: fixturePath)
     }
-    guard let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"], !key.isEmpty else {
+    let env = ProcessInfo.processInfo.environment
+    // ACKSHUALLY_APP_TOKEN + --base-url sends answers through the ackshually server (Server/), as the app does.
+    // The judge always calls Anthropic directly with ANTHROPIC_API_KEY.
+    let appToken = env["ACKSHUALLY_APP_TOKEN"].flatMap { $0.isEmpty ? nil : $0 }
+    if appToken != nil && baseURL.host == "api.anthropic.com" {
+        print("ACKSHUALLY_APP_TOKEN needs --base-url (the server's URL)"); exit(1)
+    }
+    let key = env["ANTHROPIC_API_KEY"] ?? ""
+    if key.isEmpty && (appToken == nil || !noJudge) {
         log("⏸  ANTHROPIC_API_KEY is not set — nothing was sent. Export it and re-run the same command.")
         exit(2)
     }
+    let credential: Credential = appToken.map(Credential.appToken) ?? .apiKey(key)
     let config = """
     - Date: \(Date())
     - Questions: `\(questions.lastPathComponent)`
@@ -187,7 +197,7 @@ case "run":
                           useSchema: !noSchema, useFallbacks: !noFallbacks, judgeModel: noJudge ? nil : judgeModel,
                           timeout: timeout, baseURL: baseURL, onlyGames: games, onlyIDs: ids, limit: limit, resume: resumeDir != nil,
                           pages: pageMode)
-    let records = try await Runner(opts: opts, apiKey: key).run()
+    let records = try await Runner(opts: opts, credential: credential, judgeAPIKey: key).run()
     let md = Report.markdown(records, title: "Bench report — \(model) / \(mode.rawValue) / effort \(effort)", config: config)
     try md.write(to: outDir.appendingPathComponent("report.md"), atomically: true, encoding: .utf8)
     print(outDir.appendingPathComponent("report.md").path)

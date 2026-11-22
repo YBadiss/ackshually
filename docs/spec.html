@@ -260,11 +260,12 @@
          models · AnswerProvider protocol + ClaudeProvider · streaming field parser
          quote matcher (fuzzy) · box checks · [M3] Vision OCR prep · [M4] web fallback
 evals/   bench CLI on Core: question sets, runs, kept results
-App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
+App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage
+Server/  Node 24 service at ackshually.badyass.xyz: holds the API key, checks and forwards answer requests</pre>
 <ul><li>The app and the evals share <code>Core</code>, so benchmark numbers reflect the app.</li>
 <li>Whole PDF + question + conversation in one streamed request; the PDF is prompt-cached with a <b>1-hour TTL</b> (mid-game questions are often 5–60 min apart; a cache write costs 2× input instead of 1.25×, which pays off from the third question).</li>
 <li>Data model: <code>Game → [Document]</code>, <code>Game → [Session] → [Answer]</code>. Everything on device.</li>
-<li>API key: Keychain in the app, <code>ANTHROPIC_API_KEY</code> for the evals. The app calls the API directly; no server yet.</li>
+<li>API key: only on the server (<code>Server/</code>) and in <code>ANTHROPIC_API_KEY</code> for the evals; never on the phone. The app sends the same streamed request Core builds today to <code>ackshually.badyass.xyz/v1/messages</code> with an app token; the server checks it against an allowlist of Core's request shape (models, <code>max_tokens</code>, no tools), adds the key, pipes the stream back unchanged, and logs tokens and cost per request with daily caps. Page selection stays on the device (it uses PDFKit), so the server needs no rulebooks. App tokens are static per device for now; App Attest before a public release.</li>
 <li>Step carousel: horizontal <code>ScrollView</code> + <code>.scrollTargetBehavior(.viewAligned)</code>, side margins for the peek, <code>.scrollPosition(id:)</code> drives the PDF. Fallback: <code>TabView(.page)</code>.</li>
 <li>Figures: v1 uses the model-proposed box. If boxes score badly, use Vision-detected candidate regions and let the model pick one.</li></ul>
 
@@ -296,7 +297,7 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>User-uploaded PDFs; curated library later</td><td>No rights issues; validates on own games</td></tr>
   <tr><td>2026-11-21</td><td>Web fallback only when the rulebook isn't enough; rulebook always leads</td><td>Fast path stays fast; never silently overridden</td></tr>
   <tr><td>2026-11-21</td><td>Branches instead of clarifying questions</td><td>Simpler agent; no round-trip while the table waits</td></tr>
-  <tr><td>2026-11-21</td><td>iOS-first SwiftUI, Claude behind an interface, direct API calls</td><td>Owner's iPhone; native PDFKit; no server yet</td></tr>
+  <tr><td>2026-11-21</td><td>iOS-first SwiftUI, Claude behind an interface, <s>direct API calls</s> (superseded below)</td><td>Owner's iPhone; native PDFKit; no server yet</td></tr>
   <tr><td>2026-11-21</td><td>Figures: model box first, Vision candidates if needed</td><td>Cheapest thing that produces a measurement</td></tr>
   <tr><td>2026-11-21</td><td>Layout B: full PDF + bottom sheet</td><td>Keeps the source central</td></tr>
   <tr><td>2026-11-21</td><td>Sheet v2: fixed header + peeking step cards, no buttons</td><td>Buttons + swipe were redundant; old sheet mixed answer and step</td></tr>
@@ -313,6 +314,7 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <tr><td>2026-11-21</td><td>Wide screens use the standard <code>.inspector</code> column instead of a custom side panel; the layout is decided from the window width</td><td>Standard iPad pattern with a toolbar toggle; deciding from the PDF column's width made the inspector flip the layout</td></tr>
   <tr><td>2026-11-21</td><td>Header is text hierarchy (bold verdict + one proof line with an SF Symbol); branches, steps, feedback are grouped rows; SF Symbols replace emoji; ask field is a Liquid Glass bottom field with the mic inside</td><td>Spec §3 native direction; <code>.searchable</code> can't host hold-to-talk, so the field is a glass <code>TextField</code> placed like the iOS 26 bottom search field</td></tr>
   <tr><td>2026-11-21</td><td>Answer contract: <code>steps[].title</code> and <code>branches[].steps</code> (required in the schema, optional when decoding)</td><td>Card captions need a title; S9's "cards switch to the branch" needs evidence per branch. Costs a few dozen tokens per branch before step 1 streams: watch the step-1 latency in the next bench run</td></tr>
+  <tr><td>2026-11-21</td><td>LLM calls go through a small server (<code>Server/</code>, on the existing droplet) that holds the API key: a checked pass-through of Core's request, not a server-side answer engine</td><td>Keeps the key off the phone ahead of a real release; Core and the evals keep one code path, and retrieval stays on device (PDFKit)</td></tr>
 </table></div>
 
 <!-- ============================================================ -->
@@ -324,6 +326,8 @@ App/     [M2] SwiftUI app: PDFKit viewer, answer sheet, SwiftData storage</pre>
   <li>Bench run with the v2 contract (titles + branch steps): check step-1 latency and accuracy didn't move.</li>
   <li>Set a cost ceiling per question (M1: Sonnet ≈ $0.01 per question after the first).</li>
   <li>Add a question whose answer exists only in a diagram (assumption 4 barely tested).</li>
+  <li>App: server URL + app token in place of the API key (Settings, Keychain); then App Attest so only the real app gets tokens.</li>
+  <li>Bench through the server once deployed, to measure the added latency on step 1.</li>
 </ul>
 
 </main>

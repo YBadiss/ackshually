@@ -1,0 +1,81 @@
+name: Server
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-server.yml
+      - Server/**
+      - '!Server/nginx/**'
+  pull_request:
+    paths:
+      - .github/workflows/deploy-server.yml
+      - Server/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'Server/package-lock.json'
+
+      - name: Typecheck and test
+        working-directory: Server
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+
+  deploy:
+    name: Deploy
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      # The server has no runtime dependencies and no build step, so nothing third-party runs with the SSH key.
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_DEPLOY_KEY }}
+
+      - name: Trust only the pinned server host key
+        env:
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_KNOWN_HOSTS" || { echo "SSH_KNOWN_HOSTS secret is not set" >&2; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        working-directory: Server
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          ACKSHUALLY_ENV_FILE: ${{ vars.ACKSHUALLY_ENV_FILE }}
+        run: npm run deploy
