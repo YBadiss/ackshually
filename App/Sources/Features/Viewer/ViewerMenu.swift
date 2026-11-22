@@ -1,35 +1,26 @@
 import SwiftUI
 
-/// The ⋯ menu: the system toolbar overflow menu, so its actions join the system's own overflow
-/// instead of nesting a custom ellipsis menu inside it.
+/// The viewer's ⋯ menu: the system toolbar overflow menu, so its actions join the system's own
+/// overflow instead of nesting a custom ellipsis menu inside it. Only this game's answer items
+/// live here; app-wide items (Settings, adding a rulebook) are on My Games.
 struct ViewerMenu: ToolbarContent {
     var hasAnswer: Bool
     var answerShown: Bool
     var isDemo: Bool
-    var onOpen: () -> Void
-    var onSample: () -> Void
     var onShowAnswer: () -> Void
     var onDetails: () -> Void
-    var onSettings: () -> Void
 
     var body: some ToolbarContent {
-        ToolbarOverflowMenu {
-            Section {
-                Button("Open a Rulebook PDF…", systemImage: "doc.badge.plus", action: onOpen)
-                Button("Sample Rulebook", systemImage: "book.closed", action: onSample)
-            }
-            if hasAnswer {
+        if hasAnswer {
+            ToolbarOverflowMenu {
                 Section {
                     if !answerShown {
                         Button("Show Answer", systemImage: "text.below.photo", action: onShowAnswer)
                     }
                     Button("Answer Details", systemImage: "list.bullet.rectangle", action: onDetails)
+                } header: {
+                    if isDemo { Text("Demo answers: no access token set") }
                 }
-            }
-            Section {
-                Button("Settings", systemImage: "gearshape", action: onSettings)
-            } header: {
-                if isDemo { Text("Demo answers: no access token set") }
             }
         }
     }

@@ -100,12 +100,13 @@
 <p>Milestone in the tag. Gestures in <b>bold</b>. Blue marks on the mockups show the gesture being described.</p>
 
 <section class="screen" id="s1"><div>
-  <h3>S1 · My Games <span class="mtag">M3</span></h3>
-  <p>List of games (cover, name, sessions or preparation progress) and an "Add a rulebook PDF" field.</p>
-  <ul><li><b>Tap a game</b> → viewer, resumes the last session.</li>
-  <li><b>＋</b> → iOS file picker / share-sheet import → S2.</li>
-  <li><b>Swipe left</b> → Export · Delete.</li>
-  <li>Before M3 the app opens straight into the last PDF.</li></ul>
+  <h3>S1 · My Games <span class="mtag">M2 · sessions in M3</span></h3>
+  <p>The app opens here. A standard list of imported rulebooks, most recently used first: cover (the PDF's first page), game name, "Opened 2 days ago". Settings and ＋ Add a Rulebook are in the toolbar.</p>
+  <ul><li><b>Tap a game</b> → viewer (pushed; Back returns to the list). Coming back to the same game keeps its answer.</li>
+  <li><b>＋</b> → iOS file picker → the PDF is copied into the app and opens right away (S2).</li>
+  <li><b>Swipe left</b> → Delete (removes the game and its copy). Export comes with S12 sessions.</li>
+  <li>No games yet: "Add a Rulebook" or "Try the Sample".</li>
+  <li>iPad / wide: the same stack; the viewer keeps its answer inspector column.</li></ul>
 </div><div class="shot" data-screen="s1"></div></section>
 
 <section class="screen" id="s2"><div>
@@ -281,8 +282,8 @@ Server/  Node 24 service at ackshually.badyass.xyz: holds the API key, checks an
 <div class="tbl"><table>
   <tr><th></th><th>Goal</th><th>Contents</th><th>Done when</th></tr>
   <tr><td><b>M1</b><br>Assumption check</td><td>Prove the approach, quickly</td><td><code>Core</code> + <code>evals</code>, 28 questions over Power Grid Recharged, Root (Learning to Play), Azul, Dune Imperium</td><td>Numbers look viable, or we know what broke</td></tr>
-  <tr><td><b>M2</b><br>iOS viewer</td><td>Something to use at the table</td><td><a href="#s3">S3</a>–<a href="#s9">S9</a>: ask, streaming, answer sheet, stepping, collapse/expand, inspect, follow-ups</td><td>Usable on the owner's iPhone</td></tr>
-  <tr><td><b>M3</b><br>Real tool</td><td>Game-night ready</td><td><a href="#s1">S1</a>, <a href="#s2">S2</a> with OCR, <a href="#s11">S11</a>, <a href="#s12">S12</a>; full ~60-question bench incl. a scanned variant</td><td>Used unprompted at game night</td></tr>
+  <tr><td><b>M2</b><br>iOS viewer</td><td>Something to use at the table</td><td><a href="#s1">S1</a> (list, add, delete), <a href="#s3">S3</a>–<a href="#s9">S9</a>: ask, streaming, answer sheet, stepping, collapse/expand, inspect, follow-ups</td><td>Usable on the owner's iPhone</td></tr>
+  <tr><td><b>M3</b><br>Real tool</td><td>Game-night ready</td><td><a href="#s1">S1</a> sessions + export, <a href="#s2">S2</a> with OCR, <a href="#s11">S11</a>, <a href="#s12">S12</a>; full ~60-question bench incl. a scanned variant</td><td>Used unprompted at game night</td></tr>
   <tr><td><b>M4</b><br>Fallbacks</td><td>Cover the gaps</td><td><a href="#s10">S10</a> web fallback, read-aloud, better figure boxes if needed</td><td>—</td></tr>
 </table></div>
 <h4>M1 tests five assumptions</h4>
@@ -328,6 +329,7 @@ Server/  Node 24 service at ackshually.badyass.xyz: holds the API key, checks an
   <tr><td>2026-11-21</td><td>Answer contract: <code>steps[].title</code> and <code>branches[].steps</code> (required in the schema, optional when decoding)</td><td>Card captions need a title; S9's "cards switch to the branch" needs evidence per branch. Costs a few dozen tokens per branch before step 1 streams: watch the step-1 latency in the next bench run</td></tr>
   <tr><td>2026-11-22</td><td>The app answers through the server with an app token built into the app (git-ignored <code>Secrets.xcconfig</code>); Settings shows the route, and a collapsed Developer section holds a token override and "use my own Anthropic API key" (direct). Order: bundled token, override, API key</td><td>Owner: users must not have to enter a token. Extractable from the binary, acceptable for our devices and TestFlight until App Attest</td></tr>
   <tr><td>2026-11-21</td><td>LLM calls go through a small server (<code>Server/</code>, on the existing droplet) that holds the API key: a checked pass-through of Core's request, not a server-side answer engine</td><td>Keeps the key off the phone ahead of a real release; Core and the evals keep one code path, and retrieval stays on device (PDFKit)</td></tr>
+  <tr><td>2026-11-22</td><td>App opens on the My Games list (S1), moved from M3 into M2: native <code>List</code> in a <code>NavigationStack</code> (also on iPad), the viewer is pushed; library index in Application Support; Settings moves to the list's toolbar</td><td>Opening straight into the last PDF made switching games a trip through ⋯; a split view would squeeze the PDF beside both the list and the answer inspector</td></tr>
 </table></div>
 
 <!-- ============================================================ -->

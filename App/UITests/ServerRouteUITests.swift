@@ -73,7 +73,9 @@ final class ServerRouteUITests: XCTestCase {
         app.buttons["Done"].tap()
 
         app.buttons["closeAnswer"].tap()
-        openMenu("Settings")
+        // Settings lives on My Games (S1): Back, then the gear.
+        app.navigationBars.buttons["My Games"].firstMatch.tap()
+        app.buttons["settings"].tap()
         let active = app.staticTexts["activeRoute"]
         XCTAssertTrue(active.waitForExistence(timeout: 3))
         XCTAssertEqual(active.label, "Answers by ackshually server")
@@ -108,7 +110,8 @@ final class ServerRouteUITests: XCTestCase {
         assertSentToServer(token: "fake-ok")
     }
 
-    /// A rejected token: the message points to Settings and its button opens it.
+    /// A rejected token: the message points to Settings and its button opens it. Settings moved to My Games'
+    /// toolbar (S1), but Open Settings still opens it right over the viewer, and Done returns to the answer.
     func testRevokedTokenPointsToSettings() {
         launch(token: "fake-revoked")
         let message = app.staticTexts["failureMessage"]
@@ -116,6 +119,10 @@ final class ServerRouteUITests: XCTestCase {
         XCTAssertEqual(message.label, "The server didn't accept your access token. It may be mistyped or revoked: check it in Settings.")
         app.buttons["failureSettings"].tap()
         XCTAssertTrue(app.staticTexts["activeRoute"].waitForExistence(timeout: 3))
+        app.navigationBars["Settings"].buttons["Done"].tap()
+        XCTAssertTrue(message.waitForExistence(timeout: 3), "back on the viewer with the failed answer")
+        XCTAssertTrue(app.descendants(matching: .any)["pdfView"].firstMatch.exists)
+        XCTAssertFalse(app.buttons["settings"].exists, "not dropped back to My Games")
     }
 
     /// 429s: the per-minute limit says when to retry; the daily cap says tomorrow. Neither offers Settings.

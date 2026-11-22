@@ -45,28 +45,33 @@ final class ViewerModel {
 
     // MARK: Document
 
-    func open(_ url: URL, remember: Bool = true) {
+    /// Loads a rulebook and resets the conversation. The library (My Games) decides what is
+    /// remembered; this only opens.
+    @discardableResult
+    func open(_ url: URL) -> Bool {
         guard let rb = LoadedRulebook(url: url) else {
             openError = "Couldn't open \(url.lastPathComponent) as a PDF."
-            return
+            return false
         }
-        cancel()
+        reset()
         rulebook = rb
+        return true
+    }
+
+    /// The open game was deleted from My Games.
+    func close() {
+        reset()
+        rulebook = nil
+    }
+
+    private func reset() {
+        cancel()
         turns = []
         answer = nil
         sheetVisible = false
         focus = nil
         highlights = [:]
         openError = nil
-        if remember { Library.remember(url) }
-    }
-
-    func importPicked(_ url: URL) {
-        do { open(try Library.importPDF(from: url)) } catch { openError = "Import failed: \(error.localizedDescription)" }
-    }
-
-    func openSample(remember: Bool = true) {
-        do { open(try Library.sampleRulebook(), remember: remember) } catch { openError = "\(error)" }
     }
 
     // MARK: Asking

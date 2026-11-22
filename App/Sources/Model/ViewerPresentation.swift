@@ -1,13 +1,12 @@
 import Foundation
 import Observation
 
-/// Which app-level dialogs are up (file importer, settings). A presenter that already shows the
+/// Which viewer dialogs are up (settings when a key is needed, Answer Details). A presenter that already shows the
 /// answer sheet can't present again, so the dialogs attach to whichever view is frontmost:
 /// the root, or the answer sheet while it is up (`answerSheetPresented`).
 @MainActor
 @Observable
 final class ViewerPresentation {
-    var importing = false
     var settings = false
     /// ⋯ → Answer Details (evidence match status, Copy JSON).
     var answerDetails = false

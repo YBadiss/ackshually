@@ -2,8 +2,12 @@ import Foundation
 import AckshuallyCore
 
 /// Launch arguments for the simulator and screenshots (they land in UserDefaults' argument domain):
+/// The app opens on My Games (S1). Opening a document pushes the viewer on top of the list
+/// (Back returns to it); those documents are not added to My Games.
 ///   -pdfPath /abs/file.pdf     open this PDF (simulator can read host paths)
 ///   -sample YES                open the generated sample rulebook
+///   -emptyLibrary YES          start with no games (clears the index and the imported copies)
+///   -seedSample YES            add the sample to My Games, like "Try the Sample" (persisted)
 ///   -demo YES                  scripted answers, no API calls (also when no key is set)
 ///   -demoAnswer /abs/a.json    scripted Answer JSON (spec §4 contract) for the demo provider
 ///   -ask "question"            ask right away
@@ -16,17 +20,18 @@ import AckshuallyCore
 ///   -isolatedCredentials YES        separate, emptied Keychain items; ignores the real bundled token
 @MainActor
 enum LaunchOptions {
-    static func apply(to model: ViewerModel) {
+    static func apply(to library: LibraryModel) {
         let d = UserDefaults.standard
         CredentialStore.resetIsolatedIfRequested()
+        let model = library.viewer
+        if d.bool(forKey: "emptyLibrary") { library.reset() }
+        if d.bool(forKey: "seedSample") { library.seedSample() }
         if let p = d.string(forKey: "pdfPath") {
-            // Launch-argument documents (UI tests, screenshots) are never remembered, so test runs
-            // don't decide what the app opens on the next normal launch.
-            model.open(URL(fileURLWithPath: p), remember: false)
+            // Launch-argument documents (UI tests, screenshots) are never added to My Games, so
+            // test runs don't change the list the app shows on the next normal launch.
+            library.openTransient(URL(fileURLWithPath: p))
         } else if d.bool(forKey: "sample") {
-            model.openSample(remember: false)
-        } else if model.rulebook == nil, let last = Library.last {
-            model.open(last)
+            library.openSampleTransient()
         }
         guard model.rulebook != nil else { return }
         if d.bool(forKey: "present") {
