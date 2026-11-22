@@ -96,17 +96,17 @@ struct TimeoutError: Error {}
 
 final class Runner {
     let opts: RunOptions
-    let apiKey: String
     let provider: ClaudeProvider
     let judge: Judge?
 
-    init(opts: RunOptions, apiKey: String) {
+    init(opts: RunOptions, credential: Credential, judgeAPIKey: String) {
         self.opts = opts
-        self.apiKey = apiKey
-        provider = ClaudeProvider(config: ClaudeConfig(apiKey: apiKey, model: opts.model, effort: opts.effort, mode: opts.mode,
+        provider = ClaudeProvider(config: ClaudeConfig(credential: credential, model: opts.model, effort: opts.effort, mode: opts.mode,
                                                        useSchema: opts.useSchema, useFallbacks: opts.useFallbacks, baseURL: opts.baseURL,
                                                        requestTimeout: opts.timeout))
-        judge = opts.judgeModel.map { Judge(apiKey: apiKey, model: $0, baseURL: opts.baseURL) }
+        // Through the server, the judge's request isn't one the server accepts: send it straight to Anthropic.
+        let judgeURL = credential == .apiKey(judgeAPIKey) ? opts.baseURL : URL(string: "https://api.anthropic.com")!
+        judge = opts.judgeModel.map { Judge(apiKey: judgeAPIKey, model: $0, baseURL: judgeURL) }
     }
 
     func run() async throws -> [Record] {

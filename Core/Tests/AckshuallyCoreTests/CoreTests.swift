@@ -77,6 +77,33 @@ final class IncrementalJSONTests: XCTestCase {
         XCTAssertTrue(body.contains(#""required":["condition","verdict","steps"]"#))
     }
 
+    func testCredentialHeaders() {
+        let direct = ClaudeProvider(config: ClaudeConfig(apiKey: "sk-x"))
+            .urlRequest(for: AnswerRequest(pdf: Data([1]), documentTitle: "T", question: "Q"))
+        XCTAssertEqual(direct.value(forHTTPHeaderField: "x-api-key"), "sk-x")
+        XCTAssertNil(direct.value(forHTTPHeaderField: "authorization"))
+
+        let server = URL(string: "https://ackshually.badyass.xyz")!
+        let proxied = ClaudeProvider(config: ClaudeConfig(credential: .appToken("ack_t"), baseURL: server))
+            .urlRequest(for: AnswerRequest(pdf: Data([1]), documentTitle: "T", question: "Q"))
+        XCTAssertEqual(proxied.url?.absoluteString, "https://ackshually.badyass.xyz/v1/messages")
+        XCTAssertEqual(proxied.value(forHTTPHeaderField: "authorization"), "Bearer ack_t")
+        XCTAssertNil(proxied.value(forHTTPHeaderField: "x-api-key"))
+    }
+
+    /// The server (Server/src/validate.ts) refuses any top-level field it doesn't know. If this fails, add the
+    /// new field there too, or the app breaks as soon as it talks to the server.
+    func testRequestFieldsAreAllowedByServer() throws {
+        let serverAllows: Set<String> = ["model", "max_tokens", "stream", "system", "output_config", "cache_control",
+                                         "messages", "fallbacks"]
+        for mode in [EvidenceMode.json, .citations] {
+            let body = ClaudeProvider(config: ClaudeConfig(apiKey: "x", mode: mode))
+                .requestBody(for: AnswerRequest(pdf: Data([1]), documentTitle: "T", question: "Q")).data
+            let keys = Set(try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any]).keys)
+            XCTAssertTrue(keys.isSubset(of: serverAllows), "not allowed by the server: \(keys.subtracting(serverAllows))")
+        }
+    }
+
     func testEscapesAndFenceNoise() {
         var a = JSONAnswerAssembler()
         _ = a.feed("```json\n{\"restated_question\":\"He said \\\"no\\\" {really}\",\"verdict\":\"x\",\"confidence\":\"inferred\",")

@@ -1,0 +1,22 @@
+{
+  "name": "ackshually-server",
+  "version": "0.1.0",
+  "description": "Holds the Anthropic API key for the ackshually app and forwards its answer requests",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch --disable-warning=ExperimentalWarning src/main.ts",
+    "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning src/main.ts",
+    "test": "node --test --disable-warning=ExperimentalWarning 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "token": "node scripts/new-token.ts",
+    "deploy": "bash scripts/deploy.sh"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3"
+  }
+}

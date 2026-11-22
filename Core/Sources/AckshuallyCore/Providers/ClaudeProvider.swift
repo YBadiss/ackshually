@@ -1,7 +1,14 @@
 import Foundation
 
+/// How requests authenticate: straight to Anthropic with an API key (evals, local runs), or through the
+/// ackshually server (`Server/`) with an app token, which holds the API key and forwards the same request.
+public enum Credential: Sendable, Equatable {
+    case apiKey(String)
+    case appToken(String)
+}
+
 public struct ClaudeConfig: Sendable {
-    public var apiKey: String
+    public var credential: Credential
     public var model: String
     /// low | medium | high | xhigh | max. Mid-game latency matters, so bench defaults to "low".
     public var effort: String
@@ -11,6 +18,7 @@ public struct ClaudeConfig: Sendable {
     public var useSchema: Bool
     /// Server-side refusal fallbacks (opus-5-5 / sonnet-5-5 only).
     public var useFallbacks: Bool
+    /// api.anthropic.com for `.apiKey`; the ackshually server's URL for `.appToken`.
     public var baseURL: URL
     /// Idle timeout for the HTTP stream.
     public var requestTimeout: TimeInterval
@@ -18,11 +26,11 @@ public struct ClaudeConfig: Sendable {
     /// default is 1 hour (write costs 2x input instead of 1.25x; pays off from the 3rd question).
     public var cacheTTL: CacheTTL
 
-    public init(apiKey: String, model: String = "claude-sonnet-5-5", effort: String = "low", mode: EvidenceMode = .json,
+    public init(credential: Credential, model: String = "claude-sonnet-5-5", effort: String = "low", mode: EvidenceMode = .json,
                 maxTokens: Int = 16000, useSchema: Bool = true, useFallbacks: Bool = true,
                 baseURL: URL = URL(string: "https://api.anthropic.com")!, requestTimeout: TimeInterval = 120,
                 cacheTTL: CacheTTL = .oneHour) {
-        self.apiKey = apiKey
+        self.credential = credential
         self.model = model
         self.effort = effort
         self.mode = mode
@@ -32,6 +40,16 @@ public struct ClaudeConfig: Sendable {
         self.baseURL = baseURL
         self.requestTimeout = requestTimeout
         self.cacheTTL = cacheTTL
+    }
+
+    /// Direct to Anthropic with an API key.
+    public init(apiKey: String, model: String = "claude-sonnet-5-5", effort: String = "low", mode: EvidenceMode = .json,
+                maxTokens: Int = 16000, useSchema: Bool = true, useFallbacks: Bool = true,
+                baseURL: URL = URL(string: "https://api.anthropic.com")!, requestTimeout: TimeInterval = 120,
+                cacheTTL: CacheTTL = .oneHour) {
+        self.init(credential: .apiKey(apiKey), model: model, effort: effort, mode: mode, maxTokens: maxTokens,
+                  useSchema: useSchema, useFallbacks: useFallbacks, baseURL: baseURL, requestTimeout: requestTimeout,
+                  cacheTTL: cacheTTL)
     }
 }
 
@@ -129,7 +147,10 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
         req.httpMethod = "POST"
         req.timeoutInterval = config.requestTimeout
         req.setValue("application/json", forHTTPHeaderField: "content-type")
-        req.setValue(config.apiKey, forHTTPHeaderField: "x-api-key")
+        switch config.credential {
+        case .apiKey(let key): req.setValue(key, forHTTPHeaderField: "x-api-key")
+        case .appToken(let token): req.setValue("Bearer \(token)", forHTTPHeaderField: "authorization")
+        }
         req.setValue("2026-10-21", forHTTPHeaderField: "anthropic-version")
         if useFallbacks { req.setValue("server-side-fallback-2026-07-01", forHTTPHeaderField: "anthropic-beta") }
         req.httpBody = requestBody(for: r, excerpt: excerpt).data
