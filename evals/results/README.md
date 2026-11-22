@@ -16,6 +16,10 @@ One row per kept run. All runs: 28 questions (`questions/m1.json`) over Power Gr
 | [speed-k6](2026-11-21-speed-k6/report.md) | 26/28 (2 wrong) | 27/28 | 3.3 / 6.9 s | 4.9 / 8.1 s | 54% | $0.05 / $0.78 | Top 6 pages; Azul sent whole (≥75% of pages). rt-03 and rt-06 wrong: rule page missed, model answered "inferred" instead of falling back |
 | [speed-k4-headings](2026-11-21-speed-k4-headings/report.md) | 23/28 +5 partial (0 wrong) | 24/28 → **27/28** after fix | 4.0 / 10.9 s | **4.9** / 12.2 s | 57% | $0.04 / $0.80 | Top 4 + heading boost + stricter excerpt note: rule-page misses now fall back (5/28). Off-by-one page citations fixed afterwards (quote-checked pages; re-scored from recorded matches). Partials checked by hand: no wrong rulings |
 | [restyle-sonnet-1h](2026-11-21-restyle-sonnet-1h/report.md) | 26/28 +2 partial (0 wrong, hand-checked) | 25/28 | 5.1 / 8.4 s | 5.9 / 8.8 s | 39% | $0.17 / $0.36 | Contract v2 (step titles, branch steps, steps before branches) + 1-hour cache TTL. Step 1 unchanged vs baseline (6.0 / 8.8 s). Cold question costs more (1h write = 2× input) but the cache now survives 5–60 min gaps |
+| [answer-polish-sonnet](2026-11-22-answer-polish-sonnet/report.md) | 25/28 +2 partial → **27/28 +1 partial (0 wrong)** after hand-check | 26/28 | 5.0 / 8.4 s | 5.6 / 9.2 s | 43% | $0.17 / $0.35 | Prompt: verdict ≤12 words (median 10, max 12), last step applies instead of restating (0 "Result" steps). Judge's rt-03 / rt-06 "partial/incorrect" were judge errors (Root p.12: the Eyrie rule tied clearings); pg-08 partial is fair (imprecise detail in the last step). Step 1 vs restyle-sonnet-1h: 5.6 vs 5.9 s median, 9.2 vs 8.8 s p90 |
+
+Probe runs (not scored): [azul-highlight-probe](2026-11-22-azul-highlight-probe/report.md), the owner's Azul question + follow-ups + one Root question, with per-quote text match and geometry.
+
 Costs come from the per-model price table in `Core/.../Providers/Pricing.swift`.
 
 ## What we learned (2026-11-21)
