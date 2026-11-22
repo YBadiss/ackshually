@@ -72,9 +72,16 @@ struct Theme: Sendable {
         var l: CGFloat = 12
         var xl: CGFloat = 16
         var xxl: CGFloat = 24
+        /// Side margin of the answer sheet / column content (the system's sheet and inset-grouped
+        /// margin). Grows a little with text; never so much that AX sizes lose their line length.
+        var sheetMargin: CGFloat = 20
+        /// Space above the first line of the sheet: clears the grabber and keeps the close button
+        /// out of the sheet's rounded corner.
+        var sheetTop: CGFloat = 28
 
         func scaled(_ f: CGFloat) -> Spacing {
-            Spacing(xxs: xxs * f, xs: xs * f, s: s * f, m: m * f, l: l * f, xl: xl * f, xxl: xxl * f)
+            Spacing(xxs: xxs * f, xs: xs * f, s: s * f, m: m * f, l: l * f, xl: xl * f, xxl: xxl * f,
+                    sheetMargin: sheetMargin * min(f, 1.2), sheetTop: sheetTop * min(f, 1.3))
         }
     }
 

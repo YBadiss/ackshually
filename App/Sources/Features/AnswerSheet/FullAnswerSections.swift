@@ -18,7 +18,6 @@ struct FullAnswerSections: View {
                 }
             }
         }
-        .padding(.horizontal, theme.spacing.l)
     }
 
     private func select(_ i: Int) {
@@ -28,11 +27,11 @@ struct FullAnswerSections: View {
 }
 
 #Preview {
-    ScrollView { FullAnswerSections(model: Fixtures.model(), collapsesOnSelect: true) }
+    ScrollView { FullAnswerSections(model: Fixtures.model(), collapsesOnSelect: true).padding(.horizontal) }
         .themeBackground(\.sheet).themed()
 }
 #Preview("AX5, dark") {
-    ScrollView { FullAnswerSections(model: Fixtures.model(), collapsesOnSelect: true) }
+    ScrollView { FullAnswerSections(model: Fixtures.model(), collapsesOnSelect: true).padding(.horizontal) }
         .themeBackground(\.sheet).themed()
         .dynamicTypeSize(.accessibility5).preferredColorScheme(.dark)
 }

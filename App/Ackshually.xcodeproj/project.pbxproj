@@ -42,6 +42,7 @@
 		4E7AD07BEDF8F2F3FD163C26 /* AnswerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0ED38F269B037DB7D2D3D50 /* AnswerSheet.swift */; };
 		548661C2C1AD8CFA0EEEDBDF /* LibraryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB1434C3D5123498733EE7A /* LibraryModel.swift */; };
 		54DE048A7FF480C27B5977A7 /* CardDots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88D877B03521823DF4F6AEA9 /* CardDots.swift */; };
+		5B661B3CD0E8901548472504 /* LoadingCardBody.swift in Sources */ = {isa = PBXBuildFile; fileRef = D66FE8633957E15D3936EC8E /* LoadingCardBody.swift */; };
 		5BF5EE7D432F8F79F0F827AA /* AskFieldBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 556D04C283543677B38CB9F5 /* AskFieldBackground.swift */; };
 		5D0AA1C52073378C8F265EC5 /* ViewerModel+Details.swift in Sources */ = {isa = PBXBuildFile; fileRef = 902B574B510EAB7E347BDB2B /* ViewerModel+Details.swift */; };
 		6107E6680EB8A263CE7116C0 /* Fixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102E6D47E6FA5C71743874B5 /* Fixtures.swift */; };
@@ -74,6 +75,7 @@
 		A415F5EB404A06373B33317E /* AnswerHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B841C22C8C6B8F60D3312FED /* AnswerHeader.swift */; };
 		A5D40656A6E64DE9ECFC97B5 /* AssumptionRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA333C2E0E67A4A8E4F46F39 /* AssumptionRows.swift */; };
 		B35B2D8807A68160DCD21D98 /* ValueRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E8926377CE5FEBCA1F087F0 /* ValueRow.swift */; };
+		B665337BCE2D21E265C674FB /* AnswerMetricsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68008B3A32533AC0FE116D04 /* AnswerMetricsTests.swift */; };
 		B83F41155E53911B982906C8 /* AskController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8309C89471ACC9326971F9 /* AskController.swift */; };
 		BC8D5C4B93D8383C7AA93D34 /* TruncatingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B243C8BC991FE7DB0EE1236A /* TruncatingText.swift */; };
 		BC9ECD44FA24C0EA947B02FB /* StepCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E8A889370F0B36D69427A2 /* StepCard.swift */; };
@@ -165,6 +167,7 @@
 		5F75EEDE2D8232C05D2DCC3C /* Confidence+Display.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Confidence+Display.swift"; sourceTree = "<group>"; };
 		5FB1434C3D5123498733EE7A /* LibraryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryModel.swift; sourceTree = "<group>"; };
 		62D678063C82C12347B65CD1 /* CredentialField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialField.swift; sourceTree = "<group>"; };
+		68008B3A32533AC0FE116D04 /* AnswerMetricsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerMetricsTests.swift; sourceTree = "<group>"; };
 		6E91CFB94CA44F64CBAF13D8 /* EmptyLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyLibraryView.swift; sourceTree = "<group>"; };
 		7565E829215E08E02461A87E /* HighlightOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightOverlay.swift; sourceTree = "<group>"; };
 		78D575B78E8318D5FD655B5F /* AnswerRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerRoute.swift; sourceTree = "<group>"; };
@@ -200,6 +203,7 @@
 		D1241AF671B428B23A50FF51 /* GameList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameList.swift; sourceTree = "<group>"; };
 		D386E15A4B7AE48641F6AC34 /* AnswerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerState.swift; sourceTree = "<group>"; };
 		D3AC7EBC099E42C94CFFC1A6 /* AnswerDetailsExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnswerDetailsExport.swift; sourceTree = "<group>"; };
+		D66FE8633957E15D3936EC8E /* LoadingCardBody.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingCardBody.swift; sourceTree = "<group>"; };
 		D67212BD9E16896C4E1494FF /* Ackshually.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Ackshually.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA333C2E0E67A4A8E4F46F39 /* AssumptionRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssumptionRows.swift; sourceTree = "<group>"; };
 		DA3BF2DCC97746F306A3C7AD /* RouteStatusRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteStatusRow.swift; sourceTree = "<group>"; };
@@ -378,6 +382,7 @@
 		8D75F76890CDE43F8C614E38 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				68008B3A32533AC0FE116D04 /* AnswerMetricsTests.swift */,
 				3CD48649B18A88E2CEDDA202 /* AnswerRouteTests.swift */,
 			);
 			path = Tests;
@@ -471,6 +476,7 @@
 				DD02853DFE6C3DB9408064A9 /* FeedbackButtons.swift */,
 				9A9D984D095D21BE3786E610 /* FollowUpSection.swift */,
 				C5078F1A7CFFB748F7D633F3 /* FullAnswerSections.swift */,
+				D66FE8633957E15D3936EC8E /* LoadingCardBody.swift */,
 				059D006F851E271C75686EC8 /* ProofLine.swift */,
 				92E8A889370F0B36D69427A2 /* StepCard.swift */,
 				FC0173CA074C0DB8D780A258 /* StepCarousel.swift */,
@@ -665,6 +671,7 @@
 				548661C2C1AD8CFA0EEEDBDF /* LibraryModel.swift in Sources */,
 				C886B9D2B26374C8F3494FC2 /* LibraryScreen.swift in Sources */,
 				C898649402DB719EFEA043A4 /* LibraryToolbar.swift in Sources */,
+				5B661B3CD0E8901548472504 /* LoadingCardBody.swift in Sources */,
 				629A7B62E3A4117A7FE7EF3D /* MatchInfo.swift in Sources */,
 				1D77B3BF61C3D1FC1C8A609F /* PDFViewer.swift in Sources */,
 				FBAAB3BF3079B6A9DD3E07CF /* ProofLine.swift in Sources */,
@@ -717,6 +724,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B665337BCE2D21E265C674FB /* AnswerMetricsTests.swift in Sources */,
 				7E6A3790F439F948FA2B7A41 /* AnswerRouteTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

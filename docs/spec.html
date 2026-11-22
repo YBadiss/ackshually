@@ -131,6 +131,7 @@
   <li><b>Verdict + proof line</b> (placeholder text until they arrive).</li>
   <li><b>Step 1</b>: the PDF jumps to the page, zooms and highlights. Later steps keep loading.</li></ol>
   <p>Between send and the first token the ask field shows <i>Reading the rulebook…</i> with the question and Stop; the sheet rises on the first token.</p>
+  <p><b>The sheet holds still while the answer streams.</b> It rises straight to its medium size: a placeholder step card (as tall as a full card) and the follow-up row (disabled until the answer is done) hold their places from the first token, so content fills in place. When the answer completes, the sheet may grow once for late content (branch rows come last); it never shrinks while it is shown.</p>
 </div><div class="shot" data-screen="s4"></div></section>
 
 <section class="screen" id="s5"><div>
@@ -138,7 +139,7 @@
   <p>Two layers, no Back/Continue buttons:</p>
   <p>A system sheet with three detents (collapsed, medium, large); the PDF stays usable under it up to medium. No Back/Continue buttons:</p>
   <ul><li><b>Answer header</b>, fixed while stepping: text hierarchy, no chips. Bold verdict (one short sentence; at most <b>3 lines</b> on the sheet, the full text when expanded), then one secondary proof line (<code>checkmark.seal Stated in the rules · p.12, p.14</code>). Close (or Stop while streaming) top-right.</li>
-  <li><b>Step cards</b>: a horizontal shelf of system cards; the next card peeks from the edge, which signals "swipe". Caption = step title + page, then one or two sentences. <b>All cards share one height</b>, the tallest card's content up to 5 lines of text; longer text truncates with <b>More</b>, which opens the expanded answer at that step. Text never runs outside its card at any Dynamic Type size. Page dots below.</li>
+  <li><b>Step cards</b>: a horizontal shelf of system cards; the next card peeks from the edge, which signals "swipe". Caption = step title + page, then one or two sentences. <b>All cards share one height</b>, the tallest card's content up to 5 lines of text; longer text truncates with <b>More</b>, which opens the expanded answer at that step. Text never runs outside its card at any Dynamic Type size. Page dots below. A streamed answer's shelf keeps the placeholder's full height until the sheet closes, so nothing below it moves.</li>
   <li><b>Follow-up + 👍/👎 row</b> under the cards (follow-up field, thumbs), once the answer is complete. There is no closing "Result" card: it only repeated the verdict.</li>
   <li><b>Branch rows</b> under that (<code>Without a Battery … Discard all 3 ›</code>), grouped like Settings.</li></ul>
 </div><div class="shot" data-screen="s5"></div></section>
@@ -223,6 +224,7 @@
   <tr><td>highlightOutline</td><td><span class="swatch" style="background:#a2412b"></span><code>#a2412b</code></td><td><span class="swatch" style="background:#e2775c"></span><code>#e2775c</code></td><td>Outline of the cited lines (1.6 pt) / figure box (2.4 pt), in page points</td></tr>
 </table></div>
 <ul><li><b>One font:</b> SF (system) everywhere, Dynamic Type text styles. The rulebook keeps its own fonts.</li>
+<li><b>Sheet margins:</b> answer content sits <code>sheetMargin</code> (20 pt) from the sheet's sides and starts <code>sheetTop</code> (28 pt) below its top edge, so the verdict and the close button clear the grabber and the rounded corner (16 pt in the inspector, which has no grabber). Only the step shelf runs edge to edge, its first card aligned with the text. Both scale a little with Dynamic Type.</li>
 <li><b>Corners:</b> step cards 18 · grouped sections 22 · follow-up field 20 · PDF note 16 (continuous); the sheet, buttons and glass use the system's shapes.</li>
 <li><b>Voice:</b> short, precise, a little nerdy, never smug: "Well, according to p.14…", "Stated in the rules · p.12, p.14", "Not covered by the rules", "Designer disagrees", "Reading the rulebook…".</li>
 <li><b>Dark mode:</b> every token has a dark variant (warm near-black chrome, lighter brick tint); see the dark screenshots in <a href="m2-screenshots/restyle/">m2-screenshots/restyle/</a>.</li></ul>
@@ -333,12 +335,10 @@ Server/  Node 24 service at ackshually.badyass.xyz: holds the API key, checks an
   <tr><td>2026-11-21</td><td>Answer contract: <code>steps[].title</code> and <code>branches[].steps</code> (required in the schema, optional when decoding)</td><td>Card captions need a title; S9's "cards switch to the branch" needs evidence per branch. Costs a few dozen tokens per branch before step 1 streams: watch the step-1 latency in the next bench run</td></tr>
   <tr><td>2026-11-22</td><td>The app answers through the server with an app token built into the app (git-ignored <code>Secrets.xcconfig</code>); Settings shows the route, and a collapsed Developer section holds a token override and "use my own Anthropic API key" (direct). Order: bundled token, override, API key</td><td>Owner: users must not have to enter a token. Extractable from the binary, acceptable for our devices and TestFlight until App Attest</td></tr>
   <tr><td>2026-11-21</td><td>LLM calls go through a small server (<code>Server/</code>, on the existing droplet) that holds the API key: a checked pass-through of Core's request, not a server-side answer engine</td><td>Keeps the key off the phone ahead of a real release; Core and the evals keep one code path, and retrieval stays on device (PDFKit)</td></tr>
-<<<<<<< HEAD
   <tr><td>2026-11-22</td><td>App opens on the My Games list (S1), moved from M3 into M2: native <code>List</code> in a <code>NavigationStack</code> (also on iPad), the viewer is pushed; library index in Application Support; Settings moves to the list's toolbar</td><td>Opening straight into the last PDF made switching games a trip through ⋯; a split view would squeeze the PDF beside both the list and the answer inspector</td></tr>
   <tr><td>2026-11-22</td><td>The architecture diagram lives on a Claude whiteboard linked from §5, updated whenever modules or dependencies change</td><td>Boxes and arrows can be edited one at a time and commented on, so the diagram can be kept current instead of redrawn</td></tr>
-=======
   <tr><td>2026-11-22</td><td>Layout-tolerant matching: quotes matched as long fragments forming one block on the page; a partly found quote spotlights that part ("Part of the passage highlighted") instead of the whole page; piecewise glyph geometry; pager reads "Quote 1 of 2 ›"</td><td>Owner, Root p.15: word-for-word quotes showed "Passage not found" because the text layer interleaves the main column with sidebars. Re-scoring every recorded run: quotes spotlit 76% → 90% (761 → 895 of 997), every new placement hand-checked, none wrong</td></tr>
->>>>>>> a783736 (Layout-tolerant quote matching: fragments, partial highlights, quote pager)
+  <tr><td>2026-11-22</td><td>Answer sheet: standard margins (<code>sheetMargin</code> 20 pt, <code>sheetTop</code> 28 pt under the grabber); detent heights are set once from the first token (placeholder card + follow-up row reserve the space), frozen while streaming, then grow-only; a detent whose height changes stays in the set for one transition</td><td>Owner on the iPhone 18 Pro: the verdict touched the grabber, and the panel "hid and reappeared" while the answer streamed. Cause: detents re-measured on every streamed event (the sheet shrank under the verdict, then grew), and replacing the selected <code>.height</code> detent made the system sheet snap for a moment</td></tr>
 </table></div>
 
 <!-- ============================================================ -->

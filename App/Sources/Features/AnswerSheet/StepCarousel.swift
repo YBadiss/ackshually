@@ -6,6 +6,10 @@ import SwiftUI
 /// All cards share one height, the tallest card's content (each card caps its text at
 /// `layout.cardMaxLines` and offers "More"), so text never runs outside a card. A plain `HStack`
 /// (an answer has a handful of cards) so every card is measured, not just the visible ones.
+/// The shelf never gets shorter while it shows the same answer: while streaming, the loading card
+/// reserves a full card, and when it goes away the shelf keeps that height so nothing below moves
+/// (the owner's "panel jumps while the answer arrives"). The parent resets it per answer / branch
+/// with `.id`.
 struct StepCarousel: View {
     var items: [CardItem]
     @Binding var selection: CardID?
@@ -13,9 +17,13 @@ struct StepCarousel: View {
     @Environment(\.theme) private var theme
     @State private var width: CGFloat = 0
     @State private var contentHeights: [CardID: CGFloat] = [:]
+    /// Tallest card content seen so far (the shelf only grows).
+    @State private var tallestSeen: CGFloat = 0
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var shelfHeight: CGFloat? {
-        items.compactMap { contentHeights[$0.id] }.max()
+        guard let tallest = items.compactMap({ contentHeights[$0.id] }).max() else { return nil }
+        return max(tallest, tallestSeen)
     }
 
     private var current: CardID? { selection ?? items.first?.id }
@@ -34,6 +42,7 @@ struct StepCarousel: View {
                 ForEach(items) { item in
                     StepCard(content: item.content, height: shelfHeight, onMore: { onMore(item.id) }) { h in
                         contentHeights[item.id] = h
+                        tallestSeen = max(tallestSeen, h)
                     }
                         .containerRelativeFrame(.horizontal)
                         .contentShape(Rectangle())
@@ -49,12 +58,15 @@ struct StepCarousel: View {
             }
             .scrollTargetLayout()
         }
-        .contentMargins(.horizontal, max(width * theme.layout.cardPeekFraction, theme.spacing.xl), for: .scrollContent)
+        .contentMargins(.horizontal, max(width * theme.layout.cardPeekFraction, theme.spacing.sheetMargin), for: .scrollContent)
         .scrollTargetBehavior(.viewAligned)
         .scrollPosition(id: $selection, anchor: .center)
         .scrollIndicators(.hidden)
         .scrollClipDisabled()
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        // A new text size re-measures from scratch. Not on width: the floating sheet narrows and
+        // widens a little as its detent height changes, and that must not shrink the shelf.
+        .onChange(of: typeSize) { tallestSeen = 0 }
         .accessibilityIdentifier("carousel")
     }
 }

@@ -20,7 +20,6 @@ struct AnswerFooterRow: View {
             FeedbackButtons(rating: rating, onRate: onRate)
                 .fixedSize()
         }
-        .padding(.horizontal, theme.spacing.xl)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("answerFooter")
     }
@@ -36,10 +35,10 @@ private struct FooterPreview: View {
 
 #Preview("Unrated, rated") {
     VStack(spacing: 24) { FooterPreview(); FooterPreview(rating: true) }
-        .padding(.vertical).themeBackground(\.sheet).themed()
+        .padding().themeBackground(\.sheet).themed()
 }
 #Preview("AX5, dark") {
     FooterPreview(rating: false)
-        .padding(.vertical).themeBackground(\.sheet).themed()
+        .padding().themeBackground(\.sheet).themed()
         .dynamicTypeSize(.accessibility5).preferredColorScheme(.dark)
 }

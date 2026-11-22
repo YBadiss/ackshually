@@ -45,12 +45,14 @@ struct DemoProvider: AnswerProvider {
                     try await wait(0.4); c.yield(.restatedQuestion(a.restatedQuestion))
                     try await wait(0.9); c.yield(.verdict(a.verdict))
                     try await wait(0.1); c.yield(.confidence(a.confidence))
-                    for b in a.branches { c.yield(.branch(b)) }
                     for (i, s) in a.steps.enumerated() {
                         try await wait(i == 0 ? 1.0 : 0.8)
                         for (j, e) in s.evidence.enumerated() { c.yield(.evidence(step: i, index: j, e)) }
                         c.yield(.step(index: i, s))
                     }
+                    // Same order as the real contract (spec §4): branches after the steps.
+                    try await wait(0.4)
+                    for b in a.branches { c.yield(.branch(b)) }
                     let raw = (try? JSONEncoder().encode(a)).flatMap { String(data: $0, encoding: .utf8) } ?? ""
                     c.yield(.completed(AnswerResult(answer: a, rawText: raw, usage: TokenUsage(), model: "demo",
                                                     stopReason: "end_turn", parseError: nil)))

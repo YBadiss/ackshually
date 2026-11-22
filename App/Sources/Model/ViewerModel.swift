@@ -234,8 +234,12 @@ final class ViewerModel {
         }
         // No closing "Result" card: it only repeated the verdict. Feedback and the follow-up
         // field sit in their own row under the shelf.
+        // While streaming, a loading card holds the shelf's place from the first token on, so the
+        // sheet is sized once and content fills in place.
+        // While streaming, a loading card holds the shelf's place from the first token on, so the
+        // sheet is sized once and content fills in place.
         var c: [CardID] = a.steps.indices.map { .step($0) }
-        if !(a.complete || a.stopped), a.verdict != nil { c.append(.loading) }
+        if isBusy, !(a.complete || a.stopped) { c.append(.loading) }
         return c
     }
 
@@ -426,6 +430,7 @@ final class ViewerModel {
         }
         guard rulebook.isSample || d.bool(forKey: "demo") else { return nil }
         let scripted = d.string(forKey: "demoAnswer").flatMap(DemoProvider.answer(fromFile:)) ?? DemoProvider.batteryAnswer
-        return (DemoProvider(answer: scripted), .demo)
+        let pace = d.object(forKey: "demoPace") as? String
+        return (DemoProvider(answer: scripted, pace: pace.flatMap(Double.init) ?? 1), .demo)
     }
 }
