@@ -1,21 +1,42 @@
 # M2 notes: iOS viewer
 
 **Date:** 2026-11-21 · **Scope:** S3–S9 plus a minimal S2 (open a PDF, reopen it on relaunch); S1 My Games added 2026-11-22. Built on `Core/`.
-**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). **Then: My Games (S1)**, the app opens on a list of games, see [My Games](#my-games-s1). **Then: layout-tolerant matching**, see [below](#layout-tolerant-matching-root-p15). **Then: answer sheet breathing, no jumps while streaming, console triage**, see [Sheet breathing](#sheet-breathing-streaming-jumps-console). The first-build notes further down still describe behaviour; their screenshots show the old look.
+**Update (same day): native iOS restyle**, see [Restyle](#restyle-native-ios) below. **Then: answer polish** after the owner's Azul test, see [Answer polish](#answer-polish-owners-azul-test). **Then (11-22): answers through the server**, see [Server route](#server-route). **Then: My Games (S1)**, the app opens on a list of games, see [My Games](#my-games-s1). **Then: layout-tolerant matching**, see [below](#layout-tolerant-matching-root-p15). **Then: answer sheet breathing, no jumps while streaming, console triage**, see [Sheet breathing](#sheet-breathing-streaming-jumps-console). **Then (11-23): modular viewer, injected dependencies, unit tests and tiered UI tests**, see [Modular viewer](#modular-viewer-and-test-tiers). The first-build notes further down still describe behaviour; their screenshots show the old look.
 
 ## Run it
 
 ```sh
-cd App && xcodegen            # optional: regenerate from project.yml (XcodeGen 2.48); the .xcodeproj is checked in
+App/bootstrap.sh               # generates the git-ignored Ackshually.xcodeproj from project.yml (XcodeGen 2.48+); again after pulls
 open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; runs on iPad and on Mac ("Designed for iPad")
 ```
 
 - **Answers go through the server.** The app token is built into the app: `cp App/Config/Secrets.example.xcconfig App/Config/Secrets.xcconfig`, paste the token after `ACKSHUALLY_APP_TOKEN =`, build. Settings then says *Answers by ackshually server*. Without it, Settings → Developer takes a token override or your own Anthropic API key (direct, as before; the simulator also reads `ANTHROPIC_API_KEY` from the launch environment). With none of them the sample still gets the scripted **demo answer**, and asking about another rulebook opens Settings with the question kept. See [Server route](#server-route).
 - **Rulebook.** My Games → ＋ (file importer; the PDF is copied into Application Support/Rulebooks, listed in `library.json` next to it, and opens right away), or "Try the Sample" on the empty list (Core's fake "Power Plant Rush").
 - **Device.** Pick your team under Signing & Capabilities, then run on the iPhone. Push-to-talk needs a real device; the simulator has no live mic input in automation.
-- **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf` (push the viewer over My Games; Back returns to the list; never added to the library), `-emptyLibrary YES` (start with no games: clears the index and the imported copies), `-seedSample YES` (add the sample to My Games), `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-branch N`, `-detent collapsed|medium|expanded`, `-demoPace N` (stretch the demo stream N×). Details are in `App/Sources/App/LaunchOptions.swift`.
-- **UI tests:** `xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.2'`. The scheme runs the app unit tests (`AckshuallyTests`, 8) and 24 UI tests: 13 on the sample (or PDFs/answers they generate) with demo answers, 5 against a local stub server ([Server route](#server-route)), 6 for My Games ([My Games](#my-games-s1)); the original five: streaming → stepping (swipe and peek tap), inspect (pan the PDF under the sheet) → Back to Step → tap PDF → double-tap, branch row + its own steps + dragging the system sheet between all three detents + tapping a step row, a follow-up, and close → ⋯ Show Answer → rotate to landscape (column); the rest are listed under [Answer polish](#answer-polish-owners-azul-test). Add `TEST_RUNNER_SCREENSHOT_DIR=/some/dir` to save screenshots.
+- **Launch arguments** (simulator and screenshots): `-sample YES`, `-pdfPath /abs/file.pdf` (push the viewer over My Games; Back returns to the list; never added to the library), `-emptyLibrary YES` (start with no games: clears the index and the imported copies), `-seedSample YES` (add the sample to My Games), `-demo YES`, `-demoAnswer /abs/answer.json` (a spec §4 JSON), `-ask "…"`, `-present YES`, `-card N`, `-detent collapsed|medium|expanded`, `-demoPace N` (stretch the demo stream N×; `0` = instant). Details are in `App/Sources/App/LaunchOptions.swift`.
+- **Tests:** unit tests (`AckshuallyTests`) for the answer logic, UI tests (`AckshuallyUITests`) for the screen, run through test plans; see [Modular viewer](#modular-viewer-and-test-tiers) and "Which tests when" in `CLAUDE.md`. Add `SCREENSHOT_DIR=/some/dir` to the test environment to save screenshots.
 
+
+
+## Modular viewer and test tiers
+
+**Date:** 2026-11-23. A behaviour-preserving refactor (no user-visible change), so the answer logic can be tested without launching the app.
+
+- **`ViewerModel` split.** It was one object holding the document, asking and streaming, cards, PDF focus, highlights, feedback and provider selection, with several flags deciding together whether the sheet showed (where the streaming-jump bug lived). It is now a thin per-game coordinator over four parts that views use directly: `AnswerSession` (ask, stop, retry, follow-ups, turns, phase and failure, feedback; reports changes through one `onChange`), `CardNavigator` (cards incl. the loading card, current card, branch, quote pager, "More", and the plain view values that were `ViewerModel+Content`), `HighlightStore` (quote → `Highlight` through `HighlightPlacer` off the main thread, resolved once per passage), `PDFFocusModel` (focus token, zoom, "user moved the page"). The coordinator wires them (a new card moves the PDF, a resolved highlight focuses it, a missing credential opens Settings) and owns **one rule for the sheet**: `sheetVisible` is derived from the phase and one stored input (`sheetClosed`): hidden while waiting for the first token, always shown while streaming, then shown until the reader closes it. Folded away: `failureOpensSettings` (now `AnswerPhase.failed(AnswerFailure)`), `settingsRequested` (the session's `ViewerPresentation.settings`), `isDemo` (the route), `ViewerModel+Details` (`EvidenceReport.reports`, `AnswerDetailsExport(answer:…)`).
+- **Dependencies injected.** `AppDependencies` bundles four small protocols, created once in `AckshuallyApp` (`.live()`): `CredentialAccess` (`LiveCredentials`: Keychain, bundled token, environment), `AppSettings` (`UserDefaultsSettings`: Demo Answers, `-demoAnswer`, `-demoPace`), `LibraryStorage` (`FileLibraryStorage`: the Rulebooks folder, `library.json`, covers) and `AnswerProviderFactory` (`LiveAnswerProviders`: route → `ClaudeProvider` or `DemoProvider`, nil → Settings). Models take them by initialiser; Settings reads them from the environment (`\.dependencies`, defaulting to the in-memory preview set). Previews and unit tests use `InMemoryCredentials`, `InMemorySettings`, `InMemoryLibraryStorage`. No model or view reads `CredentialStore`, `Library`, `UserDefaults` or `ServerConfig` any more.
+- **One session per game.** `LibraryModel` keeps a `ViewerModel` per opened game (the last 3; older ones are dropped, each holds the PDF and a matcher). Back + reopen keeps the answer, as before, and now switching to another game and back keeps it too. A re-import reloads the file and starts a new session; deleting a game drops it. S11 history can hang off these sessions.
+- **Core.** Page selection (the parked speed experiment) moved out of `ClaudeProvider` into `PageSelectingProvider`, which wraps it; `ClaudeProvider` builds and streams the full-PDF request. `bench` wraps its provider, so `--pages auto` sends the same requests: every request and event was dumped for 24 configurations (json/citations × full, automatic ×3, pages text/pdf × with/without history) before and after, and they are identical.
+- **Dead code** (found with Periphery, each hit checked): Core's unused `Game`/`Document`/`Session` models, `Library.fileName(in:)`, the `-branch` and `-model` launch arguments, `RouteStatus.current`, `ViewerModel.makeProvider`, and a few unused properties.
+
+### Tests
+
+Unit (`AckshuallyTests`, 40, about half a second): a `ScriptedProvider` whose stream the test drives event by event (an `AsyncThrowingStream`, no sleeps). `AnswerSessionTests`: waiting → first token → steps → completed, stop before and after the first step, failure + retry, 401 → the header offers Open Settings, unreadable answer, no credential → Settings with the question kept, follow-ups replay the history, feedback. `ViewerModelTests`: the loading card hands over to the new step, branch selection (cards, header, rows), More → expanded detent, the quote pager, double-tap and Back to Step, highlights placed once however often they are asked for, Answer Details reports, the sheet never hides while streaming, close / show / ask again. `LibraryModelTests`: sessions kept across back/reopen and across other games, bounded, dropped on delete and re-import. `DependenciesTests`: provider choice, Settings writes. Plus the existing `AnswerMetricsTests` and `AnswerRouteTests`.
+
+UI (`AckshuallyUITests`, split by area; `UITestCase` holds the shared helpers and launches the sample with instant demo answers, `-demoPace 0`): `ViewerUITests` (PDF, spotlight, pager, Answer Details, rotation, Settings without a credential), `AnswerSheetUITests` (cards, detents, margins, follow-up row, the streaming sheet holding still), `LibraryUITests`, `ServerRouteUITests`. Test plans: `Unit`, `Smoke` (one test per screen), `Viewer`, `AnswerSheet`, `Library`, `Server`, `Full` (default). UI targets are parallelizable: `-parallel-testing-enabled YES -parallel-testing-worker-count 3` clones the destination simulator per worker.
+
+UI tests replaced by unit tests: `testStreamingThenStepping` (its streaming checks → `testStreamingGoesFromWaitingToFirstTokenToStepsToCompleted` and `testSheetNeverHidesWhileStreaming`; its swipe and peek tap → `AnswerSheetUITests.testSwipeAndPeekTapStepCards` on a presented answer), `testFollowUpKeepsContext` (no Result card and the follow-up's history → `testStreamingGoes…` and `testFollowUpKeepsHistory`; the row layout and typing → `testFollowUpRowSitsUnderTheShelf`). `testBranchAndDetents` keeps the taps and drags (branch content → `testBranchSelectionSwitchesCardsHeaderAndRows`) and waits for each detent instead of sleeping, retrying a dropped drag once (it flaked once).
+
+TIMINGS
 
 ## Sheet breathing, streaming jumps, console
 
@@ -88,7 +109,7 @@ Tests: app unit tests (new `AckshuallyTests` target, 8): precedence, the URLProt
 **Date:** 2026-11-22. S1 moved from M3 into M2 (spec §6, decision log §7). The app opens on **My Games**, not on the last rulebook.
 
 - **List.** Native `List` (inset grouped) in a `NavigationStack`, large title "My Games". Each row: cover (the PDF's first page), game name, "Opened 2 days ago" (relative date). Sorted by last opened. Settings (gear) and ＋ Add a Rulebook in the toolbar.
-- **Open.** A row is a `NavigationLink(value: GameRoute.game)`; the model loads the file into `ViewerModel` before the push and bumps the game's last-opened date. Opening the game that is already loaded keeps its answer (back, then tap the same game: the answer is still there).
+- **Open.** A row is a `NavigationLink(value: GameRoute.game)`; the model opens that game's viewer session before the push and bumps the game's last-opened date. Re-opening a game keeps its answer (since 11-23, one session per game: see [Modular viewer](#modular-viewer-and-test-tiers)).
 - **Add.** ＋ → `fileImporter` (PDF) → `Library.importPDF` → added to the index and opened right away. Re-importing the same file name replaces it and keeps one row.
 - **Delete.** Swipe left → Delete: the index entry, the imported copy and its cached covers. If that game was loaded in the viewer, the viewer is closed.
 - **Empty.** `ContentUnavailableView` "No Games Yet" with "Add a Rulebook" (glass prominent) and "Try the Sample".
@@ -120,7 +141,7 @@ iPad: list · viewer with the answer inspector and Back
 
 ### Tests
 
-Core: `LibraryIndexTests` (7: sorting, open moves to top, re-import, remove / prune, ties, file round trip, corrupt file). UI: `LibraryUITests` (6, plus the Settings path in `ServerRouteUITests` updated for the list): empty state (+ Settings from the list), Try the Sample adds and opens it, open a game → ask → back → reopen keeps the answer, swipe to delete (and still gone after relaunch), relaunch opens on the list with the game, `-sample` pushes over the list without joining it. Found while running the suite: `-pdfPath … -ask` without a credential requested Settings before the viewer was pushed, so Settings never opened; `ViewerScreen` now reads `settingsRequested` with `onChange(…, initial: true)` (covered by `testRealRulebookWithoutCredentialOpensSettings`).
+Core: `LibraryIndexTests` (7: sorting, open moves to top, re-import, remove / prune, ties, file round trip, corrupt file). UI: `LibraryUITests` (6, plus the Settings path in `ServerRouteUITests` updated for the list): empty state (+ Settings from the list), Try the Sample adds and opens it, open a game → ask → back → reopen keeps the answer, swipe to delete (and still gone after relaunch), relaunch opens on the list with the game, `-sample` pushes over the list without joining it. Found while running the suite: `-pdfPath … -ask` without a credential requested Settings before the viewer was pushed, so Settings never opened; Settings is now requested through the game's own `ViewerPresentation`, which the viewer attaches when it appears (covered by `testRealRulebookWithoutCredentialOpensSettings`).
 
 ### swiftui-pro review
 
@@ -245,7 +266,7 @@ The real-Azul checks (owner's question with the API key, the spotlight on p.3 / 
 | `AnswerSheet/TruncatingText` (line cap + measured More) | short, long, AX5 |
 | `AnswerSheet/AnswerFooterRow` (follow-up + thumbs) | unrated, rated, AX5 dark |
 | `AnswerDetails/AnswerDetailsView`, `EvidenceStatusRow` | statuses, dark AX3, AX5 |
-| Model: `MatchInfo`, `EvidenceReport`, `AnswerDetailsExport`, `ViewerModel+Details` (reports, JSON, logging) | `Fixtures.evidenceReports` |
+| Model: `MatchInfo`, `EvidenceReport`, `AnswerDetailsExport` (reports, JSON) | `Fixtures.evidenceReports` |
 
 ### Tests
 
@@ -373,7 +394,7 @@ The real-rulebook check (Power Grid) is not in these screenshots because the PDF
 
 ## Component map (App/Sources)
 
-Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `StepRow`, `BranchRow`, Core models) and closures. State lives in injected `@Observable` models: `ViewerModel` (document, streaming, current card, detent, branch, PDF focus, feedback), `AskController` (push-to-talk over `SpeechInput`) and `ViewerPresentation` (settings / Answer Details, attached to whichever view is frontmost) and `LibraryModel` (My Games: index, navigation path, covers; owns the `ViewerModel`). Design tokens live in `Theme` (dynamic light/dark colors, Dynamic Type-scaled spacing and sizes), injected as `@Environment(\.theme)` by `.themed()`, which also sets the app tint. Previews use `Preview Content/Fixtures.swift`, built on Core's `FixtureRulebook`, so no API key is needed.
+Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `StepRow`, `BranchRow`, Core models) and closures. State lives in injected `@Observable` models: per game, a `ViewerModel` coordinating `AnswerSession` (asking, streaming, failures, feedback), `CardNavigator` (cards, branch, quote pager), `HighlightStore`, `PDFFocusModel` and `ViewerPresentation` (Settings / Answer Details, attached to whichever view is frontmost), with the sheet rule `sheetVisible`; `LibraryModel` (My Games: index, navigation path, covers, one `ViewerModel` per recent game); `SettingsModel`; `AskController` (push-to-talk over `SpeechInput`). Outside services come in as `AppDependencies` (see [Modular viewer](#modular-viewer-and-test-tiers)). Design tokens live in `Theme` (dynamic light/dark colors, Dynamic Type-scaled spacing and sizes), injected as `@Environment(\.theme)` by `.themed()`, which also sets the app tint. Previews use `Preview Content/Fixtures.swift`, built on Core's `FixtureRulebook`, so no API key is needed.
 
 | Component | Screen | Preview states |
 |---|---|---|
@@ -391,7 +412,7 @@ Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `S
 | `BranchRows`, `StepListRows`, `AssumptionRows` | S5, S9 | none active, active, AX5, dark |
 | `AnswerShelf`, `FullAnswerSections`, `FollowUpSection`, `DemoNote` (model-bound pieces) | S5–S9 | step 1, AX5 dark |
 | `AnswerContent` (+ `AnswerPlacement`, `AnswerMetrics`): the whole answer column | S4–S9, wide | medium, streaming, expanded, branch, inspector AX5, expanded dark |
-| `AnswerSheet` (system sheet, measured detents, background interaction) | S5, S7, S9 | via `ViewerPreview` |
+| `AnswerSheet` (system sheet, measured detents, background interaction) | S5, S7, S9 | medium, streaming, collapsed, branch dark, AX5 |
 | `AnswerInspector` (inspector column / landscape column) | wide | iPad landscape |
 | **Features/Viewer/** `PDFViewer` (PDFKit, highlights, zoom, gestures) | S5, S6, S8 | evidence zoom, whole page |
 | `HighlightOverlay` (glass pager, notes), `BackToStepPill` (glass) | S6, S8 | 2 passages, figure note, whole page, AX3/AX5, dark |
@@ -399,8 +420,9 @@ Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `S
 | `ViewerScreen` (pushed from My Games), `ViewerMenu` (`ToolbarOverflowMenu`, answer items only), `ViewerChrome`, `ViewerDialogs`, `ViewerPreview` | S2 | answered, idle, removed dark |
 | **Features/Library/** `LibraryScreen` (root `NavigationStack`), `GameList`, `GameRow`, `GameCover`, `LibraryToolbar`, `EmptyLibraryView` (`ContentUnavailableView`) | S1 | games, empty, error AX5, SE, landscape, iPad, AX5, dark |
 | **Features/Settings/** `SettingsView`, `SettingsSheet` | dev | default, dark AX5 |
-| **Model/** `ViewerModel` (+`Content`), `AnswerState`, `ViewContent`, `ViewerPresentation`, `HighlightPlacer`, `AskController`, `LibraryModel`, `GameRoute` | — | — |
-| **Services/** `DemoProvider` (now with step titles and a branch step), `Keychain`/`APIKeyStore`, `Library` (folder, `library.json`, migration), `CoverCache`, `SpeechInput` | — | — |
+| **Model/** `ViewerModel` (coordinator), `AnswerSession`, `CardNavigator`, `HighlightStore`, `PDFFocusModel`, `ViewerPresentation`, `SettingsModel`, `LibraryModel`, `AnswerState`, `ViewContent`, `HighlightPlacer`, `AskController`, `GameRoute`, `CredentialItem` | — | unit tests |
+| **Services/** `Dependencies/` (`AppDependencies` and the four protocols with their live implementations), `DemoProvider`, `CredentialStore`/`Keychain`, `ServerConfig`, `Library` (folder, `library.json`, migration), `CoverCache`, `SpeechInput` | — | — |
+| **Preview Content/** `Fixtures`, `LibraryFixtures`, `InMemoryDependencies` | — | — |
 
 ## Known gaps / next
 
