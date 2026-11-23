@@ -141,6 +141,30 @@ final class ViewerModelTests: XCTestCase {
         XCTAssertNotNil(viewer.currentHighlight)
     }
 
+    /// Regression: an empty glass overlay over the PDF (one passage, spotlit exactly) made UIKit re-lay out
+    /// the screen in a loop ("Observation tracking feedback loop detected", ~700 in 15 s on a presented
+    /// answer; 0 with the overlay unmounted). The overlay only exists when it has a note or a pager.
+    func testHighlightOverlayOnlyWhenItHasSomethingToSay() {
+        let m = ViewerModel(rulebook: Fixtures.rulebook(), providers: providers)  // Core's real matcher
+        m.present(LiveAnswer(question: batteryQuestion, answer: battery), phase: .done)
+        XCTAssertEqual(m.currentHighlight?.match.result, .matched)
+        XCTAssertNil(m.highlightChrome, "one passage, spotlit exactly: no overlay")
+        m.navigator.selectStep(2)
+        XCTAssertEqual(m.highlightChrome, HighlightChrome(evidenceIndex: 0, evidenceCount: 2, note: nil, noteKind: .info))
+        m.nextEvidence()
+        XCTAssertEqual(m.highlightChrome?.evidenceIndex, 1)
+        m.dismissSheet()
+        XCTAssertNil(m.highlightChrome, "nothing over the PDF once the answer is closed")
+
+        var missing = battery
+        missing.steps = [Step(title: "Missing", text: "Not in the book.",
+                              evidence: [Evidence(page: 3, quote: "players may trade energy freely during the auction phase of the game")])]
+        m.present(LiveAnswer(question: "q", answer: missing), phase: .done)
+        XCTAssertEqual(m.highlightChrome?.note, HighlightPlacer.notFoundNote, "a miss always says so")
+        XCTAssertEqual(m.highlightChrome?.noteKind, .miss)
+        XCTAssertEqual(m.highlightChrome?.evidenceCount, 1)
+    }
+
     func testAnswerDetailsReportEveryPassage() {
         let m = presented()
         let d = m.answerDetails

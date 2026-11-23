@@ -107,6 +107,20 @@ final class ViewerModel {
 
     var currentHighlight: Highlight? { navigator.currentEvidence.flatMap { highlights[$0] } }
 
+    /// The overlay over the PDF: a note when the spotlight isn't the exact quote, a pager when the step
+    /// cites several passages; nil when there is nothing to say (one passage, spotlit exactly). Never an
+    /// empty overlay: an empty glass container over the PDF made UIKit re-lay out the screen in a loop
+    /// ("Observation tracking feedback loop detected", ~45 per second).
+    var highlightChrome: HighlightChrome? {
+        guard sheetVisible, pdfFocus.focus != nil else { return nil }
+        let h = currentHighlight
+        let note = h?.note ?? (h?.kind == .wholePage ? HighlightPlacer.notFoundNote : nil)
+        let count = navigator.currentStep?.evidence.count ?? 0
+        guard note != nil || count > 1 else { return nil }
+        return HighlightChrome(evidenceIndex: navigator.evidenceIndex, evidenceCount: count, note: note,
+                               noteKind: h.map { HighlightNoteKind($0.match) } ?? .info)
+    }
+
     func nextEvidence() {
         guard navigator.nextEvidence() else { return }
         pdfFocus.followEvidence()

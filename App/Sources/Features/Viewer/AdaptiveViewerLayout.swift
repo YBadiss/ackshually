@@ -135,11 +135,9 @@ struct AdaptiveViewerLayout: View {
                   onUserMove: { model.pdfFocus.userMovedPDF = true },
                   onDoubleTap: { model.toggleZoom() })
             .overlay(alignment: .top) {
-                if model.pdfFocus.focus != nil, model.sheetVisible {
-                    HighlightOverlay(evidenceIndex: model.navigator.evidenceIndex, evidenceCount: model.navigator.currentStep?.evidence.count ?? 0,
-                                     note: model.currentHighlight?.note ?? (model.currentHighlight?.kind == .wholePage ? HighlightPlacer.notFoundNote : nil),
-                                     noteKind: model.currentHighlight.map { HighlightNoteKind($0.match) } ?? .info,
-                                     onNext: { model.nextEvidence() })
+                if let chrome = model.highlightChrome {
+                    HighlightOverlay(evidenceIndex: chrome.evidenceIndex, evidenceCount: chrome.evidenceCount,
+                                     note: chrome.note, noteKind: chrome.noteKind, onNext: { model.nextEvidence() })
                         .padding(.top, theme.spacing.s)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { overlayHeight = $0 }
                         .onDisappear { overlayHeight = 0 }

@@ -47,6 +47,15 @@ struct CardItem: Identifiable, Equatable {
     var content: StepCardContent
 }
 
+/// The glass chrome over the PDF for the current evidence (`HighlightOverlay`): the quote pager and the
+/// note about the spotlight.
+struct HighlightChrome: Equatable {
+    var evidenceIndex: Int
+    var evidenceCount: Int
+    var note: String?
+    var noteKind: HighlightNoteKind
+}
+
 /// A row of the full-answer step list (S9).
 struct StepRow: Identifiable, Equatable {
     var id: Int { index }

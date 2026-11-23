@@ -26,6 +26,7 @@ open App/Ackshually.xcodeproj  # scheme "Ackshually", iOS 27+, iPhone first; run
 - **Dependencies injected.** `AppDependencies` bundles four small protocols, created once in `AckshuallyApp` (`.live()`): `CredentialAccess` (`LiveCredentials`: Keychain, bundled token, environment), `AppSettings` (`UserDefaultsSettings`: Demo Answers, `-demoAnswer`, `-demoPace`), `LibraryStorage` (`FileLibraryStorage`: the Rulebooks folder, `library.json`, covers) and `AnswerProviderFactory` (`LiveAnswerProviders`: route → `ClaudeProvider` or `DemoProvider`, nil → Settings). Models take them by initialiser; Settings reads them from the environment (`\.dependencies`, defaulting to the in-memory preview set). Previews and unit tests use `InMemoryCredentials`, `InMemorySettings`, `InMemoryLibraryStorage`. No model or view reads `CredentialStore`, `Library`, `UserDefaults` or `ServerConfig` any more.
 - **One session per game.** `LibraryModel` keeps a `ViewerModel` per opened game (the last 3; older ones are dropped, each holds the PDF and a matcher). Back + reopen keeps the answer, as before, and now switching to another game and back keeps it too. A re-import reloads the file and starts a new session; deleting a game drops it. S11 history can hang off these sessions.
 - **Core.** Page selection (the parked speed experiment) moved out of `ClaudeProvider` into `PageSelectingProvider`, which wraps it; `ClaudeProvider` builds and streams the full-PDF request. `bench` wraps its provider, so `--pages auto` sends the same requests: every request and event was dumped for 24 configurations (json/citations × full, automatic ×3, pages text/pdf × with/without history) before and after, and they are identical.
+- **"Observation tracking feedback loop detected" fixed.** UIKit logged it ~45 times a second (697 in 15 s on a presented answer), re-laying out the whole screen, which also kept the app from going idle for UI tests. Cause: on a step with one exactly matched quote, the glass `HighlightOverlay` over the PDF was still mounted with nothing in it (no note, no pager); an empty `GlassEffectContainer` there fed back into layout. With a pager or a note there was no loop. The overlay now exists only when it has something to say (`ViewerModel.highlightChrome`, unit-tested); 0 asserts presented, streaming, collapsed or with the pager.
 - **Dead code** (found with Periphery, each hit checked): Core's unused `Game`/`Document`/`Session` models, `Library.fileName(in:)`, the `-branch` and `-model` launch arguments, `RouteStatus.current`, `ViewerModel.makeProvider`, and a few unused properties.
 
 ### Tests
@@ -36,7 +37,17 @@ UI (`AckshuallyUITests`, split by area; `UITestCase` holds the shared helpers an
 
 UI tests replaced by unit tests: `testStreamingThenStepping` (its streaming checks → `testStreamingGoesFromWaitingToFirstTokenToStepsToCompleted` and `testSheetNeverHidesWhileStreaming`; its swipe and peek tap → `AnswerSheetUITests.testSwipeAndPeekTapStepCards` on a presented answer), `testFollowUpKeepsContext` (no Result card and the follow-up's history → `testStreamingGoes…` and `testFollowUpKeepsHistory`; the row layout and typing → `testFollowUpRowSitsUnderTheShelf`). `testBranchAndDetents` keeps the taps and drags (branch content → `testBranchSelectionSwitchesCardsHeaderAndRows`) and waits for each detent instead of sleeping, retrying a dropped drag once (it flaked once).
 
-TIMINGS
+**Suite time** (this machine, iPhone 18 Pro simulator, 2026-11-23; other agents' builds kept the load average between ~10 and ~970, so these swing a lot; compare like with like):
+
+| Run | Tests | Wall time | Load average |
+|---|---|---|---|
+| `main` before this change, scheme test (serial) | 8 unit + 24 UI | 10 min 49 s | ~420 falling to ~13 |
+| `Unit` plan | 41 unit | ~0.5 s of tests (≈20 s with build check and launch) | any |
+| `Full` plan, 3 parallel workers (before rebasing onto #14) | 40 unit + 25 UI | 7 min 8 s | ~270–600 |
+| `Full` plan, 3 parallel workers (final) | 41 unit + 27 UI | 9 min 27 s | ~390–660 |
+| `Smoke` plan | 5 UI | 5 min 35 s | ~700–970 (launches alone took minutes) |
+
+On a quiet machine the UI tests take 10–25 s each (launch + checks), so Smoke should be about a minute; under the load above, single app launches took 1–3 minutes. The logic checks that moved to unit tests now run in milliseconds instead of 10–45 s each.
 
 ## Sheet breathing, streaming jumps, console
 
@@ -61,7 +72,7 @@ TIMINGS
 | `onChange(of: Settle) action tried to update multiple times per frame` | **ours, fixed (follow-up PR)** | `AdaptiveViewerLayout` re-centred the PDF from a `.task(id:)` keyed on the sheet's live top edge, which changes every frame while the sheet moves. It now re-centres from the selected detent's height (see above). |
 | `onChange(of: String) action tried to update multiple times per frame` (1 per follow-up sent with Return) | **ours, left** | The vertical `TextField` writes the text with the newline, and sending clears the draft in the same frame. Harmless; Return still sends once. |
 | `FocusedValue update tried to update multiple times per frame` (1 per launch) | not this area | Appeared with My Games (#10); not investigated here. |
-| `Observation tracking feedback loop detected!` (UIKit; root hosting view relayout + PDF scroll-view "ScrollAway" updates) | **ours, open** | Came with #12: it's gone when `HighlightOverlay` (glass note/pager over the PDF) isn't shown, and `main` before #13 logs it too. It doesn't come from the overlay-height → `topObscured` feedback. It slows some UI tests and once hung `testFollowUpKeepsContext`. Needs its own fix. |
+| `Observation tracking feedback loop detected!` (UIKit; root hosting view relayout + PDF scroll-view "ScrollAway" updates) | **ours, fixed (11-23)** | Came with #12: an *empty* glass `HighlightOverlay` (no note, no pager) stayed mounted over the PDF. It isn't the overlay-height → `topObscured` feedback. It's now shown only when it has content; see [Modular viewer](#modular-viewer-and-test-tiers). |
 | `Decomposition of 'bounds'/'position' was requested on layer (delegate UIViewInProcessLayerAnimationCoordinator) while a composite animation is already running` (red, fault) | system | UIKit's own debug assertion when the toolbar's ⋯ menu morphs open/closed; 4 per open/close, identical in the bare `NavigationStack` + `ToolbarOverflowMenu` / `Menu` probe. Never logged while streaming, dragging the sheet or zooming the PDF. |
 | `cannot add handler to 0 from 0 - dropping` | system | Core Animation, at launch and on system transitions; also in the bare probe. |
 | `non-launching port is incompatible with service identifier "com.apple.PointerUI.pointeruid.default-service"` | system | UIKit's pointer (trackpad) service isn't available to an iPhone simulator app; once per launch, also in the bare probe. |
