@@ -1,8 +1,8 @@
 import Foundation
 import AckshuallyCore
 
-// Plain values the leaf views render. Built by `ViewerModel` (see ViewerModel+Content.swift) or
-// by preview fixtures; views never reach into the model themselves.
+// Plain values the leaf views render. Built by `CardNavigator` or by preview fixtures; leaf views never
+// reach into the models themselves.
 
 /// Answer header (S4/S5): verdict + one proof line, fixed while stepping.
 struct HeaderContent: Equatable {
@@ -10,7 +10,7 @@ struct HeaderContent: Equatable {
         /// S4: nothing but the (restated) question yet.
         case arriving
         case answered
-        case failed(String)
+        case failed(AnswerFailure)
     }
     var state: State
     /// Restated question when known, else what the user asked.
@@ -47,6 +47,15 @@ struct CardItem: Identifiable, Equatable {
     var content: StepCardContent
 }
 
+/// The glass chrome over the PDF for the current evidence (`HighlightOverlay`): the quote pager and the
+/// note about the spotlight.
+struct HighlightChrome: Equatable {
+    var evidenceIndex: Int
+    var evidenceCount: Int
+    var note: String?
+    var noteKind: HighlightNoteKind
+}
+
 /// A row of the full-answer step list (S9).
 struct StepRow: Identifiable, Equatable {
     var id: Int { index }
@@ -63,4 +72,29 @@ struct BranchRow: Identifiable, Equatable {
     var condition: String
     var verdict: String
     var isActive: Bool
+}
+
+extension Step {
+    /// Caption title: the contract's `title`, else "Step N" (older answers, citations mode).
+    func displayTitle(number: Int) -> String { title ?? "Step \(number)" }
+
+    var citedPages: [Int] { evidence.map(\.page).uniqued() }
+}
+
+extension StepCardContent {
+    static func step(_ s: Step, number: Int) -> StepCardContent {
+        .step(number: number, title: s.displayTitle(number: number), pages: s.citedPages, text: s.text,
+              figure: s.evidence.contains { $0.quote == nil })
+    }
+}
+
+extension Array where Element: Hashable {
+    func uniqued() -> [Element] {
+        var seen = Set<Element>()
+        return filter { seen.insert($0).inserted }
+    }
+}
+
+extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }

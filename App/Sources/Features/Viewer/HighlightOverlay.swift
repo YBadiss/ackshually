@@ -6,7 +6,8 @@ import SwiftUI
 /// so a missing or partial spotlight is never silent. Glass, as floating controls over content.
 ///
 /// Note and pager share one row when both fit; otherwise the pager sits on its own row above the
-/// note (narrow phones, large text), so neither crowds the other.
+/// note (narrow phones, large text), so neither crowds the other. Only mounted when it has one of
+/// them (`ViewerModel.highlightChrome`).
 struct HighlightOverlay: View {
     var evidenceIndex: Int
     var evidenceCount: Int

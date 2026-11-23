@@ -14,3 +14,11 @@ struct AssumptionRows: View {
         }
     }
 }
+
+#Preview { AssumptionRows(assumptions: Fixtures.answer.assumptions).padding().themeBackground(\.sheet).themed() }
+#Preview("Several, AX5, dark") {
+    ScrollView {
+        AssumptionRows(assumptions: Fixtures.answer.assumptions + ["You are playing the base game, without expansions."]).padding()
+    }
+    .themeBackground(\.sheet).themed().dynamicTypeSize(.accessibility5).preferredColorScheme(.dark)
+}

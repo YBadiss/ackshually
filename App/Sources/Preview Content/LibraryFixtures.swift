@@ -21,7 +21,7 @@ enum LibraryFixtures {
     static var covers: [String: UIImage] { cover.map { ["power-plant-rush.pdf": $0] } ?? [:] }
 
     static func model(games: [LibraryEntry] = games) -> LibraryModel {
-        let m = LibraryModel(viewer: Fixtures.model(.idle), index: LibraryIndex(entries: games))
+        let m = LibraryModel(dependencies: .inMemory(library: InMemoryLibraryStorage(index: LibraryIndex(entries: games))))
         if let cover { m.setCover(cover, for: "power-plant-rush.pdf") }
         return m
     }

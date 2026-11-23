@@ -9,11 +9,11 @@ struct FullAnswerSections: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.spacing.xl) {
-            StepListRows(rows: model.stepRows, current: model.focusedRow, onSelect: select)
-            if let a = model.answer?.assumptions, !a.isEmpty { AssumptionRows(assumptions: a) }
-            if model.answer?.complete == true {
+            StepListRows(rows: model.navigator.stepRows, current: model.navigator.focusedRow, onSelect: select)
+            if let a = model.session.answer?.assumptions, !a.isEmpty { AssumptionRows(assumptions: a) }
+            if model.session.answer?.complete == true {
                 GroupedSection(title: "Was this right?") {
-                    FeedbackButtons(rating: model.currentRating, onRate: model.rate)
+                    FeedbackButtons(rating: model.session.currentRating, onRate: model.session.rate)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -21,7 +21,7 @@ struct FullAnswerSections: View {
     }
 
     private func select(_ i: Int) {
-        model.selectRow(i)
+        model.navigator.selectRow(i)
         if collapsesOnSelect { withAnimation(.snappy) { model.detent = .medium } }
     }
 }

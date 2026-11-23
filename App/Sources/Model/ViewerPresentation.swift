@@ -1,7 +1,8 @@
 import Foundation
 import Observation
 
-/// Which viewer dialogs are up (settings when a key is needed, Answer Details). A presenter that already shows the
+/// Which viewer dialogs are up (Settings when a credential is needed or rejected, Answer Details). Owned by
+/// the game's `ViewerModel`. A presenter that already shows the
 /// answer sheet can't present again, so the dialogs attach to whichever view is frontmost:
 /// the root, or the answer sheet while it is up (`answerSheetPresented`).
 @MainActor

@@ -6,14 +6,13 @@ struct ViewerPreview: View {
     var detent: SheetDetent = .medium
     @State private var model: ViewerModel?
     @State private var voice = AskController()
-    @State private var presentation = ViewerPresentation()
     @State private var windowSize = CGSize.zero
 
     var body: some View {
         NavigationStack {
-            if let model, let rb = model.rulebook {
-                AdaptiveViewerLayout(model: model, voice: voice, document: rb.pdf, presentation: presentation, windowSize: windowSize)
-                    .navigationTitle(rb.title).navigationBarTitleDisplayMode(.inline)
+            if let model {
+                AdaptiveViewerLayout(model: model, voice: voice, document: model.rulebook.pdf, windowSize: windowSize)
+                    .navigationTitle(model.rulebook.title).navigationBarTitleDisplayMode(.inline)
                     .viewerChrome()
             }
         }

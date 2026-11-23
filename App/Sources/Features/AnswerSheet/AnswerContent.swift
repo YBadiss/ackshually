@@ -8,7 +8,7 @@ import SwiftUI
 /// While an answer streams, the shelf (a loading card) and the follow-up row are laid out from
 /// the first token, so the sheet can be sized once and the content fills in place.
 struct AnswerContent: View {
-    @Bindable var model: ViewerModel
+    var model: ViewerModel
     var voice: AskController
     var placement: AnswerPlacement
     var onMetrics: (AnswerMetrics) -> Void = { _ in }
@@ -16,24 +16,19 @@ struct AnswerContent: View {
     @State private var metrics = AnswerMetrics()
 
     private nonisolated static let space = "answerContent"
-    private var answered: Bool { model.header?.state == .answered }
+    private var answered: Bool { model.navigator.header?.state == .answered }
     /// Shelf and footer row: once answered, and as placeholders while the answer streams.
-    private var showsShelf: Bool { answered || model.isBusy }
+    private var showsShelf: Bool { answered || model.session.isBusy }
     private var topMargin: CGFloat { placement == .inspector ? theme.spacing.xl : theme.spacing.sheetTop }
-    /// A rejected credential: the error header offers Settings.
-    private var settingsAction: (() -> Void)? {
-        guard model.failureOpensSettings else { return nil }
-        return { model.requestSettings() }
-    }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: theme.spacing.xl) {
-                    if let h = model.header {
+                    if let h = model.navigator.header {
                         AnswerHeader(content: h, showsQuestion: placement.isExpanded,
-                                     onStop: stop, onRetry: model.retry,
-                                     onSettings: settingsAction, onClose: close)
+                                     onStop: stop, onRetry: model.session.retry,
+                                     onSettings: { model.presentation.settings = true }, onClose: close)
                             .id("top")
                             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.space)).maxY } action: {
                                 metrics.collapsed = $0 + topMargin
@@ -48,14 +43,14 @@ struct AnswerContent: View {
                     }
                     // Sheet below large: follow-up + thumbs in their own row (expanded / inspector
                     // have them in the full sections below). Shown, disabled, while streaming.
-                    if model.canFollowUp || model.isBusy, !placement.isExpanded {
-                        AnswerFooterRow(draft: $model.draft, voice: voice, rating: model.currentRating,
-                                        onRate: model.rate, onSend: model.ask)
-                            .disabled(!model.canFollowUp)
+                    if model.session.canFollowUp || model.session.isBusy, !placement.isExpanded {
+                        AnswerFooterRow(draft: Bindable(model.session).draft, voice: voice, rating: model.session.currentRating,
+                                        onRate: model.session.rate, onSend: model.session.ask)
+                            .disabled(!model.session.canFollowUp)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
-                    if answered, !model.branchRows.isEmpty {
-                        BranchRows(rows: model.branchRows, onSelect: selectBranch)
+                    if answered, !model.navigator.branchRows.isEmpty {
+                        BranchRows(rows: model.navigator.branchRows, onSelect: selectBranch)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
                     // The medium detent ends here; what follows shows when expanded. The stack's
@@ -69,10 +64,10 @@ struct AnswerContent: View {
                         FullAnswerSections(model: model, collapsesOnSelect: placement != .inspector)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
-                    if model.canFollowUp, placement.isExpanded {
-                        FollowUpSection(model: model, voice: voice)
+                    if model.session.canFollowUp, placement.isExpanded {
+                        FollowUpSection(session: model.session, voice: voice)
                     }
-                    if model.isDemo, answered { DemoNote() }
+                    if model.session.isDemo, answered { DemoNote() }
                 }
                 .coordinateSpace(.named(Self.space))
             }
@@ -85,19 +80,19 @@ struct AnswerContent: View {
                 if !expanded { withAnimation(.snappy) { proxy.scrollTo("top", anchor: .top) } }
             }
             // "More" on a card: show that step's full text in the step list.
-            .task(id: model.expandedRow) {
-                guard let row = model.expandedRow else { return }
+            .task(id: model.navigator.expandedRow) {
+                guard let row = model.navigator.expandedRow else { return }
                 try? await Task.sleep(for: theme.layout.sheetSettleDelay)
                 withAnimation(.snappy) { proxy.scrollTo(StepListRows.scrollID(row), anchor: .top) }
-                model.clearExpandedRow()
+                model.navigator.clearExpandedRow()
             }
         }
         .accessibilityIdentifier("answerSheet")
     }
 
-    private func stop() { withAnimation(.snappy) { model.stop() } }
+    private func stop() { withAnimation(.snappy) { model.session.stop() } }
     private func close() { withAnimation(.snappy) { model.dismissSheet() } }
-    private func selectBranch(_ i: Int?) { withAnimation(.snappy) { model.selectBranch(i) } }
+    private func selectBranch(_ i: Int?) { withAnimation(.snappy) { model.navigator.selectBranch(i) } }
 }
 
 #Preview("Sheet, medium") {

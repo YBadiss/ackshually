@@ -10,7 +10,7 @@ struct AnswerHeader: View {
     var showsQuestion = false
     var onStop: () -> Void = {}
     var onRetry: () -> Void = {}
-    /// Set when the failure is fixed in Settings (rejected credential).
+    /// Open Settings: offered only when the failure is fixed there (rejected credential).
     var onSettings: (() -> Void)?
     var onClose: () -> Void = {}
     @Environment(\.theme) private var theme
@@ -21,7 +21,7 @@ struct AnswerHeader: View {
                 switch content.state {
                 case .arriving: arriving
                 case .answered: answered
-                case .failed(let msg): FailureHeader(message: msg, onRetry: onRetry, onSettings: onSettings)
+                case .failed(let f): FailureHeader(message: f.message, onRetry: onRetry, onSettings: f.opensSettings ? onSettings : nil)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -2,435 +2,187 @@ import Foundation
 import Observation
 import AckshuallyCore
 
+/// One game's viewer session (created per rulebook by `LibraryModel`, kept when you go back). A thin
+/// coordinator over its parts, which views use directly:
+/// - `session` (`AnswerSession`): asking, streaming, stop/retry, follow-ups, failures, feedback;
+/// - `navigator` (`CardNavigator`): cards, branches, the quote pager, "More";
+/// - `highlights` (`HighlightStore`): quote → highlight, resolved once off the main thread;
+/// - `pdfFocus` (`PDFFocusModel`): what the PDF zooms to and whether the reader moved it;
+/// - `presentation` (`ViewerPresentation`): Settings / Answer Details.
+/// It wires their changes together (a new card moves the PDF, a resolved highlight focuses it, a missing
+/// credential opens Settings) and owns the one rule for when the answer is on screen (`sheetVisible`).
 @MainActor
 @Observable
 final class ViewerModel {
-    // Document
-    private(set) var rulebook: LoadedRulebook?
-    var openError: String?
+    let rulebook: LoadedRulebook
+    let session: AnswerSession
+    let navigator: CardNavigator
+    let highlights: HighlightStore
+    let pdfFocus = PDFFocusModel()
+    let presentation = ViewerPresentation()
+    let providers: any AnswerProviderFactory
 
-    // Asking
-    var draft = ""
-    private(set) var turns: [Turn] = []
-
-    // Answer
-    private(set) var answer: LiveAnswer?
-    private(set) var phase: AnswerPhase = .done
-    private(set) var sheetVisible = false
     var detent: SheetDetent = .medium
-    /// Step row the expanded answer scrolls to ("More" on a truncated card).
-    private(set) var expandedRow: Int?
-    /// Bound to the carousel's `.scrollPosition(id:)`.
-    var cardID: CardID? {
-        didSet { if cardID != oldValue { cardChanged() } }
-    }
-    private(set) var activeBranch: Int?
-    private(set) var evidenceIndex = 0
-    private(set) var zoom: ZoomMode = .evidence
-    private(set) var focus: PDFFocus?
-    /// Set by the PDF view when the user pinches/pans (shows "Back to Step N").
-    var userMovedPDF = false
-    /// Thumbs up/down per answer, in memory for M2 (S11 storage is M3).
-    private(set) var feedback: [UUID: Bool] = [:]
-    private(set) var isDemo = false
-    /// Which route answered (or is answering) the current answer: Answer Details shows it.
-    private(set) var route: AnswerRoute.Kind?
-    /// The failure is fixed in Settings (rejected token or key): the error header offers it.
-    private(set) var failureOpensSettings = false
+    /// The reader closed the answer (header ✕, Hide Answer). The only stored input of `sheetVisible`.
+    private(set) var sheetClosed = false
 
-    private var task: Task<Void, Never>?
-    private(set) var highlights: [String: Highlight] = [:]
-    private var resolving: Set<String> = []
-    private var focusToken = 0
-
-    // MARK: Document
-
-    /// Loads a rulebook and resets the conversation. The library (My Games) decides what is
-    /// remembered; this only opens.
-    @discardableResult
-    func open(_ url: URL) -> Bool {
-        guard let rb = LoadedRulebook(url: url) else {
-            openError = "Couldn't open \(url.lastPathComponent) as a PDF."
-            return false
+    init(rulebook: LoadedRulebook, providers: any AnswerProviderFactory, place: HighlightStore.Placer? = nil) {
+        self.rulebook = rulebook
+        self.providers = providers
+        session = AnswerSession(rulebook: rulebook, providers: providers)
+        navigator = CardNavigator(session: session)
+        highlights = place.map(HighlightStore.init(place:)) ?? HighlightStore(matcher: rulebook.matcher)
+        session.onChange = { [unowned self] in self.sessionChanged($0) }
+        navigator.onCardChange = { [unowned self] in
+            self.pdfFocus.followEvidence()
+            self.refocus()
         }
-        reset()
-        rulebook = rb
-        return true
-    }
-
-    /// The open game was deleted from My Games.
-    func close() {
-        reset()
-        rulebook = nil
-    }
-
-    private func reset() {
-        cancel()
-        turns = []
-        answer = nil
-        sheetVisible = false
-        focus = nil
-        highlights = [:]
-        openError = nil
-    }
-
-    // MARK: Asking
-
-    var isBusy: Bool { phase == .waiting || phase == .streaming }
-
-    /// Follow-ups keep the conversation (Core replays prior turns).
-    var canFollowUp: Bool {
-        guard let a = answer, !isBusy else { return false }
-        return a.complete || a.stopped || { if case .failed = phase { true } else { false } }()
-    }
-
-    /// Set when Settings should open: a real rulebook asked about without a credential, or a rejected
-    /// credential. The screen opens Settings and clears it.
-    var settingsRequested = false
-
-    func requestSettings() { settingsRequested = true }
-
-    func ask(_ raw: String) {
-        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, let rb = rulebook else { return }
-        // Never answer a real rulebook with the scripted demo: keep the question and ask for a credential.
-        guard let (provider, route) = Self.makeProvider(for: rb) else {
-            draft = q
-            settingsRequested = true
-            return
-        }
-        cancel()
-        draft = ""
-        answer = LiveAnswer(question: q)
-        phase = .waiting
-        activeBranch = nil
-        cardID = nil
-        evidenceIndex = 0
-        zoom = .evidence
-        userMovedPDF = false
-        // Spec S4: the sheet rises on the first token; until then the ask bar shows progress.
-        sheetVisible = false
-        detent = .medium
-
-        isDemo = route == .demo
-        self.route = route
-        failureOpensSettings = false
-        Self.log.debug("asking via \(route.rawValue, privacy: .public)")
-        let request = AnswerRequest(pdf: rb.data, documentTitle: rb.title, question: q, history: turns)
-        task = Task { [weak self] in
-            do {
-                for try await event in provider.answer(request) {
-                    guard let self, !Task.isCancelled else { return }
-                    self.handle(event)
-                }
-            } catch {
-                guard let self, !Task.isCancelled else { return }
-                self.fail(AnswerFailure(error, route: route))
-            }
+        highlights.onResolved = { [unowned self] e, h in
+            self.logMatch(e, h)
+            if let cur = self.navigator.currentEvidence, HighlightStore.key(cur) == HighlightStore.key(e) { self.refocus() }
         }
     }
 
-    /// Stop (S4): before any step arrives the question goes back into the field to rephrase.
-    func stop() {
-        guard isBusy else { return }
-        cancel()
-        if var a = answer, !a.steps.isEmpty {
-            a.stopped = true
-            answer = a
-            phase = .done
-            rebuildCardsIfNeeded()
-        } else {
-            draft = answer?.question ?? draft
-            answer = nil
-            sheetVisible = false
-            phase = .done
+    // MARK: Sheet
+
+    /// When the answer (sheet, inspector or column) is on screen. Spec S4: not while waiting for the first
+    /// token (the ask bar shows progress), always while streaming (it never hides or jumps under the reader:
+    /// closing it stops the answer), and once done or failed until the reader closes it.
+    var sheetVisible: Bool {
+        guard session.answer != nil else { return false }
+        switch session.phase {
+        case .waiting: return false
+        case .streaming: return true
+        case .done, .failed: return !sheetClosed
         }
     }
 
     func dismissSheet() {
-        if isBusy { stop() }
-        sheetVisible = false
-        focus = nil
-        userMovedPDF = false
+        if session.isBusy { session.stop() }
+        sheetClosed = true
+        pdfFocus.clear()
     }
 
     func showSheet() {
-        guard answer != nil else { return }
-        sheetVisible = true
+        guard session.answer != nil else { return }
+        sheetClosed = false
         refocus()
-    }
-
-    func retry() {
-        guard let q = answer?.question else { return }
-        ask(q)
-    }
-
-    private func cancel() {
-        task?.cancel()
-        task = nil
-    }
-
-    private func fail(_ failure: AnswerFailure) {
-        failureOpensSettings = failure.opensSettings
-        phase = .failed(failure.message)
-        sheetVisible = true
-    }
-
-    private func handle(_ event: AnswerEvent) {
-        guard var a = answer else { return }
-        switch event {
-        case .firstToken:
-            phase = .streaming
-            sheetVisible = true
-        case .restatedQuestion(let s):
-            a.restated = s
-        case .verdict(let s):
-            a.verdict = s
-        case .confidence(let c):
-            a.confidence = c
-        case .branch(let b):
-            a.branches.append(b)
-        case .evidence(_, _, let e):
-            resolve(e)
-        case .step(let i, let s):
-            if i < a.steps.count { a.steps[i] = s } else { a.steps.append(s) }
-            for e in s.evidence { resolve(e) }
-        case .completed(let r):
-            if let final = r.answer {
-                let done = LiveAnswer(question: a.question, answer: final)
-                a = Self.merged(a, with: done)
-                for e in final.steps.flatMap(\.evidence) { resolve(e) }
-                turns.append(Turn(question: a.question, answer: final, rawAssistantText: r.rawText))
-                phase = .done
-                answer = a
-                logAnswer()
-            } else {
-                answer = a
-                fail(AnswerFailure(message: "The answer couldn't be read (\(r.parseError ?? "unknown error"))."))
-                return
-            }
-        }
-        sheetVisible = sheetVisible || phase == .streaming
-        answer = a
-        if case .step(let i, _) = event { rebuildCardsIfNeeded(newStep: i) } else { rebuildCardsIfNeeded() }
-    }
-
-    /// Keeps the answer's id (feedback and the carousel are keyed on it) while taking the final fields.
-    private static func merged(_ old: LiveAnswer, with new: LiveAnswer) -> LiveAnswer {
-        var a = old
-        a.restated = new.restated; a.verdict = new.verdict; a.confidence = new.confidence
-        a.branches = new.branches; a.assumptions = new.assumptions; a.steps = new.steps
-        a.complete = true
-        return a
-    }
-
-    // MARK: Cards
-
-    var cards: [CardID] {
-        guard let a = answer else { return [] }
-        if let b = activeBranch, let branch = a.branches[safe: b] {
-            if branch.steps.isEmpty { return [.branch(b)] }
-            return branch.steps.indices.map { .branchStep(branch: b, step: $0) }
-        }
-        // No closing "Result" card: it only repeated the verdict. Feedback and the follow-up
-        // field sit in their own row under the shelf.
-        // While streaming, a loading card holds the shelf's place from the first token on, so the
-        // sheet is sized once and content fills in place.
-        // While streaming, a loading card holds the shelf's place from the first token on, so the
-        // sheet is sized once and content fills in place.
-        var c: [CardID] = a.steps.indices.map { .step($0) }
-        if isBusy, !(a.complete || a.stopped) { c.append(.loading) }
-        return c
-    }
-
-    var currentCard: CardID? { cardID ?? cards.first }
-
-    /// 1-based step number of the card the PDF follows (main answer or branch).
-    var focusedStepNumber: Int? {
-        switch currentCard {
-        case .step(let i), .branchStep(_, let i): i + 1
-        default: nil
-        }
-    }
-
-    /// Index of the step on screen in the expanded step list (main answer or active branch).
-    var focusedRow: Int? {
-        switch currentCard {
-        case .step(let i), .branchStep(_, let i): i
-        default: nil
-        }
-    }
-
-    /// Keeps the carousel on a valid card as cards stream in: step 1 becomes current when it
-    /// arrives (S4: the PDF jumps to it); a reader parked on the loading card moves to the new step.
-    private func rebuildCardsIfNeeded(newStep: Int? = nil) {
-        let c = cards
-        if cardID == .loading, let n = newStep { cardID = .step(n); return }
-        if let id = cardID, c.contains(id) { return }
-        if cardID == nil {
-            if let f = c.first, f != .loading { cardID = f }
-            return
-        }
-        cardID = cardID == .loading ? c.last : c.first
-    }
-
-    func select(_ card: CardID) {
-        cardID = card
-    }
-
-    func selectStep(_ i: Int) {
-        activeBranch = nil
-        cardID = .step(i)
-    }
-
-    /// A row of the expanded step list: that step of whatever is shown (main answer or branch).
-    func selectRow(_ i: Int) {
-        if let b = activeBranch { cardID = .branchStep(branch: b, step: i) } else { cardID = .step(i) }
     }
 
     /// "More" on a truncated card: the expanded answer, scrolled to that step's full text.
     func showMore(_ card: CardID) {
-        switch card {
-        case .step(let i), .branchStep(_, let i): expandedRow = i
-        default: expandedRow = nil
-        }
-        cardID = card
+        navigator.showMore(card)
         detent = .expanded
     }
 
-    func clearExpandedRow() { expandedRow = nil }
+    /// The ⋯ menu's "Demo answers: no access token set".
+    var showsDemoNote: Bool { session.isDemo || providers.claudeRoute == nil }
 
-    func selectBranch(_ i: Int?) {
-        activeBranch = i
-        cardID = cards.first
-    }
-
-    private func cardChanged() {
-        evidenceIndex = 0
-        zoom = .evidence
-        userMovedPDF = false
-        refocus()
-    }
-
-    // MARK: PDF focus
-
-    var currentStep: Step? {
-        guard let a = answer else { return nil }
-        switch currentCard {
-        case .step(let i): return a.steps[safe: i]
-        case .branchStep(let b, let i): return a.branches[safe: b]?.steps[safe: i]
-        default: return nil
+    private func sessionChanged(_ change: AnswerSession.Change) {
+        switch change {
+        case .started:
+            navigator.reset()
+            pdfFocus.followEvidence()
+            sheetClosed = false
+            detent = .medium
+        case .needsCredential:
+            presentation.settings = true
+        case .evidence(let evidence):
+            evidence.forEach(highlights.resolve)
+        case .step(let i):
+            navigator.rebuild(newStep: i)
+        case .updated:
+            navigator.rebuild()
+        case .completed:
+            navigator.rebuild()
+            logAnswer()
+        case .stopped:
+            if session.answer != nil { navigator.rebuild() }
+        case .failed:
+            break
         }
     }
 
-    var currentEvidence: Evidence? {
-        guard let s = currentStep, s.evidence.indices.contains(evidenceIndex) else { return nil }
-        return s.evidence[evidenceIndex]
+    // MARK: PDF
+
+    var currentHighlight: Highlight? { navigator.currentEvidence.flatMap { highlights[$0] } }
+
+    /// The overlay over the PDF: a note when the spotlight isn't the exact quote, a pager when the step
+    /// cites several passages; nil when there is nothing to say (one passage, spotlit exactly). Never an
+    /// empty overlay: an empty glass container over the PDF made UIKit re-lay out the screen in a loop
+    /// ("Observation tracking feedback loop detected", ~45 per second).
+    var highlightChrome: HighlightChrome? {
+        guard sheetVisible, pdfFocus.focus != nil else { return nil }
+        let h = currentHighlight
+        let note = h?.note ?? (h?.kind == .wholePage ? HighlightPlacer.notFoundNote : nil)
+        let count = navigator.currentStep?.evidence.count ?? 0
+        guard note != nil || count > 1 else { return nil }
+        return HighlightChrome(evidenceIndex: navigator.evidenceIndex, evidenceCount: count, note: note,
+                               noteKind: h.map { HighlightNoteKind($0.match) } ?? .info)
     }
 
-    var currentHighlight: Highlight? { currentEvidence.flatMap { highlights[Self.key($0)] } }
-
     func nextEvidence() {
-        guard let s = currentStep, s.evidence.count > 1 else { return }
-        evidenceIndex = (evidenceIndex + 1) % s.evidence.count
-        zoom = .evidence
-        userMovedPDF = false
+        guard navigator.nextEvidence() else { return }
+        pdfFocus.followEvidence()
         refocus()
     }
 
     func backToStep() {
-        userMovedPDF = false
-        zoom = .evidence
+        pdfFocus.followEvidence()
         refocus()
     }
 
     /// S8 double-tap: evidence zoom ↔ full page.
     func toggleZoom() {
         guard currentHighlight != nil else { return }
-        zoom = (zoom == .evidence && !userMovedPDF) ? .page : .evidence
-        userMovedPDF = false
+        pdfFocus.toggleZoom()
         refocus()
     }
 
     /// Re-center after the visible area changes (sheet detent), unless the user is inspecting.
     func visibleAreaChanged() {
-        guard !userMovedPDF, focus != nil else { return }
+        guard pdfFocus.followsEvidence else { return }
         refocus()
     }
 
     private func refocus() {
-        guard let e = currentEvidence else { return }  // result/branch cards keep the PDF where it is
-        if let h = highlights[Self.key(e)] {
-            focusToken += 1
-            focus = PDFFocus(token: focusToken, highlight: h, zoom: zoom)
-        } else {
-            resolve(e)
-        }
+        guard let e = navigator.currentEvidence else { return }  // branch cards keep the PDF where it is
+        if let h = highlights[e] { pdfFocus.show(h) } else { highlights.resolve(e) }
     }
 
-    static func key(_ e: Evidence) -> String {
-        "\(e.page)|\(e.quote ?? "")|\(e.box.map { "\($0.x),\($0.y),\($0.w),\($0.h)" } ?? "")"
+    // MARK: Answer Details
+
+    var answerDetails: AnswerDetailsExport? {
+        session.answer.map { AnswerDetailsExport(answer: $0, turns: session.turns, route: session.route, highlights: highlights) }
     }
 
-    /// Quote → word rects via Core's QuoteMatcher, off the main thread (it may scan the whole book).
-    private func resolve(_ e: Evidence) {
-        let k = Self.key(e)
-        guard highlights[k] == nil, !resolving.contains(k), let matcher = rulebook?.matcher else { return }
-        resolving.insert(k)
-        Task { [weak self] in
-            let h = await Task.detached(priority: .userInitiated) { HighlightPlacer.place(e, matcher: matcher) }.value
-            guard let self else { return }
-            self.resolving.remove(k)
-            self.highlights[k] = h
-            self.logMatch(e, h)
-            if let cur = self.currentEvidence, Self.key(cur) == k { self.refocus() }
-        }
+    var routeLabel: String? { session.route?.label(serverHost: providers.serverHost) }
+
+    /// Debug builds: the raw answer when it completes and each quote's match as it resolves.
+    private func logAnswer() {
+        #if DEBUG
+        guard let d = answerDetails else { return }
+        AnswerSession.log.debug("answer: \(d.json, privacy: .public)")
+        #endif
+    }
+
+    private func logMatch(_ e: Evidence, _ h: Highlight) {
+        #if DEBUG
+        AnswerSession.log.debug("evidence p.\(e.page) \(h.match.result.rawValue, privacy: .public) [\(h.match.detail, privacy: .public)] rects=\(h.match.rects) quote=\(e.quote ?? "–", privacy: .public)")
+        #endif
     }
 
     // MARK: Previews / screenshots
 
-    /// Shows an answer without streaming (previews, UI screenshots). Highlights resolve synchronously.
-    func present(_ live: LiveAnswer, phase: AnswerPhase, demo: Bool = true) {
-        cancel()
-        answer = live
-        self.phase = phase
-        isDemo = demo
-        route = demo ? .demo : CredentialStore.route?.kind
-        sheetVisible = true
-        if let m = rulebook?.matcher {
-            for e in (live.steps + live.branches.flatMap(\.steps)).flatMap(\.evidence) {
-                let h = HighlightPlacer.place(e, matcher: m)
-                highlights[Self.key(e)] = h
-                logMatch(e, h)
-            }
+    /// Shows an answer without streaming (previews, `-present`). Highlights are placed synchronously.
+    func present(_ live: LiveAnswer, phase: AnswerPhase) {
+        session.present(live, phase: phase)
+        sheetClosed = false
+        for e in (live.steps + live.branches.flatMap(\.steps)).flatMap(\.evidence) {
+            if let h = highlights.placeNow(e) { logMatch(e, h) }
         }
         logAnswer()
-        cardID = nil
-        rebuildCardsIfNeeded()
-    }
-
-    // MARK: Feedback
-
-    func rate(_ up: Bool) {
-        guard let id = answer?.id else { return }
-        feedback[id] = feedback[id] == up ? nil : up
-    }
-
-    var currentRating: Bool? { answer.flatMap { feedback[$0.id] } }
-
-    // MARK: Provider
-
-    /// Claude through the route the credentials give (token → server, else API key → direct); the scripted
-    /// demo only for the sample rulebook (or `-demo YES`); nil for a real rulebook without a credential.
-    static func makeProvider(for rulebook: LoadedRulebook) -> (AnswerProvider, route: AnswerRoute.Kind)? {
-        let d = UserDefaults.standard
-        if !d.bool(forKey: "demo"), let route = CredentialStore.route {
-            let model = d.string(forKey: "model") ?? "claude-sonnet-5-5"
-            return (ClaudeProvider(config: route.claudeConfig(model: model)), route.kind)
-        }
-        guard rulebook.isSample || d.bool(forKey: "demo") else { return nil }
-        let scripted = d.string(forKey: "demoAnswer").flatMap(DemoProvider.answer(fromFile:)) ?? DemoProvider.batteryAnswer
-        let pace = d.object(forKey: "demoPace") as? String
-        return (DemoProvider(answer: scripted, pace: pace.flatMap(Double.init) ?? 1), .demo)
+        navigator.cardID = nil
+        navigator.rebuild()
     }
 }

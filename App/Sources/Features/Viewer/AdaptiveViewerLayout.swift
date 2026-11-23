@@ -9,10 +9,9 @@ import PDFKit
 /// how much of it the sheet / field covers: the sheet's target detent height, so the PDF moves
 /// together with the sheet instead of waiting for it to settle.
 struct AdaptiveViewerLayout: View {
-    @Bindable var model: ViewerModel
+    var model: ViewerModel
     var voice: AskController
     var document: PDFDocument
-    var presentation: ViewerPresentation
     /// The whole window (measured outside the inspector, so opening it can't flip the layout).
     var windowSize: CGSize
     @Environment(\.theme) private var theme
@@ -86,11 +85,11 @@ struct AdaptiveViewerLayout: View {
             model.visibleAreaChanged()
         }
         .onChange(of: sheetPresented, initial: true) { _, p in
-            presentation.answerSheetPresented = p
+            model.presentation.answerSheetPresented = p
             if !p { sheetCovered = nil }
         }
         .sheet(isPresented: sheetBinding) {
-            AnswerSheet(model: model, voice: voice, presentation: presentation,
+            AnswerSheet(model: model, voice: voice,
                         containerHeight: container.size.height + container.safeBottom) { sheetCovered = $0 }
                 .themed()
         }
@@ -102,7 +101,7 @@ struct AdaptiveViewerLayout: View {
                 Button(model.sheetVisible ? "Hide Answer" : "Show Answer", systemImage: "sidebar.trailing", action: toggleAnswer)
                     .accessibilityIdentifier("toggleAnswer")
             }
-            .hidden(!(wide && model.answer != nil))
+            .hidden(!(wide && model.session.answer != nil))
         }
     }
 
@@ -132,15 +131,13 @@ struct AdaptiveViewerLayout: View {
     // MARK: PDF
 
     private var pdf: some View {
-        PDFViewer(document: document, focus: model.focus, bottomObscured: covered, topObscured: overlayHeight,
-                  onUserMove: { model.userMovedPDF = true },
+        PDFViewer(document: document, focus: model.pdfFocus.focus, bottomObscured: covered, topObscured: overlayHeight,
+                  onUserMove: { model.pdfFocus.userMovedPDF = true },
                   onDoubleTap: { model.toggleZoom() })
             .overlay(alignment: .top) {
-                if model.focus != nil, model.sheetVisible {
-                    HighlightOverlay(evidenceIndex: model.evidenceIndex, evidenceCount: model.currentStep?.evidence.count ?? 0,
-                                     note: model.currentHighlight?.note ?? (model.currentHighlight?.kind == .wholePage ? HighlightPlacer.notFoundNote : nil),
-                                     noteKind: model.currentHighlight.map { HighlightNoteKind($0.match) } ?? .info,
-                                     onNext: { model.nextEvidence() })
+                if let chrome = model.highlightChrome {
+                    HighlightOverlay(evidenceIndex: chrome.evidenceIndex, evidenceCount: chrome.evidenceCount,
+                                     note: chrome.note, noteKind: chrome.noteKind, onNext: { model.nextEvidence() })
                         .padding(.top, theme.spacing.s)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { overlayHeight = $0 }
                         .onDisappear { overlayHeight = 0 }
@@ -152,7 +149,7 @@ struct AdaptiveViewerLayout: View {
 
     private var floatingControls: some View {
         VStack(spacing: theme.spacing.m) {
-            if model.userMovedPDF, model.sheetVisible, let n = model.focusedStepNumber {
+            if model.pdfFocus.userMovedPDF, model.sheetVisible, let n = model.navigator.focusedStepNumber {
                 BackToStepPill(step: n) { model.backToStep() }
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
@@ -168,14 +165,14 @@ struct AdaptiveViewerLayout: View {
         // Above the sheet's top edge (the sheet is a separate presentation, not in this stack).
         .padding(.bottom, sheetPresented ? max(covered - container.safeBottom, 0) + theme.spacing.m : 0)
         .animation(theme.sheetAnimation, value: showsAskField)
-        .animation(.snappy, value: model.userMovedPDF)
+        .animation(.snappy, value: model.pdfFocus.userMovedPDF)
     }
 
     @ViewBuilder private var askArea: some View {
-        if model.phase == .waiting, let q = model.answer?.question {
-            WaitingBar(question: q) { model.stop() }
+        if model.session.phase == .waiting, let q = model.session.answer?.question {
+            WaitingBar(question: q) { model.session.stop() }
         } else {
-            AskField(text: $model.draft, voice: voice) { model.ask($0) }
+            AskField(text: Bindable(model.session).draft, voice: voice) { model.session.ask($0) }
         }
     }
 }

@@ -16,3 +16,11 @@ struct LibraryToolbar: ToolbarContent {
         }
     }
 }
+
+#Preview {
+    NavigationStack { List {}.navigationTitle("My Games").toolbar { LibraryToolbar(onAdd: {}, onSettings: {}) } }.themed()
+}
+#Preview("AX5, dark") {
+    NavigationStack { List {}.navigationTitle("My Games").toolbar { LibraryToolbar(onAdd: {}, onSettings: {}) } }
+        .themed().dynamicTypeSize(.accessibility5).preferredColorScheme(.dark)
+}

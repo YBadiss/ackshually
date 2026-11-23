@@ -51,11 +51,6 @@ enum Library {
 
     static func url(for fileName: String) -> URL { folder.appending(path: fileName) }
 
-    /// The entry name for a file inside the folder; nil for files elsewhere (launch arguments).
-    static func fileName(in url: URL) -> String? {
-        url.deletingLastPathComponent().standardizedFileURL.path == folder.standardizedFileURL.path ? url.lastPathComponent : nil
-    }
-
     /// Copies a file picked with the importer (security-scoped) into the app's folder.
     static func importPDF(from picked: URL) throws -> URL {
         let scoped = picked.startAccessingSecurityScopedResource()

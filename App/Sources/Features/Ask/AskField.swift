@@ -21,7 +21,7 @@ struct AskField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: theme.spacing.s) {
-            if holding { HoldToTalkPanel(transcript: voice.transcript, cancelArmed: voice.cancelArmed) }
+            if holding { HoldToTalkPanel(transcript: voice.transcript) }
             // The mic keeps one identity across modes so a hold gesture isn't interrupted.
             HStack(alignment: .center, spacing: theme.spacing.m) {
                 if holding {

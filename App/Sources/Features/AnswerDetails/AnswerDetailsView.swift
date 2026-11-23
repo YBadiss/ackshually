@@ -8,7 +8,6 @@ struct AnswerDetailsView: View {
     var route: String?
     var onCopy: () -> Void
     var onDone: () -> Void
-    @Environment(\.theme) private var theme
     @State private var copied = false
 
     private var sections: [(title: String, rows: [EvidenceReport])] { EvidenceReport.sections(reports) }

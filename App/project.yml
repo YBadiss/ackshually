@@ -1,7 +1,8 @@
-# Generate the Xcode project: `cd App && xcodegen` (XcodeGen 2.42+). The generated
-# Ackshually.xcodeproj is checked in so the app also builds without XcodeGen.
+# The Xcode project is generated from this file: run `App/bootstrap.sh` after cloning, pulling or editing
+# it (it runs XcodeGen). Ackshually.xcodeproj is git-ignored: never edit it by hand, change this file.
 name: Ackshually
 options:
+  minimumXcodeGenVersion: 2.48.0
   bundleIdPrefix: app.ackshually
   deploymentTarget:
     iOS: "27.0"
@@ -82,5 +83,15 @@ schemes:
         Ackshually: all
         AckshuallyTests: [test]
         AckshuallyUITests: [test]
+    # Test plans (App/TestPlans): Full is the default; see "Which tests when" in CLAUDE.md.
     test:
       targets: [AckshuallyTests, AckshuallyUITests]
+      testPlans:
+        - path: TestPlans/Full.xctestplan
+          defaultPlan: true
+        - path: TestPlans/Unit.xctestplan
+        - path: TestPlans/Smoke.xctestplan
+        - path: TestPlans/Viewer.xctestplan
+        - path: TestPlans/AnswerSheet.xctestplan
+        - path: TestPlans/Library.xctestplan
+        - path: TestPlans/Server.xctestplan

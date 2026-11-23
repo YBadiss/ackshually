@@ -1,17 +1,11 @@
 import Foundation
 
-/// What Settings shows about the answer route: plain values, built from `CredentialStore` (or fixtures).
+/// What Settings shows about the answer route: plain values, built by `CredentialAccess.status` (or fixtures).
 struct RouteStatus: Equatable {
-    var active: CredentialStore.Active
+    var active: ActiveCredential
     var serverHost: String
     var tokenOverrideSaved = false
     var apiKeySaved = false
-
-    @MainActor static var current: RouteStatus {
-        RouteStatus(active: CredentialStore.active, serverHost: ServerConfig.host,
-                    tokenOverrideSaved: CredentialStore.saved(.tokenOverride) != nil,
-                    apiKeySaved: CredentialStore.saved(.apiKey) != nil)
-    }
 
     var title: String {
         switch active {

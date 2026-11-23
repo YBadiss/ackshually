@@ -39,3 +39,14 @@ struct StepListRows: View {
         .contentShape(.rect)
     }
 }
+
+#Preview("None current") {
+    ScrollView { StepListRows(rows: Fixtures.stepRows, current: nil) { _ in }.padding() }.themeBackground(\.sheet).themed()
+}
+#Preview("Step 2 current") {
+    ScrollView { StepListRows(rows: Fixtures.stepRows, current: 1) { _ in }.padding() }.themeBackground(\.sheet).themed()
+}
+#Preview("AX5, dark") {
+    ScrollView { StepListRows(rows: Fixtures.stepRows, current: 0) { _ in }.padding() }.themeBackground(\.sheet).themed()
+        .dynamicTypeSize(.accessibility5).preferredColorScheme(.dark)
+}

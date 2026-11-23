@@ -1,5 +1,4 @@
 import SwiftUI
-import AckshuallyCore
 
 /// One game in My Games: cover, name, and when it was last opened.
 struct GameRow: View {

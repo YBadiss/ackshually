@@ -8,17 +8,11 @@ import Foundation
 /// Launch arguments: `-noKey YES` ignores all three (the no-credential paths stay testable on any build).
 /// Debug builds: `-isolatedCredentials YES` (UI tests) keeps Keychain items under separate account names,
 /// emptied at launch, and ignores the real bundled token and the environment.
+///
+/// Only `LiveCredentials` (the app's `CredentialAccess`) and `LaunchOptions` use it; models and views get
+/// credentials through `AppDependencies`.
 enum CredentialStore {
-    /// What Settings can save in the Keychain.
-    enum Item: String, CaseIterable {
-        case tokenOverride = "app-token-override"
-        case apiKey = "anthropic-api-key"
-    }
-
-    /// The credential in use, for Settings ("Answers by …").
-    enum Active: Equatable {
-        case bundledToken, tokenOverride, apiKey(fromEnvironment: Bool), none
-    }
+    typealias Item = CredentialItem
 
     static func saved(_ item: Item) -> String? { Keychain.get(account(item)) }
 
@@ -26,7 +20,7 @@ enum CredentialStore {
         Keychain.set(value?.trimmingCharacters(in: .whitespacesAndNewlines), for: account(item))
     }
 
-    static var active: Active {
+    static var active: ActiveCredential {
         if ignoresAll { return .none }
         if ServerConfig.bundledToken != nil { return .bundledToken }
         if saved(.tokenOverride) != nil { return .tokenOverride }

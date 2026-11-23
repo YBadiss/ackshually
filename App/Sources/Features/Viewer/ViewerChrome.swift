@@ -14,3 +14,12 @@ struct ViewerChrome: ViewModifier {
 extension View {
     func viewerChrome() -> some View { modifier(ViewerChrome()) }
 }
+
+#Preview {
+    NavigationStack { Fixtures.pageBackdrop.navigationTitle("Power plant rush").navigationBarTitleDisplayMode(.inline).viewerChrome() }
+        .themed()
+}
+#Preview("Dark") {
+    NavigationStack { Fixtures.pageBackdrop.navigationTitle("Power plant rush").navigationBarTitleDisplayMode(.inline).viewerChrome() }
+        .themed().preferredColorScheme(.dark)
+}

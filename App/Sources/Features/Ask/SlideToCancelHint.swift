@@ -11,3 +11,4 @@ struct SlideToCancelHint: View {
             .foregroundStyle(cancelArmed ? theme.colors.tint : theme.colors.secondaryLabel)
     }
 }
+

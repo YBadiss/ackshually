@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Wide screens (iPad, Mac, phone landscape): the whole answer in the standard inspector column.
 struct AnswerInspector: View {
-    @Bindable var model: ViewerModel
+    var model: ViewerModel
     var voice: AskController
     var idealWidth: CGFloat
     @Environment(\.theme) private var theme

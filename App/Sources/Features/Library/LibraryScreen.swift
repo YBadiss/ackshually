@@ -19,8 +19,8 @@ struct LibraryScreen: View {
                     LibraryToolbar(onAdd: { importing = true }, onSettings: { settings = true })
                 }
                 .themeBackground(\.groupedBackground)
-                .navigationDestination(for: GameRoute.self) { _ in
-                    ViewerScreen(model: library.viewer, voice: voice, windowSize: windowSize)
+                .navigationDestination(for: GameRoute.self) { route in
+                    ViewerScreen(model: library.session(for: route), voice: voice, windowSize: windowSize)
                 }
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { windowSize = $0 }

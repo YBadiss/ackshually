@@ -2,7 +2,7 @@ import SwiftUI
 
 /// "Follow-up" section at the end of the expanded answer / inspector.
 struct FollowUpSection: View {
-    @Bindable var model: ViewerModel
+    @Bindable var session: AnswerSession
     var voice: AskController
     @Environment(\.theme) private var theme
 
@@ -13,12 +13,12 @@ struct FollowUpSection: View {
                 .foregroundStyle(theme.colors.secondaryLabel)
                 .padding(.horizontal, theme.spacing.xl)
                 .accessibilityAddTraits(.isHeader)
-            AskField(text: $model.draft, voice: voice, placeholder: "Ask a follow-up", style: .inline, onSend: model.ask)
+            AskField(text: $session.draft, voice: voice, placeholder: "Ask a follow-up", style: .inline, onSend: session.ask)
         }
     }
 }
 
 #Preview {
-    FollowUpSection(model: Fixtures.model(), voice: AskController())
+    FollowUpSection(session: Fixtures.model().session, voice: AskController())
         .padding().themeBackground(\.sheet).themed()
 }
