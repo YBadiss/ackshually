@@ -1,0 +1,31 @@
+{
+  "configurations": [
+    {
+      "id": "ECEAD4C2-F03A-5E8A-ACCB-24FA9F5DFA42",
+      "name": "Default",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "defaultTestExecutionTimeAllowance": 120,
+    "testTimeoutsEnabled": true
+  },
+  "testTargets": [
+    {
+      "parallelizable": true,
+      "selectedTests": [
+        "LibraryUITests/testEmptyState()",
+        "LibraryUITests/testTrySampleAddsAndOpensIt()",
+        "ViewerUITests/testInspectBackToStepAndDoubleTap()",
+        "AnswerSheetUITests/testSwipeAndPeekTapStepCards()",
+        "ServerRouteUITests/testBundledTokenAnswersThroughServer()"
+      ],
+      "target": {
+        "containerPath": "container:Ackshually.xcodeproj",
+        "identifier": "6F03967B75DA5A9AA68FC47B",
+        "name": "AckshuallyUITests"
+      }
+    }
+  ],
+  "version": 1
+}

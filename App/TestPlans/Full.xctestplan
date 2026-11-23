@@ -1,0 +1,32 @@
+{
+  "configurations": [
+    {
+      "id": "5066BBA5-93CF-5263-85AA-9482EEE7FE54",
+      "name": "Default",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "defaultTestExecutionTimeAllowance": 120,
+    "testTimeoutsEnabled": true
+  },
+  "testTargets": [
+    {
+      "parallelizable": true,
+      "target": {
+        "containerPath": "container:Ackshually.xcodeproj",
+        "identifier": "7FCB7F7C2A3AB820E73E5D09",
+        "name": "AckshuallyTests"
+      }
+    },
+    {
+      "parallelizable": true,
+      "target": {
+        "containerPath": "container:Ackshually.xcodeproj",
+        "identifier": "6F03967B75DA5A9AA68FC47B",
+        "name": "AckshuallyUITests"
+      }
+    }
+  ],
+  "version": 1
+}

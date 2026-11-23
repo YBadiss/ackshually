@@ -2,9 +2,7 @@ import XCTest
 
 /// The answer route through the ackshually server, against a local stub (`StubServer`) with fake tokens
 /// injected by Debug-only launch arguments. Never the real server, never a real token.
-@MainActor
-final class ServerRouteUITests: XCTestCase {
-    private let app = XCUIApplication()
+final class ServerRouteUITests: UITestCase {
     private var stub: StubServer!
     private var pdfPath = ""
 
@@ -16,7 +14,7 @@ final class ServerRouteUITests: XCTestCase {
     ]
 
     override func setUp() async throws {
-        continueAfterFailure = false
+        try await super.setUp()
         let json = String(decoding: try JSONSerialization.data(withJSONObject: Self.answer), as: UTF8.self)
         stub = try StubServer(answerJSON: json)
         // A rulebook that isn't the sample, so the demo provider never answers it.
@@ -30,6 +28,7 @@ final class ServerRouteUITests: XCTestCase {
 
     override func tearDown() async throws {
         stub.stop()
+        try await super.tearDown()
     }
 
     /// `token` stands in for the bundled one; nil = a build without a bundled token.
@@ -40,8 +39,6 @@ final class ServerRouteUITests: XCTestCase {
         app.launchArguments = args
         app.launch()
     }
-
-    private func any(_ id: String) -> XCUIElement { app.descendants(matching: .any)[id].firstMatch }
 
     private func openMenu(_ item: String) {
         app.navigationBars.buttons["More"].firstMatch.tap()

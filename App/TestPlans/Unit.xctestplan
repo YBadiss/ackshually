@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "id": "2569679E-8D47-5D61-A786-560A056F8788",
+      "name": "Default",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "defaultTestExecutionTimeAllowance": 120,
+    "testTimeoutsEnabled": true
+  },
+  "testTargets": [
+    {
+      "parallelizable": true,
+      "target": {
+        "containerPath": "container:Ackshually.xcodeproj",
+        "identifier": "7FCB7F7C2A3AB820E73E5D09",
+        "name": "AckshuallyTests"
+      }
+    }
+  ],
+  "version": 1
+}

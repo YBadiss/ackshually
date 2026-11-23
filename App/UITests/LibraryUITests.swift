@@ -1,35 +1,18 @@
 import XCTest
 
 /// S1 · My Games: the app opens on the list of imported rulebooks. Every test starts from an
-/// empty library (`-emptyLibrary YES`) on the sample rulebook, with demo answers.
-/// Set SCREENSHOT_DIR in the test environment to save PNGs.
-@MainActor
-final class LibraryUITests: XCTestCase {
-    private let app = XCUIApplication()
+/// empty library (`-emptyLibrary YES`) on the sample rulebook, with instant demo answers. Which game keeps
+/// which answer is unit-tested (`LibraryModelTests`); these check the list, navigation and persistence.
+final class LibraryUITests: UITestCase {
     private static let sampleRow = "game-power-plant-rush.pdf"
 
-    override func setUp() async throws {
-        continueAfterFailure = false
-    }
-
     private func launch(_ args: [String]) {
-        app.launchArguments = ["-demo", "YES"] + args
+        app.launchArguments = ["-demo", "YES", "-demoPace", "0"] + args
         app.launch()
-    }
-
-    private func shot(_ name: String) {
-        let png = XCUIScreen.main.screenshot().pngRepresentation
-        let a = XCTAttachment(data: png, uniformTypeIdentifier: "public.png")
-        a.name = name; a.lifetime = .keepAlways
-        add(a)
-        if let dir = ProcessInfo.processInfo.environment["SCREENSHOT_DIR"] {
-            try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(name).png"))
-        }
     }
 
     private var listBar: XCUIElement { app.navigationBars["My Games"] }
     private var sampleRow: XCUIElement { app.buttons[Self.sampleRow] }
-    private var pdf: XCUIElement { app.descendants(matching: .any)["pdfView"].firstMatch }
 
     private func backToList() {
         app.navigationBars.buttons["My Games"].firstMatch.tap()
@@ -77,7 +60,7 @@ final class LibraryUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 3))
         field.tap()
         field.typeText("what happens to my energy at end of turn if I have the battery\n")
-        XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 8))
         app.buttons["closeAnswer"].tap()
         backToList()
         XCTAssertFalse(pdf.exists)
