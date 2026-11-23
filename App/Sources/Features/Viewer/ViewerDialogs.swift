@@ -14,7 +14,7 @@ struct ViewerDialogs: ViewModifier {
                     .themed()
             }
             .sheet(isPresented: active ? $presentation.answerDetails : .constant(false)) {
-                AnswerDetailsView(reports: model.evidenceReports, route: model.routeLabel,
+                AnswerDetailsView(reports: model.answerDetails?.evidence ?? [], route: model.routeLabel,
                                   onCopy: { UIPasteboard.general.string = model.answerDetails?.json },
                                   onDone: { presentation.answerDetails = false })
                     .themed()
@@ -23,7 +23,7 @@ struct ViewerDialogs: ViewModifier {
 }
 
 extension View {
-    func viewerDialogs(_ p: ViewerPresentation, model: ViewerModel, active: Bool) -> some View {
-        modifier(ViewerDialogs(presentation: p, model: model, active: active))
+    func viewerDialogs(model: ViewerModel, active: Bool) -> some View {
+        modifier(ViewerDialogs(presentation: model.presentation, model: model, active: active))
     }
 }

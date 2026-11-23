@@ -18,9 +18,8 @@ import SwiftUI
 /// for a moment. So the detent being left stays in the set (`stale`) until the next selection
 /// change, and the sheet glides from it to the new height.
 struct AnswerSheet: View {
-    @Bindable var model: ViewerModel
+    var model: ViewerModel
     var voice: AskController
-    var presentation: ViewerPresentation
     /// Window height, for capping the detents.
     var containerHeight: CGFloat
     /// Height of the selected detent, from the window bottom: what the sheet covers once settled
@@ -43,7 +42,7 @@ struct AnswerSheet: View {
             // The question line only shows when expanded; keep the smaller detents' sizes.
             if model.detent != .expanded, m != measured { measured = m; resize() }
         }
-        .onChange(of: model.isBusy) { resize() }
+        .onChange(of: model.session.isBusy) { resize() }
         .onChange(of: typeSize) { metrics = measured }
         .onChange(of: metrics.isSized ? coveredHeight : nil, initial: true) { _, h in onCoveredChange(h) }
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
@@ -53,11 +52,11 @@ struct AnswerSheet: View {
         .presentationDragIndicator(.visible)
         .presentationContentInteraction(.resizes)
         .interactiveDismissDisabled()
-        .viewerDialogs(presentation, model: model, active: true)
+        .viewerDialogs(model: model, active: true)
     }
 
     private func resize() {
-        let next = metrics.next(measured: measured, streaming: model.isBusy)
+        let next = metrics.next(measured: measured, streaming: model.session.isBusy)
         guard next != metrics else { return }
         let before = selected
         metrics = next

@@ -9,7 +9,8 @@ enum AnswerPhase: Equatable {
     case waiting
     case streaming
     case done
-    case failed(String)
+    /// What went wrong, and whether Settings is where to fix it.
+    case failed(AnswerFailure)
 }
 
 /// The answer as it streams in (spec §4 order) and once complete.

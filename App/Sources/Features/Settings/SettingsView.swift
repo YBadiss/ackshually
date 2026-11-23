@@ -5,15 +5,15 @@ import SwiftUI
 struct SettingsView: View {
     var status: RouteStatus
     @Binding var demo: Bool
-    var onSave: (String, CredentialStore.Item) -> Void
-    var onRemove: (CredentialStore.Item) -> Void
+    var onSave: (String, CredentialItem) -> Void
+    var onRemove: (CredentialItem) -> Void
     var onDone: () -> Void
     /// Seeded once: open when nothing is set up, so the way to fix it is on screen.
     @State private var showsDeveloper: Bool
     @Environment(\.theme) private var theme
 
-    init(status: RouteStatus, demo: Binding<Bool>, onSave: @escaping (String, CredentialStore.Item) -> Void,
-         onRemove: @escaping (CredentialStore.Item) -> Void, onDone: @escaping () -> Void) {
+    init(status: RouteStatus, demo: Binding<Bool>, onSave: @escaping (String, CredentialItem) -> Void,
+         onRemove: @escaping (CredentialItem) -> Void, onDone: @escaping () -> Void) {
         self.status = status
         _demo = demo
         self.onSave = onSave

@@ -57,7 +57,7 @@ enum Fixtures {
 
     static let tokenRejected = "The server didn't accept your access token. It may be mistyped or revoked: check it in Settings."
     static let dailyLimit = "Today's question limit is reached. Try again tomorrow."
-    static let headerFailed = HeaderContent(state: .failed(tokenRejected),
+    static let headerFailed = HeaderContent(state: .failed(AnswerFailure(message: tokenRejected, opensSettings: true)),
                                             question: "Can I keep energy?")
 
     // MARK: Cards
@@ -73,7 +73,7 @@ enum Fixtures {
     ]
 
     static let cardItems: [CardItem] = answer.steps.enumerated().map { i, s in
-        CardItem(id: .step(i), content: ViewerModel.card(s, number: i + 1))
+        CardItem(id: .step(i), content: .step(s, number: i + 1))
     } + [CardItem(id: .step(answer.steps.count), content: cardStates[3])]
 
     /// More than a card's line limit at any size: the card truncates and shows "More".
@@ -100,7 +100,7 @@ enum Fixtures {
     ]
 
     static let stepRows: [StepRow] = answer.steps.enumerated().map {
-        StepRow(index: $0, title: ViewerModel.stepTitle($1, number: $0 + 1), text: $1.text, pages: $1.evidence.map(\.page).uniqued())
+        StepRow(index: $0, title: $1.displayTitle(number: $0 + 1), text: $1.text, pages: $1.citedPages)
     }
 
     static func branchRows(active: Int?) -> [BranchRow] {
@@ -111,9 +111,15 @@ enum Fixtures {
 
     enum ModelState { case idle, streaming, answered, branch }
 
-    static func model(_ state: ModelState = .answered, detent: SheetDetent = .medium) -> ViewerModel {
-        let m = ViewerModel()
-        m.open(rulebookURL)
+    /// The sample rulebook, loaded (a fresh one per call: each session owns its documents).
+    static func rulebook() -> LoadedRulebook {
+        guard let rb = LoadedRulebook(url: rulebookURL) else { preconditionFailure("fixture rulebook at \(rulebookURL.path)") }
+        return rb
+    }
+
+    static func model(_ state: ModelState = .answered, detent: SheetDetent = .medium,
+                      dependencies: AppDependencies = .preview) -> ViewerModel {
+        let m = ViewerModel(rulebook: rulebook(), providers: dependencies.providers)
         var live = LiveAnswer(question: "what happens to my energy at end of turn if I have the battery", answer: answer)
         switch state {
         case .idle:
@@ -126,7 +132,7 @@ enum Fixtures {
             m.present(live, phase: .done)
         case .branch:
             m.present(live, phase: .done)
-            m.selectBranch(0)
+            m.navigator.selectBranch(0)
         }
         m.detent = detent
         return m

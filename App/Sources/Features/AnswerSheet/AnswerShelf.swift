@@ -2,17 +2,17 @@ import SwiftUI
 
 /// Step cards + page dots (S5/S6).
 struct AnswerShelf: View {
-    @Bindable var model: ViewerModel
+    var model: ViewerModel
     @Environment(\.theme) private var theme
 
     var body: some View {
-        let items = model.cardItems
+        let items = model.navigator.cardItems
         if !items.isEmpty {
             VStack(spacing: theme.spacing.m) {
-                StepCarousel(items: items, selection: $model.cardID, onMore: showMore)
+                StepCarousel(items: items, selection: Bindable(model.navigator).cardID, onMore: showMore)
                     // Fresh measurements (shelf height) per answer and per branch.
-                    .id(ShelfKey(answer: model.answer?.id, branch: model.activeBranch))
-                CardDots(count: items.count, index: items.firstIndex { $0.id == model.currentCard } ?? 0)
+                    .id(ShelfKey(answer: model.session.answer?.id, branch: model.navigator.activeBranch))
+                CardDots(count: items.count, index: items.firstIndex { $0.id == model.navigator.currentCard } ?? 0)
             }
         }
     }

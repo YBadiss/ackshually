@@ -18,6 +18,9 @@ enum AnswerRoute: Equatable, Sendable, CustomStringConvertible {
             case .demo: "Demo answers"
             }
         }
+
+        /// Answer Details' "Answered by" row.
+        func label(serverHost: String) -> String { self == .server ? "\(title) · \(serverHost)" : title }
     }
 
     /// Precedence: bundled token → server; otherwise a developer token override → server; otherwise an API
