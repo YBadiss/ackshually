@@ -6,7 +6,8 @@ import PDFKit
 /// - wide (iPad, Mac): the answer in the standard inspector column beside the PDF; phone landscape
 ///   (compact width) gets the same content as a trailing column
 /// Also owns the floating chrome over the PDF (ask field, "Back to Step N") and tells the PDF
-/// how much of it the sheet / field covers, once the sheet has settled.
+/// how much of it the sheet / field covers: the sheet's target detent height, so the PDF moves
+/// together with the sheet instead of waiting for it to settle.
 struct AdaptiveViewerLayout: View {
     @Bindable var model: ViewerModel
     var voice: AskController
@@ -18,7 +19,8 @@ struct AdaptiveViewerLayout: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.displayScale) private var displayScale
     @State private var container = Container()
-    @State private var sheetTop: CGFloat?
+    /// Height of the answer sheet's selected detent (nil while it isn't presented or not yet measured).
+    @State private var sheetCovered: CGFloat?
     @State private var askHeight: CGFloat = 0
     /// Height of the quote pager + highlight note over the PDF (keeps evidence below them).
     @State private var overlayHeight: CGFloat = 0
@@ -26,12 +28,10 @@ struct AdaptiveViewerLayout: View {
 
     struct Container: Equatable {
         var size: CGSize = .zero
-        /// Global y of the window's bottom edge (below the home indicator).
-        var bottom: CGFloat = 0
         var safeBottom: CGFloat = 0
     }
 
-    private struct Settle: Equatable {
+    private struct VisibleArea: Equatable {
         var covered: CGFloat
         var size: CGSize
     }
@@ -46,9 +46,11 @@ struct AdaptiveViewerLayout: View {
     private var sheetPresented: Bool { measured && model.sheetVisible && !wide }
     private var showsAskField: Bool { !model.sheetVisible }
 
-    /// What covers the bottom of the PDF right now (may move while the sheet is dragged).
+    /// What covers the bottom of the PDF: the sheet's selected detent (not its live edge, so a
+    /// drag doesn't re-center until it lands on a detent), or the ask field.
     private var liveCovered: CGFloat {
-        if sheetPresented, let top = sheetTop { return max(container.bottom - top, 0) }
+        // Until the sheet has measured its detents, keep what was covered before.
+        if sheetPresented { return sheetCovered ?? covered }
         if showsAskField { return askHeight + container.safeBottom }
         return 0
     }
@@ -62,7 +64,7 @@ struct AdaptiveViewerLayout: View {
                 floatingControls
             }
             .onGeometryChange(for: Container.self) {
-                Container(size: $0.size, bottom: $0.frame(in: .global).maxY + $0.safeAreaInsets.bottom, safeBottom: $0.safeAreaInsets.bottom)
+                Container(size: $0.size, safeBottom: $0.safeAreaInsets.bottom)
             } action: { container = $0 }
             if columnPresented {
                 Rectangle().fill(theme.colors.chromeSeparator).frame(width: 1 / displayScale).ignoresSafeArea()
@@ -77,20 +79,19 @@ struct AdaptiveViewerLayout: View {
                 .accessibilityHidden(true)
         }
         .animation(theme.sheetAnimation, value: columnPresented)
-        // Re-center only once the sheet (or the inspector, a rotation) stops moving.
-        .task(id: Settle(covered: liveCovered, size: container.size)) {
-            try? await Task.sleep(for: theme.layout.sheetSettleDelay)
-            guard !Task.isCancelled else { return }
-            covered = liveCovered
+        // Re-center when what covers the PDF changes (detent, ask field, rotation). No delayed
+        // retry: the target detent height is known up front, so the PDF animates with the sheet.
+        .onChange(of: VisibleArea(covered: liveCovered, size: container.size)) { _, area in
+            covered = area.covered
             model.visibleAreaChanged()
         }
         .onChange(of: sheetPresented, initial: true) { _, p in
             presentation.answerSheetPresented = p
-            if !p { sheetTop = nil }
+            if !p { sheetCovered = nil }
         }
         .sheet(isPresented: sheetBinding) {
             AnswerSheet(model: model, voice: voice, presentation: presentation,
-                        containerHeight: container.size.height + container.safeBottom) { sheetTop = $0 }
+                        containerHeight: container.size.height + container.safeBottom) { sheetCovered = $0 }
                 .themed()
         }
         .inspector(isPresented: inspectorBinding) {

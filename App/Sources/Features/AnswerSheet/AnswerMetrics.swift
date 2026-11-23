@@ -11,10 +11,9 @@ struct AnswerMetrics: Equatable {
     var isSized: Bool { collapsed > 0 && medium > collapsed }
 
     /// The heights the sheet should use next, given the latest `measured` content: frozen while
-    /// the answer streams once sized, and otherwise only growing, so the sheet never shrinks
-    /// under the reader (it used to re-measure on every streamed event and jump).
+    /// the answer streams once sized (it used to re-measure on every streamed event and jump), and
+    /// fitted to the content otherwise, so a finished answer settles once to its real size.
     func next(measured: AnswerMetrics, streaming: Bool) -> AnswerMetrics {
-        if streaming, isSized { return self }
-        return AnswerMetrics(collapsed: max(collapsed, measured.collapsed), medium: max(medium, measured.medium))
+        streaming && isSized ? self : measured
     }
 }

@@ -2,13 +2,12 @@ import XCTest
 @testable import Ackshually
 
 /// The sheet's detent heights (owner, 2026-11-22: "the panel hides and reappears" while an
-/// answer streams): frozen while streaming once sized, then grow-only.
+/// answer streams): frozen while streaming once sized, then fitted to the finished content.
 final class AnswerMetricsTests: XCTestCase {
     private let sized = AnswerMetrics(collapsed: 120, medium: 400)
 
     func testFirstMeasurementIsTakenWhileStreaming() {
-        let m = AnswerMetrics().next(measured: sized, streaming: true)
-        XCTAssertEqual(m, sized)
+        XCTAssertEqual(AnswerMetrics().next(measured: sized, streaming: true), sized)
     }
 
     func testFrozenWhileStreaming() {
@@ -17,10 +16,12 @@ final class AnswerMetricsTests: XCTestCase {
         XCTAssertEqual(sized.next(measured: AnswerMetrics(collapsed: 140, medium: 460), streaming: true), sized)
     }
 
-    func testOnlyGrowsOnceDone() {
-        XCTAssertEqual(sized.next(measured: AnswerMetrics(collapsed: 100, medium: 330), streaming: false), sized)
-        XCTAssertEqual(sized.next(measured: AnswerMetrics(collapsed: 100, medium: 450), streaming: false),
-                       AnswerMetrics(collapsed: 120, medium: 450))
+    func testFitsContentOnceDone() {
+        // Loading card gone (shorter) or branch rows in (taller): follow the content.
+        let shorter = AnswerMetrics(collapsed: 100, medium: 330)
+        let taller = AnswerMetrics(collapsed: 100, medium: 450)
+        XCTAssertEqual(sized.next(measured: shorter, streaming: false), shorter)
+        XCTAssertEqual(sized.next(measured: taller, streaming: false), taller)
     }
 
     func testPartialMeasurementKeepsMeasuringWhileStreaming() {

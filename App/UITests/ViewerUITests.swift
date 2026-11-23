@@ -149,6 +149,9 @@ final class ViewerUITests: XCTestCase {
         XCTAssertGreaterThan(field.frame.minY, carousel.frame.maxY)
         shot("s6-last-card")
         field.tap()
+        // On a loaded simulator the keyboard can take a moment to take focus; typing earlier fails
+        // with "Neither element nor any descendant has keyboard focus".
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         field.typeText("And with two Batteries?\n")
         XCTAssertTrue(app.buttons["stop"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 12))
@@ -436,9 +439,35 @@ final class ViewerUITests: XCTestCase {
         let tops = settled.map(\.top)
         let ref = tops.first ?? 0
         XCTAssertTrue(tops.allSatisfy { abs($0 - ref) <= 1 }, "sheet top moved while streaming: \(tops.map { Int($0) })")
-        // Once complete it may grow once to fit late content (branches), but never shrinks or hides.
-        XCTAssertTrue(after.allSatisfy { $0.exists && $0.top <= ref + 1 }, "after completion: \(after.map { Int($0.top) })")
+        // Once complete it settles once to the finished content (branch rows in, the loading card's
+        // reserved height out): one move in one direction, never hidden, no dip and bounce back.
+        let path = [ref] + after.map(\.top)
+        XCTAssertTrue(after.allSatisfy(\.exists), "the sheet never disappears after completion")
+        let steps = zip(path, path.dropFirst()).map { $1 - $0 }.filter { abs($0) > 1 }
+        XCTAssertTrue(steps.allSatisfy { $0 > 0 } || steps.allSatisfy { $0 < 0 },
+                      "after completion the sheet moves once, one way: \(path.map { Int($0) })")
         shot("streamed-medium")
+    }
+
+    /// Once a streamed answer is complete the cards fit their content again (equal height across
+    /// the shelf): the loading card's reserved height only holds while streaming.
+    func testCardsFitContentAfterStreaming() throws {
+        let path = try demoAnswer(verdict: "Discard it.", steps: [
+            ("Rule", "Unused energy is discarded.", 3, Self.goodQuote),
+            ("Battery", "A Battery keeps 2.", 4, "keeps up to 2 unused energy instead of discarding them"),
+        ])
+        launch(["-ask", "What happens to unused energy?", "-demoAnswer", path])
+        let loading = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@ AND label == %@", "stepCard", "Next step loading")).firstMatch
+        XCTAssertTrue(loading.waitForExistence(timeout: 8))
+        let placeholder = loading.frame.height
+        XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 12))
+        sleep(1)
+        let cards = app.descendants(matching: .any).matching(identifier: "stepCard").allElementsBoundByIndex
+        XCTAssertEqual(cards.count, 2)
+        let heights = cards.map { $0.frame.height }
+        XCTAssertEqual(Set(heights.map { Int($0.rounded()) }).count, 1, "equal heights: \(heights)")
+        XCTAssertLessThan(heights[0], placeholder * 0.75, "card \(heights[0]) fits its 1-line text, not the placeholder \(placeholder)")
+        shot("cards-fit-after-streaming")
     }
 
     /// The sheet's content sits inside standard margins: the verdict and the close button clear the
