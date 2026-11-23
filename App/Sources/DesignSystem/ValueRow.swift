@@ -40,3 +40,16 @@ struct ValueRow: View {
         .contentShape(.rect)
     }
 }
+
+#Preview {
+    List {
+        ValueRow(title: "Model", value: "claude-sonnet-5-5")
+        ValueRow(title: "Demo Answers", systemImage: "sparkles", accessory: .checkmark)
+        ValueRow(title: "Plain", accessory: .none)
+    }
+    .themed()
+}
+#Preview("AX5, dark") {
+    List { ValueRow(title: "Evidence", systemImage: "quote.opening", value: "JSON quotes") }
+        .themed().dynamicTypeSize(.accessibility5).preferredColorScheme(.dark)
+}

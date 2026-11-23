@@ -25,3 +25,18 @@ struct ViewerMenu: ToolbarContent {
         }
     }
 }
+
+#Preview("Answer hidden, demo") {
+    NavigationStack {
+        Fixtures.pageBackdrop.navigationTitle("Power plant rush").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ViewerMenu(hasAnswer: true, answerShown: false, isDemo: true, onShowAnswer: {}, onDetails: {}) }
+    }
+    .themed()
+}
+#Preview("No answer") {
+    NavigationStack {
+        Fixtures.pageBackdrop.navigationTitle("Power plant rush")
+            .toolbar { ViewerMenu(hasAnswer: false, answerShown: false, isDemo: false, onShowAnswer: {}, onDetails: {}) }
+    }
+    .themed()
+}

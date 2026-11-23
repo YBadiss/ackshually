@@ -11,3 +11,12 @@ struct SlideToCancelHint: View {
             .foregroundStyle(cancelArmed ? theme.colors.tint : theme.colors.secondaryLabel)
     }
 }
+
+#Preview {
+    VStack(spacing: 16) {
+        SlideToCancelHint(cancelArmed: false)
+        SlideToCancelHint(cancelArmed: true)
+    }
+    .padding().themed()
+}
+#Preview("AX5, dark") { SlideToCancelHint(cancelArmed: true).padding().themed().dynamicTypeSize(.accessibility5).preferredColorScheme(.dark) }

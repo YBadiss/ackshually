@@ -29,3 +29,16 @@ struct CardCaption: View {
         if let trailing { Text(trailing).monospacedDigit() }
     }
 }
+
+#Preview {
+    VStack(alignment: .leading, spacing: 16) {
+        CardCaption(title: "1 · General rule", trailing: "p.3")
+        CardCaption(title: "2 · Scoring track", trailing: "p.4", systemImage: "photo")
+        CardCaption(title: "Designer", trailing: "bgg.com · 2021")
+    }
+    .padding().themed()
+}
+#Preview("AX5, dark") {
+    CardCaption(title: "1 · General rule", trailing: "p.3, p.4").padding().themed()
+        .dynamicTypeSize(.accessibility5).preferredColorScheme(.dark)
+}

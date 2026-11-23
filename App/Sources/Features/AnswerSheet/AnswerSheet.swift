@@ -116,3 +116,20 @@ struct AnswerSheet: View {
         }
     }
 }
+
+/// The system sheet over a page backdrop, at its measured detents.
+private struct AnswerSheetPreview: View {
+    var model: ViewerModel
+    var body: some View {
+        Fixtures.pageBackdrop
+            .sheet(isPresented: .constant(true)) {
+                AnswerSheet(model: model, voice: AskController(), containerHeight: 874) { _ in }.themed()
+            }
+    }
+}
+
+#Preview("Medium") { AnswerSheetPreview(model: Fixtures.model()).themed() }
+#Preview("Streaming") { AnswerSheetPreview(model: Fixtures.model(.streaming)).themed() }
+#Preview("Collapsed") { AnswerSheetPreview(model: Fixtures.model(detent: .collapsed)).themed() }
+#Preview("Branch, dark") { AnswerSheetPreview(model: Fixtures.model(.branch)).themed().preferredColorScheme(.dark) }
+#Preview("AX5") { AnswerSheetPreview(model: Fixtures.model()).themed().dynamicTypeSize(.accessibility5) }
