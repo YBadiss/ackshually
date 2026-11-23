@@ -62,7 +62,6 @@ final class CountingPlacer: Sendable {
     private let counts = Mutex<[String: Int]>([:])
 
     func count(_ e: Evidence) -> Int { counts.withLock { $0[HighlightStore.key(e)] ?? 0 } }
-    var total: Int { counts.withLock { $0.values.reduce(0, +) } }
 
     var place: HighlightStore.Placer {
         { [self] e in

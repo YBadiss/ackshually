@@ -44,7 +44,7 @@ struct StepCarousel: View {
                             if item.id != current { withAnimation(.snappy) { selection = item.id } }
                         }
                         .accessibilityAction(named: "Show") { selection = item.id }
-                        .accessibilityLabel(Self.accessibilityLabel(item, of: items.count))
+                        .accessibilityLabel(Self.accessibilityLabel(item))
                         .accessibilityIdentifier("stepCard")
                         .id(item.id)
                 }
@@ -62,7 +62,7 @@ struct StepCarousel: View {
 }
 
 extension StepCarousel {
-    static func accessibilityLabel(_ item: CardItem, of count: Int) -> String {
+    static func accessibilityLabel(_ item: CardItem) -> String {
         switch item.content {
         case let .step(n, title, pages, text, _):
             "Step \(n), \(title)\(pages.isEmpty ? "" : ", page \(pages.map(String.init).joined(separator: ", "))"). \(text)"

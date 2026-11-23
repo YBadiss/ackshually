@@ -1,48 +1,5 @@
 import Foundation
 
-// MARK: - Library
-
-/// A game owns one or more documents (rulebook, later expansions / FAQ). UI shows one for now.
-public struct Game: Codable, Sendable, Identifiable, Hashable {
-    public var id: UUID
-    public var name: String
-    public var documents: [Document]
-
-    public init(id: UUID = UUID(), name: String, documents: [Document]) {
-        self.id = id
-        self.name = name
-        self.documents = documents
-    }
-}
-
-public struct Document: Codable, Sendable, Identifiable, Hashable {
-    public var id: UUID
-    public var title: String
-    /// Local file URL of the PDF.
-    public var fileURL: URL
-
-    public init(id: UUID = UUID(), title: String, fileURL: URL) {
-        self.id = id
-        self.title = title
-        self.fileURL = fileURL
-    }
-}
-
-/// One game night: a conversation of questions/answers that carry context.
-public struct Session: Codable, Sendable, Identifiable {
-    public var id: UUID
-    public var gameID: UUID
-    public var startedAt: Date
-    public var turns: [Turn]
-
-    public init(id: UUID = UUID(), gameID: UUID, startedAt: Date = Date(), turns: [Turn] = []) {
-        self.id = id
-        self.gameID = gameID
-        self.startedAt = startedAt
-        self.turns = turns
-    }
-}
-
 /// A question plus what came back. `rawAssistantText` is what gets replayed as conversation context.
 public struct Turn: Codable, Sendable {
     public var question: String
