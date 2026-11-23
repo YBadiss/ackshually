@@ -5,6 +5,8 @@ struct SettingsSheet: View {
     var onDone: () -> Void
     @Environment(\.dependencies) private var dependencies
 
+    // The model built here is only kept the first time (`@State` below); later ones are dropped. The sheet's
+    // body rarely re-runs (environment changes), and building one only reads the credentials.
     var body: some View {
         SettingsSheetContent(model: SettingsModel(credentials: dependencies.credentials, settings: dependencies.settings),
                              onDone: onDone)

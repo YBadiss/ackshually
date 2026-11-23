@@ -422,7 +422,7 @@ Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `S
 | **Features/Settings/** `SettingsView`, `SettingsSheet` | dev | default, dark AX5 |
 | **Model/** `ViewerModel` (coordinator), `AnswerSession`, `CardNavigator`, `HighlightStore`, `PDFFocusModel`, `ViewerPresentation`, `SettingsModel`, `LibraryModel`, `AnswerState`, `ViewContent`, `HighlightPlacer`, `AskController`, `GameRoute`, `CredentialItem` | — | unit tests |
 | **Services/** `Dependencies/` (`AppDependencies` and the four protocols with their live implementations), `DemoProvider`, `CredentialStore`/`Keychain`, `ServerConfig`, `Library` (folder, `library.json`, migration), `CoverCache`, `SpeechInput` | — | — |
-| **Preview Content/** `Fixtures`, `LibraryFixtures`, `InMemoryDependencies` | — | — |
+| **Preview Content/** `Fixtures`, `LibraryFixtures`, `InMemoryDependencies` (+ `InMemoryCredentials`, `InMemorySettings`, `InMemoryLibraryStorage`) | — | — |
 
 ## Known gaps / next
 

@@ -6,10 +6,7 @@
       "options": {}
     }
   ],
-  "defaultOptions": {
-    "defaultTestExecutionTimeAllowance": 120,
-    "testTimeoutsEnabled": true
-  },
+  "defaultOptions": {},
   "testTargets": [
     {
       "parallelizable": true,

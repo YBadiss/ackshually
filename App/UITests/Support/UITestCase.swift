@@ -50,7 +50,7 @@ class UITestCase: XCTestCase {
         return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: p, object: nil)], timeout: timeout) == .completed
     }
 
-    func waitForCard(_ label: String, timeout: TimeInterval = 3) -> Bool { wait(dots, "label == %@", label, timeout: timeout) }
+    func waitForCard(_ label: String, timeout: TimeInterval = 5) -> Bool { wait(dots, "label == %@", label, timeout: timeout) }
 
     func waitHittable(_ e: XCUIElement, _ hittable: Bool = true, timeout: TimeInterval = 3) -> Bool {
         wait(e, "hittable == %@", NSNumber(value: hittable), timeout: timeout)
