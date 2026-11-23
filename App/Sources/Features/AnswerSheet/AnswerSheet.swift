@@ -3,13 +3,14 @@ import SwiftUI
 /// The answer on compact screens: a system sheet (S5/S7/S9) with three detents sized from the
 /// content (collapsed = verdict + proof line, medium = + step cards and branches, large = all),
 /// background interaction up to medium so the PDF stays pinchable and pannable under it, and no
-/// swipe-to-dismiss (the header's close button closes). Reports its top edge so the PDF can
-/// center evidence in the part of the page that is still visible.
+/// swipe-to-dismiss (the header's close button closes). Reports the height of the detent it is
+/// on (or heading to) so the PDF can center evidence in the part of the page that stays visible,
+/// moving together with the sheet instead of after it settles.
 ///
 /// The detent heights hold still while an answer streams: they are taken from the first layout
 /// (header + loading card + follow-up row, all laid out from the first token) and frozen until the
-/// answer is done; after that they only grow (late content such as branch rows), never shrink,
-/// while the sheet is up. Re-measuring on every streamed event made the sheet shrink under the
+/// answer is done; then they fit the finished content once (late branch rows in, the loading
+/// card's reserved height out), animated. Re-measuring on every streamed event made the sheet shrink under the
 /// verdict and grow back each time (owner, 2026-11-22: "the panel hides and reappears").
 ///
 /// A height change also changes the detent's identity (`.height(x)`): if the sheet sits on the
@@ -22,11 +23,13 @@ struct AnswerSheet: View {
     var presentation: ViewerPresentation
     /// Window height, for capping the detents.
     var containerHeight: CGFloat
-    var onTopChange: (CGFloat) -> Void
+    /// Height of the selected detent, from the window bottom: what the sheet covers once settled
+    /// (nil until both detents are measured).
+    var onCoveredChange: (CGFloat?) -> Void
     @Environment(\.theme) private var theme
     /// Latest content heights.
     @State private var measured = AnswerMetrics()
-    /// Heights the detents use: frozen while streaming, grow-only otherwise.
+    /// Heights the detents use: frozen while streaming, fitted to the content otherwise.
     @State private var metrics = AnswerMetrics()
     @Environment(\.dynamicTypeSize) private var typeSize
     /// Home-indicator inset at the bottom of the sheet: content heights don't include it, so the
@@ -42,7 +45,7 @@ struct AnswerSheet: View {
         }
         .onChange(of: model.isBusy) { resize() }
         .onChange(of: typeSize) { metrics = measured }
-        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { onTopChange($0) }
+        .onChange(of: metrics.isSized ? coveredHeight : nil, initial: true) { _, h in onCoveredChange(h) }
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
         .presentationDetents(detents, selection: selection)
         .presentationBackgroundInteraction(.enabled(upThrough: medium))
@@ -58,7 +61,9 @@ struct AnswerSheet: View {
         guard next != metrics else { return }
         let before = selected
         metrics = next
-        if selected != before { stale = before }
+        // Keep the detent the sheet actually sits on: if two changes land before the sheet moves,
+        // the first one's starting detent is still the one on screen.
+        if selected != before, stale == nil { stale = before }
     }
 
     private var selected: PresentationDetent {
@@ -69,16 +74,32 @@ struct AnswerSheet: View {
         }
     }
 
-    private var collapsed: PresentationDetent {
-        guard metrics.collapsed > 0 else { return .fraction(0.22) }
-        let h = metrics.collapsed + theme.spacing.s + bottomInset
-        return .height(min(h, containerHeight * theme.layout.sheetCollapsedMaxFraction))
+    /// Fallback before the first measurement.
+    private static let unmeasuredFraction: CGFloat = 0.22
+
+    private var collapsedHeight: CGFloat {
+        guard metrics.collapsed > 0 else { return containerHeight * Self.unmeasuredFraction }
+        return min(metrics.collapsed + theme.spacing.s + bottomInset, containerHeight * theme.layout.sheetCollapsedMaxFraction)
     }
 
     /// Same as collapsed until there is more than the header (S4: before the cards arrive).
+    private var mediumHeight: CGFloat {
+        guard metrics.medium > metrics.collapsed + theme.spacing.xl else { return collapsedHeight }
+        return min(metrics.medium + bottomInset, containerHeight * theme.layout.sheetMediumMaxFraction)
+    }
+
+    private var collapsed: PresentationDetent {
+        metrics.collapsed > 0 ? .height(collapsedHeight) : .fraction(Self.unmeasuredFraction)
+    }
+
     private var medium: PresentationDetent {
-        guard metrics.medium > metrics.collapsed + theme.spacing.xl else { return collapsed }
-        return .height(min(metrics.medium + bottomInset, containerHeight * theme.layout.sheetMediumMaxFraction))
+        metrics.medium > metrics.collapsed + theme.spacing.xl ? .height(mediumHeight) : collapsed
+    }
+
+    /// The large detent hides the PDF: keep it framed for medium, where the sheet comes back to,
+    /// instead of re-centering it into the sliver above a full-height sheet.
+    private var coveredHeight: CGFloat {
+        model.detent == .collapsed ? collapsedHeight : mediumHeight
     }
 
     private var detents: Set<PresentationDetent> {
