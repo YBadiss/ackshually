@@ -32,6 +32,6 @@ cd Server && npm test                                  # server tests (fake upst
 cd evals && ./compare.sh                               # model / evidence-mode comparison
 App/bootstrap.sh                                       # generate the Xcode project (brew install xcodegen); again after pulls
 open App/Ackshually.xcodeproj                          # iOS app (no key → demo answers; My Games → Try the Sample)
-xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -testPlan Smoke
-                                                       # test plans: Unit, Smoke, Viewer, AnswerSheet, Library, Server, Full (see CLAUDE.md)
+xcodebuild test -project App/Ackshually.xcodeproj -scheme Ackshually -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -testPlan Unit
+                                                       # test plans: Unit (unit, layout, snapshots), Smoke, Full (see CLAUDE.md)
 ```

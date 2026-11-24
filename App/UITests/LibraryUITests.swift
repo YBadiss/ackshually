@@ -1,8 +1,8 @@
 import XCTest
 
-/// S1 · My Games: the app opens on the list of imported rulebooks. Every test starts from an
-/// empty library (`-emptyLibrary YES`) on the sample rulebook, with instant demo answers. Which game keeps
-/// which answer is unit-tested (`LibraryModelTests`); these check the list, navigation and persistence.
+/// S1 · My Games: navigation from the list into a game and back, on the running app. Adding, deleting
+/// and what a relaunch shows are unit-tested (`LibraryModelTests`), the empty state and the list's looks
+/// in-process (`ViewerLayoutTests`, `ScreenSnapshotTests`).
 final class LibraryUITests: UITestCase {
     private static let sampleRow = "game-power-plant-rush.pdf"
 
@@ -19,43 +19,15 @@ final class LibraryUITests: UITestCase {
         XCTAssertTrue(app.buttons["addRulebook"].waitForExistence(timeout: 3))
     }
 
-    func testEmptyState() {
+    /// Empty list → Try the Sample opens the new game; ask, go back to the list (the game is in it),
+    /// open it again: the same game resumes with its answer.
+    func testTrySampleOpenGoBackAndResume() {
         launch(["-emptyLibrary", "YES"])
         XCTAssertTrue(listBar.waitForExistence(timeout: 5), "the app opens on My Games")
-        XCTAssertTrue(app.staticTexts["No Games Yet"].exists)
-        XCTAssertTrue(app.buttons["emptyAddRulebook"].exists)
-        XCTAssertTrue(app.buttons["trySample"].exists)
-        XCTAssertTrue(app.buttons["addRulebook"].exists, "Add a Rulebook is also in the toolbar")
-        XCTAssertTrue(app.buttons["settings"].exists, "Settings moved to the list's toolbar")
-        shot("01-empty")
-        app.buttons["settings"].tap()
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3))
-    }
-
-    func testTrySampleAddsAndOpensIt() {
-        launch(["-emptyLibrary", "YES"])
         XCTAssertTrue(app.buttons["trySample"].waitForExistence(timeout: 5))
         app.buttons["trySample"].tap()
-        // Opens the new game right away…
         XCTAssertTrue(pdf.waitForExistence(timeout: 5))
         XCTAssertTrue(app.navigationBars["Power plant rush"].exists)
-        shot("03-viewer-from-list")
-        // …and it is in the list behind it.
-        backToList()
-        XCTAssertTrue(sampleRow.waitForExistence(timeout: 3))
-        XCTAssertTrue(sampleRow.label.contains("Power plant rush"))
-        XCTAssertTrue(sampleRow.label.contains("Opened"), "row shows when it was last used: \(sampleRow.label)")
-        XCTAssertFalse(app.staticTexts["No Games Yet"].exists)
-    }
-
-    func testOpenGameAndGoBack() {
-        launch(["-emptyLibrary", "YES", "-seedSample", "YES"])
-        XCTAssertTrue(sampleRow.waitForExistence(timeout: 5))
-        sleep(1)  // let the cover render
-        shot("02-list")
-        sampleRow.tap()
-        XCTAssertTrue(pdf.waitForExistence(timeout: 5))
-        // Ask, go back, come back: the same game resumes with its answer.
         let field = app.textFields["askField"]
         XCTAssertTrue(field.waitForExistence(timeout: 3))
         field.tap()
@@ -64,47 +36,13 @@ final class LibraryUITests: UITestCase {
         app.buttons["closeAnswer"].tap()
         backToList()
         XCTAssertFalse(pdf.exists)
+        XCTAssertTrue(sampleRow.waitForExistence(timeout: 3))
+        XCTAssertTrue(sampleRow.label.contains("Opened"), "row shows when it was last used: \(sampleRow.label)")
+        shot("02-list")
         sampleRow.tap()
         XCTAssertTrue(pdf.waitForExistence(timeout: 5))
         app.navigationBars.buttons["More"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Show Answer"].waitForExistence(timeout: 2), "the answer is still there")
         XCTAssertFalse(app.buttons["Settings"].exists, "Settings lives on My Games, not the viewer's ⋯")
-    }
-
-    func testSwipeToDelete() {
-        launch(["-emptyLibrary", "YES", "-seedSample", "YES"])
-        XCTAssertTrue(sampleRow.waitForExistence(timeout: 5))
-        sampleRow.swipeLeft()
-        let delete = app.buttons["Delete"]
-        XCTAssertTrue(delete.waitForExistence(timeout: 2))
-        shot("04-swipe-delete")
-        delete.tap()
-        XCTAssertTrue(sampleRow.waitForNonExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["No Games Yet"].waitForExistence(timeout: 2))
-        // Deleted for good: still gone after a relaunch.
-        app.terminate()
-        launch([])
-        XCTAssertTrue(app.staticTexts["No Games Yet"].waitForExistence(timeout: 5))
-        XCTAssertFalse(sampleRow.exists)
-    }
-
-    func testRelaunchOpensOnListWithGame() {
-        launch(["-emptyLibrary", "YES"])
-        XCTAssertTrue(app.buttons["trySample"].waitForExistence(timeout: 5))
-        app.buttons["trySample"].tap()
-        XCTAssertTrue(pdf.waitForExistence(timeout: 5))
-        // Relaunch while the viewer is open: the app opens on the list, not the last rulebook.
-        app.terminate()
-        launch([])
-        XCTAssertTrue(listBar.waitForExistence(timeout: 5))
-        XCTAssertTrue(sampleRow.waitForExistence(timeout: 3))
-        XCTAssertFalse(pdf.exists)
-    }
-
-    func testLaunchArgumentDocumentPushesOverListWithoutJoiningIt() {
-        launch(["-emptyLibrary", "YES", "-sample", "YES"])
-        XCTAssertTrue(pdf.waitForExistence(timeout: 5))
-        backToList()
-        XCTAssertTrue(app.staticTexts["No Games Yet"].exists, "-sample is not added to My Games")
     }
 }

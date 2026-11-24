@@ -10,10 +10,6 @@ class UITestCase: XCTestCase {
         continueAfterFailure = false
     }
 
-    override func tearDown() async throws {
-        XCUIDevice.shared.orientation = .portrait
-    }
-
     /// The sample rulebook with demo answers, instant by default (`-demoPace 0`: the whole answer at once).
     func launchSample(_ args: [String], pace: Double = 0) {
         app.launchArguments = ["-sample", "YES", "-demo", "YES", "-demoPace", "\(pace)"] + args
@@ -43,13 +39,6 @@ class UITestCase: XCTestCase {
         return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: p, object: element)], timeout: timeout) == .completed
     }
 
-    /// Waits until `condition` holds (frames, counts: what a format predicate can't read).
-    @discardableResult
-    func eventually(timeout: TimeInterval = 3, _ condition: @escaping () -> Bool) -> Bool {
-        let p = NSPredicate { _, _ in MainActor.assumeIsolated { condition() } }
-        return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: p, object: nil)], timeout: timeout) == .completed
-    }
-
     func waitForCard(_ label: String, timeout: TimeInterval = 5) -> Bool { wait(dots, "label == %@", label, timeout: timeout) }
 
     func waitHittable(_ e: XCUIElement, _ hittable: Bool = true, timeout: TimeInterval = 3) -> Bool {
@@ -63,25 +52,19 @@ class UITestCase: XCTestCase {
         start.press(forDuration: 0.05, thenDragTo: end)
     }
 
-    /// Writes a spec §4 answer for `-demoAnswer` (the sample rulebook's pages 3–4 hold the quotes).
-    func demoAnswer(verdict: String, steps: [(title: String, text: String, evidence: [(page: Int, quote: String)])],
-                    branches: [(condition: String, verdict: String)] = []) throws -> String {
+    /// Writes a spec §4 answer for `-demoAnswer`, one passage per step (the sample rulebook's pages
+    /// 3–4 hold the quotes).
+    func demoAnswer(verdict: String, steps: [(title: String, text: String, page: Int, quote: String)]) throws -> String {
         let json: [String: Any] = [
             "restated_question": "What happens to unused energy?", "verdict": verdict, "confidence": "stated",
             "steps": steps.map { s in
-                ["title": s.title, "text": s.text, "evidence": s.evidence.map { ["page": $0.page, "quote": $0.quote, "box": NSNull()] }]
+                ["title": s.title, "text": s.text, "evidence": [["page": s.page, "quote": s.quote, "box": NSNull()]]]
             },
-            "branches": branches.map { ["condition": $0.condition, "verdict": $0.verdict, "steps": []] }, "assumptions": [], "needs_web": false,
+            "branches": [], "assumptions": [], "needs_web": false,
         ]
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("demo-\(UUID().uuidString).json")
         try JSONSerialization.data(withJSONObject: json).write(to: url)
         return url.path
-    }
-
-    /// One passage per step.
-    func demoAnswer(verdict: String, steps: [(title: String, text: String, page: Int, quote: String)],
-                    branches: [(condition: String, verdict: String)] = []) throws -> String {
-        try demoAnswer(verdict: verdict, steps: steps.map { ($0.title, $0.text, [($0.page, $0.quote)]) }, branches: branches)
     }
 
     static let goodQuote = "you must discard all unused energy"

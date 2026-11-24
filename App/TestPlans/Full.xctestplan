@@ -9,7 +9,7 @@
   "defaultOptions": {},
   "testTargets": [
     {
-      "parallelizable": true,
+      "parallelizable": false,
       "target": {
         "containerPath": "container:Ackshually.xcodeproj",
         "identifier": "7FCB7F7C2A3AB820E73E5D09",
@@ -17,7 +17,7 @@
       }
     },
     {
-      "parallelizable": true,
+      "parallelizable": false,
       "target": {
         "containerPath": "container:Ackshually.xcodeproj",
         "identifier": "6F03967B75DA5A9AA68FC47B",

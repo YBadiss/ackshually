@@ -1,18 +1,21 @@
 import XCTest
 
-/// The answer sheet on screen (S4–S9): detents and dragging, card gestures, layout and margins, the
-/// streaming sheet holding still. Answer logic (streaming states, stop, branches, More, follow-ups) is
-/// unit-tested in `AckshuallyTests`; these tests check what only the real screen shows.
+/// The answer sheet on screen (S4–S9): what only the running system sheet shows, its gestures, detents
+/// and the sheet holding still while an answer streams. Its layout (margins, what each detent shows,
+/// cards, the verdict cap, branch rows) is checked in-process by `AnswerLayoutTests` and its looks by
+/// `ScreenSnapshotTests`; answer logic by the model unit tests.
 final class AnswerSheetUITests: UITestCase {
-    private static let longText = Array(repeating: "A player who owns a Battery keeps up to 2 unused energy at the end of the turn instead of discarding them, and any additional energy is discarded as normal.", count: 3).joined(separator: " ")
-
-    /// S5/S6: swipe between cards; a tap on the right peek goes to the next card.
-    func testSwipeAndPeekTapStepCards() {
+    /// S5–S9 gestures on the system sheet: swipe between cards and tap the right peek for the next one;
+    /// a branch row and Main Answer are tappable rows; the sheet drags between all three detents; a step
+    /// row in the expanded answer jumps back to its card at medium.
+    /// Hardened (it flaked once): every drag waits for the detent's content instead of sleeping, and
+    /// retries once if the simulator dropped the drag.
+    func testSwipeBranchAndDetents() {
         launchSample(["-present", "YES"])
+        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
         let carousel = app.scrollViews["carousel"]
         XCTAssertTrue(carousel.waitForExistence(timeout: 5))
         XCTAssertTrue(waitForCard("Card 1 of 3"))
-        shot("s5-step1")
         carousel.swipeLeft()
         // A simulator swipe right after the sheet settles occasionally doesn't register: retry once.
         if !waitForCard("Card 2 of 3") { carousel.swipeLeft() }
@@ -20,15 +23,6 @@ final class AnswerSheetUITests: UITestCase {
         shot("s6-step2")
         carousel.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.5)).tap()
         XCTAssertTrue(waitForCard("Card 3 of 3"))
-    }
-
-    /// S7/S9: a branch row and Main Answer are tappable rows; the system sheet drags between all three
-    /// detents; a step row in the expanded answer jumps back to its card at medium.
-    /// Hardened (it flaked once): every drag waits for the detent's content instead of sleeping, and
-    /// retries once if the simulator dropped the drag.
-    func testBranchAndDetents() {
-        launchSample(["-present", "YES"])
-        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
         let branch = app.buttons["branch-0"]
         XCTAssertTrue(waitHittable(branch))
         branch.tap()
@@ -55,113 +49,6 @@ final class AnswerSheetUITests: UITestCase {
         shot("s9-expanded")
         app.buttons["stepRow-1"].tap()
         XCTAssertTrue(waitForCard("Card 2 of 3"))
-    }
-
-    /// The follow-up field and thumbs sit in their own row under the shelf, and a typed follow-up is sent.
-    func testFollowUpRowSitsUnderTheShelf() {
-        launchSample(["-present", "YES"])
-        let carousel = app.scrollViews["carousel"]
-        XCTAssertTrue(carousel.waitForExistence(timeout: 5))
-        let field = app.textFields["followUpField"]
-        XCTAssertTrue(field.waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons.matching(identifier: "thumbsUp").allElementsBoundByIndex.contains { $0.isHittable })
-        XCTAssertGreaterThan(field.frame.minY, carousel.frame.maxY)
-        shot("s6-follow-up-row")
-        field.tap()
-        // On a loaded simulator the keyboard can take a moment to take focus; typing earlier fails
-        // with "Neither element nor any descendant has keyboard focus".
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
-        field.typeText("And with two Batteries?\n")
-        XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 8), "the follow-up is answered")
-    }
-
-    /// Collapsed sheet (S7): verdict and proof line fully on screen, nothing cut off below them.
-    func testCollapsedShowsWholeHeaderOnly() {
-        launchSample(["-present", "YES", "-detent", "collapsed"])
-        let proof = any("proofLine")
-        XCTAssertTrue(proof.waitForExistence(timeout: 5))
-        XCTAssertTrue(waitHittable(verdict))
-        sleep(1)  // the sheet's presentation spring settles (frames are read once)
-        let window = app.windows.firstMatch.frame
-        XCTAssertLessThanOrEqual(proof.frame.maxY, window.maxY - 20, "proof line must not be clipped by the sheet edge")
-        XCTAssertFalse(any("carousel").isHittable)
-        XCTAssertFalse(app.buttons["branch-0"].isHittable)
-        shot("s7-collapsed-header-only")
-    }
-
-    /// Step card text never renders outside its card (owner's Azul test), at default and AX text sizes;
-    /// all cards share one height and long text offers "More", which opens that step expanded.
-    func testCardTextStaysInsideCard() throws {
-        let path = try demoAnswer(verdict: "Keep 2, discard 1.", steps: [
-            ("Short", "Unused energy is discarded.", 3, Self.goodQuote),
-            ("Long", Self.longText, 4, "keeps up to 2 unused energy instead of discarding them"),
-            ("Medium", "Anything above 2 is still discarded, so 1 of your 3 energy goes back to the supply.", 3, Self.goodQuote),
-        ])
-        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityL"] {
-            launchSample(["-present", "YES", "-demoAnswer", path, "-UIPreferredContentSizeCategoryName", size])
-            XCTAssertTrue(app.scrollViews["carousel"].waitForExistence(timeout: 5))
-            let cardQuery = app.descendants(matching: .any).matching(identifier: "stepCard")
-            XCTAssertTrue(wait(cardQuery.element(boundBy: 2), "exists == true"), size)
-            let cards = cardQuery.allElementsBoundByIndex
-            XCTAssertEqual(cards.count, 3, size)
-            let heights = Set(cards.map { Int($0.frame.height.rounded()) })
-            XCTAssertEqual(heights.count, 1, "all cards share one height (\(size)): \(heights)")
-            for card in cards {
-                for text in card.descendants(matching: .staticText).matching(identifier: "stepCardText").allElementsBoundByIndex {
-                    XCTAssertTrue(card.frame.insetBy(dx: -1, dy: -1).contains(text.frame),
-                                  "text \(text.frame) outside card \(card.frame) at \(size)")
-                }
-            }
-            shot("cards-equal-height-\(size)")
-            app.terminate()
-        }
-        launchSample(["-present", "YES", "-demoAnswer", path, "-card", "1"])
-        let more = app.buttons["cardMore"].firstMatch
-        XCTAssertTrue(more.waitForExistence(timeout: 5))
-        more.tap()
-        XCTAssertTrue(waitHittable(app.buttons["stepRow-1"]), "More opens the expanded answer at that step")
-        shot("card-more-expanded")
-    }
-
-    /// A long verdict is capped at three lines on the sheet (owner: "5 bold lines"); expanded shows it all.
-    func testLongVerdictIsCappedUntilExpanded() throws {
-        let long = "You still must pick tiles, and any you can't or don't want to place go to your floor line, costing you minus points. Taking is not optional, and the starting player marker counts as a floor tile too."
-        let path = try demoAnswer(verdict: long, steps: [("Rule", "Unused energy is discarded.", 3, Self.goodQuote)])
-        launchSample(["-present", "YES", "-demoAnswer", path])
-        XCTAssertTrue(waitHittable(verdict, timeout: 5))
-        let capped = verdict.frame.height
-        XCTAssertEqual(verdict.label, long, "VoiceOver still gets the whole verdict")
-        let proof = any("proofLine")
-        // Three title3 lines are well under 4.2 × the proof line's height.
-        XCTAssertLessThan(capped, proof.frame.height * 4.2)
-        app.terminate()
-        launchSample(["-present", "YES", "-demoAnswer", path, "-detent", "expanded"])
-        XCTAssertTrue(verdict.waitForExistence(timeout: 5))
-        XCTAssertTrue(eventually(timeout: 5) { self.verdict.frame.height > capped * 1.3 }, "expanded shows the whole verdict")
-    }
-
-    /// The expanded sheet unfolds the cards into the step list in place: each part shows once (the
-    /// carousel, follow-up field and thumbs used to appear again further down). A branch whose verdict
-    /// is a whole sentence puts it under the condition instead of one letter per line beside it.
-    func testExpandedShowsEachPartOnceAndLongBranchVerdictStacks() throws {
-        let path = try demoAnswer(
-            verdict: "Unused energy is lost.",
-            steps: [("Rule", "Unused energy is discarded.", 3, Self.goodQuote), ("Timing", "At the end of the round.", 3, Self.goodQuote)],
-            branches: [("If you meant the bonus tiles rather than the energy cubes",
-                        "Bonus tiles are never discarded; they stay in front of you and count at the end of the game.")])
-        launchSample(["-present", "YES", "-demoAnswer", path, "-detent", "expanded"])
-        let row = app.buttons["stepRow-1"]
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.scrollViews["carousel"].exists, "expanded shows the step list instead of the cards")
-        XCTAssertEqual(app.textFields.matching(identifier: "followUpField").count, 1)
-        XCTAssertEqual(app.buttons.matching(identifier: "thumbsUp").count, 1)
-        let branch = app.buttons["branch-0"]
-        XCTAssertTrue(branch.exists)
-        // Stacked: condition (2 lines) + verdict (about 3) — a one-letter column ran to 20+ lines.
-        XCTAssertLessThan(branch.frame.height, branch.frame.width * 0.75)
-        shot("s9-expanded-once")
-        row.tap()
-        XCTAssertTrue(waitForCard("Card 2 of 2"), "picking a step goes back to its card")
     }
 
     /// While an answer streams, the sheet stays put: content fills in place. Before the fix the detents
@@ -207,59 +94,5 @@ final class AnswerSheetUITests: UITestCase {
         XCTAssertTrue(steps.allSatisfy { $0 > 0 } || steps.allSatisfy { $0 < 0 },
                       "after completion the sheet moves once, one way: \(path.map { Int($0) })")
         shot("streamed-medium")
-    }
-
-    /// Once a streamed answer is complete the cards fit their content again (equal height across
-    /// the shelf): the loading card's reserved height only holds while streaming.
-    func testCardsFitContentAfterStreaming() throws {
-        let path = try demoAnswer(verdict: "Discard it.", steps: [
-            ("Rule", "Unused energy is discarded.", 3, Self.goodQuote),
-            ("Battery", "A Battery keeps 2.", 4, "keeps up to 2 unused energy instead of discarding them"),
-        ])
-        launchSample(["-ask", "What happens to unused energy?", "-demoAnswer", path], pace: 1)
-        let loading = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@ AND label == %@", "stepCard", "Next step loading")).firstMatch
-        XCTAssertTrue(loading.waitForExistence(timeout: 8))
-        let placeholder = loading.frame.height
-        XCTAssertTrue(app.buttons["closeAnswer"].waitForExistence(timeout: 12))
-        sleep(1)  // the shelf animates to its new height
-        let cards = app.descendants(matching: .any).matching(identifier: "stepCard").allElementsBoundByIndex
-        XCTAssertEqual(cards.count, 2)
-        let heights = cards.map { $0.frame.height }
-        XCTAssertEqual(Set(heights.map { Int($0.rounded()) }).count, 1, "equal heights: \(heights)")
-        XCTAssertLessThan(heights[0], placeholder * 0.75, "card \(heights[0]) fits its 1-line text, not the placeholder \(placeholder)")
-        shot("cards-fit-after-streaming")
-    }
-
-    /// The sheet's content sits inside standard margins: the verdict and the close button clear the
-    /// grabber and the rounded corners, and cards / rows keep off the sheet's sides, at every detent.
-    func testSheetContentHasStandardMargins() {
-        // The floating sheet at the lower detents can be drawn very slightly scaled down, so
-        // margins are checked at 95 % of their design value.
-        let edge: CGFloat = 20 * 0.95, top: CGFloat = 24 * 0.95
-        for detent in ["collapsed", "medium", "expanded"] {
-            launchSample(["-present", "YES", "-detent", detent])
-            XCTAssertTrue(waitHittable(verdict, timeout: 5))
-            sleep(1)  // the sheet's presentation spring settles (frames are read once)
-            let sheet = any("answerSheet").frame
-            let close = app.buttons["closeAnswer"].frame
-            XCTAssertGreaterThanOrEqual(verdict.frame.minY - sheet.minY, top, "verdict clears the grabber (\(detent))")
-            XCTAssertGreaterThanOrEqual(close.minY - sheet.minY, edge, "close button clears the top edge (\(detent))")
-            XCTAssertGreaterThanOrEqual(sheet.maxX - close.maxX, edge, "close button clears the corner (\(detent))")
-            XCTAssertGreaterThanOrEqual(verdict.frame.minX - sheet.minX, edge, "verdict margin (\(detent))")
-            if detent != "collapsed" {
-                // Medium shows the step cards; expanded unfolds them into the step list.
-                let steps = detent == "medium"
-                    ? app.descendants(matching: .any).matching(identifier: "stepCard").firstMatch.frame
-                    : app.buttons["stepRow-0"].frame
-                XCTAssertGreaterThanOrEqual(steps.minX - sheet.minX, edge, "steps margin (\(detent))")
-                let field = any("followUpField")
-                let thumbsDown = app.buttons["thumbsDown"].firstMatch
-                XCTAssertTrue(field.exists && thumbsDown.exists)
-                XCTAssertGreaterThanOrEqual(field.frame.minX - sheet.minX, edge, "follow-up field margin (\(detent))")
-                XCTAssertGreaterThanOrEqual(sheet.maxX - thumbsDown.frame.maxX, edge, "thumbs margin (\(detent))")
-            }
-            shot("margins-\(detent)")
-            app.terminate()
-        }
     }
 }
