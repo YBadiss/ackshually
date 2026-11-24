@@ -17,9 +17,9 @@ const footer = `<div class="fb" style="margin:6px 11px 0"><span style="flex:4;te
 const dots = n => `<div class="dots">${[0,1,2].map(i=>`<i${i===n?' class="on"':''}></i>`).join('')}</div>`;
 
 const S = [
- {t:'1 · My Games', ms:'Home · M2 (sessions + export in M3)', li:['App <b>opens here</b>; most recently used first','<b>Tap a game</b> → viewer, Back returns here','<b>＋</b> → file picker → new game, or add to a game','<b>Swipe left</b> → Delete'],
+ {t:'1 · My Games', ms:'Home · M2 (sessions + export in M3)', li:['App <b>opens here</b>; most recently used first','<b>Tap a game</b> → viewer, Back returns here','<b>＋</b> → pick one or more PDFs → review the suggested games (S14)','<b>Swipe left</b> → Delete · <b>Edit</b> → select several'],
   h:`<div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="home">
-   <div style="display:flex;justify-content:space-between;color:var(--accent);font-size:13px;margin:2px 0 4px"><span>⚙︎</span><span>＋</span></div>
+   <div style="display:flex;justify-content:space-between;color:var(--accent);font-size:13px;margin:2px 0 4px"><span>⚙︎</span><span>Edit &nbsp; ＋</span></div>
    <div style="font-size:19px;font-weight:700;margin-bottom:8px">My Games</div>
    <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Power plant rush</b><span>Opened 2 minutes ago</span></div><span style="color:var(--muted)">›</span></div>
    <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Azul</b><span>Opened yesterday</span></div><span style="color:var(--muted)">›</span></div>
@@ -107,7 +107,7 @@ const S = [
     <div class="qrow"><div>Ties in turn order?</div><div>Highest plant number goes first</div></div></div>
    <div class="tap" style="top:24px;right:2px;width:34px"></div>`}
 ,
- {t:'13 · Playing with', ms:'Opening a game with add-ons · M3', li:['Shows <b>every time</b> a game has add-ons','Core books always on; <b>tap</b> an add-on to tick it','Starts from last time: <b>Play</b> is one tap','<b>Swipe left</b> → Remove · long-press → Make Core / Add-on, Rename','Viewer title button changes it mid-game'],
+ {t:'13 · Playing with', ms:'Opening a game with add-ons · M3', li:['Shows <b>every time</b> a game has add-ons','Core books always on; <b>tap</b> an add-on to tick it','Starts from last time: <b>Play</b> is one tap','<b>Swipe left</b> → Remove (the last book: delete the game?) · long-press → Make Core / Add-on, Rename','Viewer title button changes it mid-game'],
   h:`${chrome('My Games')}
    <div class="sheet" style="top:58px;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted)">✕</span><span style="text-align:center;line-height:1.1"><b style="font-size:12px">Root</b><br><span style="color:var(--muted);font-size:8.5px">Playing with</span></span><span class="btn">Play</span></div>
@@ -123,6 +123,22 @@ const S = [
     <div class="qrow" style="padding:5px 8px;color:var(--accent)">＋ Add a Rulebook</div>
     </div>
    <div class="tap" style="top:186px;right:10px;width:26px"></div>`}
+,
+ {t:'14 · Adding rulebooks', ms:'＋ with several PDFs · M3', li:['<b>＋</b> → pick <b>several PDFs</b> (Mac: drop them on My Games)','Sheet opens at once; files move from <b>Sorting…</b> into games','<b>Drag</b> a book to another game, or <b>long-press → Move to…</b>','Core / Add-on menu per book; tap a name to rename','Nothing is saved until <b>Add</b>'],
+  h:`${chrome('My Games')}
+   <div class="sheet" style="top:58px;padding:10px 12px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted)">Cancel</span><b style="font-size:10.5px;white-space:nowrap">Add 5 Rulebooks</b><span class="btn">Add</span></div>
+    <div class="sect" style="display:flex;justify-content:space-between"><span>Root</span><span style="text-transform:none;letter-spacing:0">In My Games</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:4px 7px;margin-bottom:3px"><span class="cover" style="width:13px;height:17px;border-radius:2px;background:#fff;border:1px solid var(--line)"></span><span style="flex:1">Law of Root</span><span style="color:var(--accent);font-size:8px">Core ⌄</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:4px 7px;margin-bottom:3px"><span class="cover" style="width:13px;height:17px;border-radius:2px;background:#fff;border:1px solid var(--line)"></span><span style="flex:1">Learning to Play</span><span style="color:var(--accent);font-size:8px">Core ⌄</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:4px 7px;margin-bottom:3px"><span class="cover" style="width:13px;height:17px;border-radius:2px;background:#fff;border:1px solid var(--line)"></span><span style="flex:1">Riverfolk</span><span style="color:var(--accent);font-size:8px">Add-on ⌄</span></div>
+    <div class="sect" style="display:flex;justify-content:space-between"><span>Azul ✎</span><span style="text-transform:none;letter-spacing:0">New game</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:4px 7px;margin-bottom:3px"><span class="cover" style="width:13px;height:17px;border-radius:2px;background:#fff;border:1px solid var(--line)"></span><span style="flex:1">Azul</span><span style="color:var(--accent);font-size:8px">Core ⌄</span></div>
+    <div class="sect">Sorting…</div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:4px 7px;margin-bottom:3px;color:var(--muted)"><span class="cover" style="width:13px;height:17px;border-radius:2px;background:var(--line)"></span><span style="flex:1">dune-imperium.pdf</span><span>◌</span></div>
+    <div style="color:var(--muted);font-size:8px;margin-top:4px">Suggested by Claude from titles and first pages. Check the groups.</div>
+    </div>
+   <div class="tap" style="top:160px;left:14px;width:30px"></div><div class="gest" style="top:166px;left:58px">long-press → Move to…</div>`}
 ];
 
 // Render: gallery into #grid, or any element with data-screen="s5" (phone only, or with notes if data-notes is set).
