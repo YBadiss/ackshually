@@ -9,12 +9,10 @@
   "defaultOptions": {},
   "testTargets": [
     {
-      "parallelizable": true,
+      "parallelizable": false,
       "selectedTests": [
-        "LibraryUITests/testEmptyState()",
-        "LibraryUITests/testTrySampleAddsAndOpensIt()",
-        "ViewerUITests/testInspectAndDoubleTap()",
-        "AnswerSheetUITests/testSwipeAndPeekTapStepCards()",
+        "AnswerSheetUITests/testSwipeBranchAndDetents()",
+        "LibraryUITests/testTrySampleOpenGoBackAndResume()",
         "ServerRouteUITests/testBundledTokenAnswersThroughServer()"
       ],
       "target": {

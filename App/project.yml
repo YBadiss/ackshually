@@ -10,6 +10,10 @@ options:
 packages:
   AckshuallyCore:
     path: ../Core
+  # Snapshot tests only (AckshuallyTests); pinned so reference images don't move with the library.
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    exactVersion: 1.19.7
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -53,12 +57,17 @@ targets:
   AckshuallyTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [Tests]
+    # Reference images live next to the snapshot tests (`__Snapshots__`); they are read from the
+    # source tree, not bundled.
+    sources:
+      - path: Tests
+        excludes: ["**/__Snapshots__/**"]
     dependencies:
       - target: Ackshually
       # Already linked into the host app: import it, don't link a second copy.
       - package: AckshuallyCore
         link: false
+      - package: SnapshotTesting
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.ackshually.viewer.tests
@@ -91,7 +100,3 @@ schemes:
           defaultPlan: true
         - path: TestPlans/Unit.xctestplan
         - path: TestPlans/Smoke.xctestplan
-        - path: TestPlans/Viewer.xctestplan
-        - path: TestPlans/AnswerSheet.xctestplan
-        - path: TestPlans/Library.xctestplan
-        - path: TestPlans/Server.xctestplan

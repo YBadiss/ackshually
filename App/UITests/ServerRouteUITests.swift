@@ -1,7 +1,8 @@
 import XCTest
 
 /// The answer route through the ackshually server, against a local stub (`StubServer`) with fake tokens
-/// injected by Debug-only launch arguments. Never the real server, never a real token.
+/// injected by Debug-only launch arguments. Never the real server, never a real token. Error messages
+/// (401, 429) and Open Settings are unit-tested (`AnswerRouteTests`, `AnswerSessionTests`, `AnswerLayoutTests`).
 final class ServerRouteUITests: UITestCase {
     private var stub: StubServer!
     private var pdfPath = ""
@@ -93,6 +94,10 @@ final class ServerRouteUITests: UITestCase {
         field.tap()
         field.typeText("fake-ok")
         app.buttons["tokenOverrideField.save"].tap()
+        // The keyboard stays up and the Form keeps the field in view: the route row at the top has left the
+        // lazy list (#17: "activeRoute" not found after Save). Scroll back up to it.
+        let form = app.collectionViews.firstMatch
+        for _ in 0..<3 where !app.staticTexts["activeRoute"].exists { form.swipeDown() }
         XCTAssertTrue(app.staticTexts["activeRoute"].waitForExistence(timeout: 3))
         XCTAssertEqual(app.staticTexts["activeRoute"].label, "Answers by ackshually server")
         XCTAssertEqual(app.staticTexts["activeRouteDetail"].label, "Developer token · 127.0.0.1")
@@ -105,34 +110,5 @@ final class ServerRouteUITests: UITestCase {
         send.tap()
         XCTAssertTrue(app.staticTexts["verdict"].waitForExistence(timeout: 10))
         assertSentToServer(token: "fake-ok")
-    }
-
-    /// A rejected token: the message points to Settings and its button opens it. Settings moved to My Games'
-    /// toolbar (S1), but Open Settings still opens it right over the viewer, and Done returns to the answer.
-    func testRevokedTokenPointsToSettings() {
-        launch(token: "fake-revoked")
-        let message = app.staticTexts["failureMessage"]
-        XCTAssertTrue(message.waitForExistence(timeout: 10))
-        XCTAssertEqual(message.label, "The server didn't accept your access token. It may be mistyped or revoked: check it in Settings.")
-        app.buttons["failureSettings"].tap()
-        XCTAssertTrue(app.staticTexts["activeRoute"].waitForExistence(timeout: 3))
-        app.navigationBars["Settings"].buttons["Done"].tap()
-        XCTAssertTrue(message.waitForExistence(timeout: 3), "back on the viewer with the failed answer")
-        XCTAssertTrue(app.descendants(matching: .any)["pdfView"].firstMatch.exists)
-        XCTAssertFalse(app.buttons["settings"].exists, "not dropped back to My Games")
-    }
-
-    /// 429s: the per-minute limit says when to retry; the daily cap says tomorrow. Neither offers Settings.
-    func testRateLimitAndDailyCapMessages() {
-        for (token, text) in [("fake-busy", "Too many questions at once. Try again in 30 seconds."),
-                              ("fake-daily", "Today's question limit is reached. Try again tomorrow.")] {
-            launch(token: token)
-            let message = app.staticTexts["failureMessage"]
-            XCTAssertTrue(message.waitForExistence(timeout: 10), token)
-            XCTAssertEqual(message.label, text)
-            XCTAssertFalse(app.buttons["failureSettings"].exists, token)
-            XCTAssertTrue(app.buttons["Try Again"].exists, token)
-            app.terminate()
-        }
     }
 }

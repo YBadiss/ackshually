@@ -103,4 +103,40 @@ final class LibraryModelTests: XCTestCase {
         XCTAssertEqual(library.error, "Couldn't open broken.pdf as a PDF.")
         XCTAssertTrue(library.path.isEmpty)
     }
+
+    // MARK: Adding, deleting, relaunching (were LibraryUITests)
+
+    /// A fresh model over the same storage: what the next launch reads.
+    private func relaunch() -> LibraryModel {
+        LibraryModel(dependencies: .inMemory(library: storage, providers: ScriptedProviders()))
+    }
+
+    func testTrySampleAddsTheGameAndOpensIt() throws {
+        library.addSample()
+        let name = try storage.sampleRulebook().lastPathComponent
+        XCTAssertEqual(library.path, [.game(fileName: name)], "opens the new game right away")
+        XCTAssertNotNil(library.current)
+        XCTAssertEqual(library.games.map(\.fileName), [name], "and it is in the list behind it")
+        XCTAssertEqual(library.games.first?.title, "Power plant rush")
+    }
+
+    func testRelaunchOpensOnTheListWithTheGame() {
+        library.addSample()
+        let next = relaunch()
+        XCTAssertTrue(next.path.isEmpty, "the app opens on the list, not the last rulebook")
+        XCTAssertEqual(next.games.count, 1)
+    }
+
+    func testDeletedGameIsGoneAfterRelaunch() {
+        library.addSample()
+        back()
+        library.delete(library.games)
+        XCTAssertTrue(relaunch().games.isEmpty)
+    }
+
+    func testLaunchArgumentDocumentDoesNotJoinTheList() throws {
+        library.openSampleTransient()
+        XCTAssertEqual(library.path, [.file(try storage.sampleRulebook())])
+        XCTAssertTrue(library.games.isEmpty, "-sample is not added to My Games")
+    }
 }
