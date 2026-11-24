@@ -22,10 +22,15 @@ public final class RulebookIndex: @unchecked Sendable {
 
     public init(document: PDFDocument) {
         self.document = document
-        pageTexts = (0..<document.pageCount).map { document.page(at: $0)?.string ?? "" }
+        pageTexts = (0..<document.pageCount).map { Self.pageText(document, at: $0) }
         headings = Self.headings(document)
         index = PageIndex(pageTexts: pageTexts, headings: headings)
         matcher = QuoteMatcher(document: document)
+    }
+
+    /// One page's text layer (PDFKit; the same text `QuoteMatcher` reads). "" for a page without text.
+    public static func pageText(_ document: PDFDocument, at index: Int) -> String {
+        document.page(at: index)?.string ?? ""
     }
 
     /// Original page for one piece of excerpt evidence: the page the model named (mapped from an

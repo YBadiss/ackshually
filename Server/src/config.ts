@@ -11,6 +11,9 @@ export interface Config {
   tokens: Map<string, string>
   allowedModels: Set<string>
   maxTokens: number
+  /** Rulebook sorting (S14): its own models and a small output cap. */
+  sortModels: Set<string>
+  sortMaxTokens: number
   maxBodyBytes: number
   /** Daily spend caps in USD (UTC day). The per-client cap applies to each token separately. */
   dailyLimitPerClient: number
@@ -56,6 +59,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     tokens,
     allowedModels: new Set(list(env.ALLOWED_MODELS ?? 'claude-sonnet-5-5,claude-opus-5-5')),
     maxTokens: number('MAX_TOKENS', 16000),
+    sortModels: new Set(list(env.SORT_MODELS ?? 'claude-haiku-5-5')),
+    sortMaxTokens: number('SORT_MAX_TOKENS', 4096),
     // Anthropic's request limit is 32 MB; a base64 PDF is ~4/3 of the file.
     maxBodyBytes: number('MAX_BODY_MB', 32) * 1024 * 1024,
     dailyLimitPerClient: number('DAILY_LIMIT_USD_PER_CLIENT', 5),
