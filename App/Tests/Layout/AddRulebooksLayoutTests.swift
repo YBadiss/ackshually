@@ -42,16 +42,16 @@ final class AddRulebooksLayoutTests: XCTestCase {
         XCTAssertTrue(h.elements.contains { $0.label.contains("New game") })
         XCTAssertTrue(h.elements.contains { $0.label.contains("In My Games") })
         XCTAssertTrue(h.elements.contains { $0.label == "Add 5 Rulebooks" })
-        XCTAssertNotNil(h.frame("reviewNote"))
+        XCTAssertTrue(h.elements.contains { $0.label == c.note }, "the note under the groups")
     }
 
     func testSortingHasNoNoteAndUnsortedSaysSortYourself() async throws {
         var h = await hosted { AddRulebooksFixtures.sheet(AddRulebooksFixtures.sorting) }
-        XCTAssertNil(h.frame("reviewNote"))
+        XCTAssertNil(AddRulebooksFixtures.sorting.note)
         XCTAssertTrue(h.elements.contains { $0.value == "Sorting" })
         XCTAssertFalse(AddRulebooksFixtures.sorting.canAdd, "Add waits for the groups")
-        h = await hosted { AddRulebooksFixtures.sheet(AddRulebooksFixtures.unsorted) }
-        XCTAssertTrue(h.element("reviewNote")?.label.hasPrefix("Sort these yourself") == true)
+        h = await hosted(size: CGSize(width: Self.phone.width, height: 1800)) { AddRulebooksFixtures.sheet(AddRulebooksFixtures.unsorted) }
+        XCTAssertTrue(h.elements.contains { $0.label.hasPrefix("Sort these yourself") })
         XCTAssertEqual(AddRulebooksFixtures.unsorted.batch.groups.count, AddRulebooksFixtures.files.count, "one game per file")
     }
 

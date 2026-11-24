@@ -48,6 +48,7 @@ struct ReviewBookRow: View {
             }
         }
         .padding(.vertical, theme.spacing.xxs)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("review-\(book.fileName)")
     }
 }

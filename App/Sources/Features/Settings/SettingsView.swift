@@ -52,9 +52,15 @@ struct SettingsView: View {
                         CredentialField(title: "Use My Own Anthropic API Key", prompt: "sk-ant-…", isSaved: status.apiKeySaved,
                                         fieldID: "apiKeyField", onSave: { onSave($0, .apiKey) },
                                         onRemove: { onRemove(.apiKey) })
-                        Button("Remove All Games", role: .destructive) { confirmingRemoveAll = true }
+                        Button("Remove All Games", role: .destructive, action: askToRemoveAll)
                             .disabled(gameCount == 0)
                             .accessibilityIdentifier("removeAllGames")
+                            .confirmationDialog("Remove all \(gameCount) games?", isPresented: $confirmingRemoveAll,
+                                                titleVisibility: .visible) {
+                                Button("Remove All Games", role: .destructive, action: onRemoveAllGames)
+                            } message: {
+                                Text("Every rulebook PDF in My Games is removed from this device.")
+                            }
                     }
                     .accessibilityIdentifier("developerSection")
                 } footer: {
@@ -72,16 +78,13 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(theme.colors.groupedBackground)
-            .confirmationDialog("Remove all \(gameCount) games?", isPresented: $confirmingRemoveAll, titleVisibility: .visible) {
-                Button("Remove All Games", role: .destructive, action: onRemoveAllGames)
-            } message: {
-                Text("Every rulebook PDF in My Games is removed from this device.")
-            }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm, action: onDone) } }
         }
     }
+
+    private func askToRemoveAll() { confirmingRemoveAll = true }
 }
 
 #Preview("Bundled token") {

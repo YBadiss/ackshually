@@ -48,19 +48,16 @@ struct LibraryScreen: View {
         }
         // S14: ＋ → "Add N Rulebooks".
         .addRulebooksSheet(library)
-        .confirmationDialog(library.pendingDeletion?.question ?? "", isPresented: deletionAsked, titleVisibility: .visible,
-                            presenting: library.pendingDeletion) { _ in
-            Button("Delete", role: .destructive) {
-                library.confirmDeletion()
-                endEditing()
-            }
-            .accessibilityIdentifier("confirmDelete")
+        .confirmationDialog(library.pendingDeletion?.question ?? "", item: $library.pendingDeletion, titleVisibility: .visible) { _ in
+            Button("Delete", role: .destructive, action: confirmDeletion)
+                .accessibilityIdentifier("confirmDelete")
         } message: { Text($0.detail) }
         .environment(library)
     }
 
-    private var deletionAsked: Binding<Bool> {
-        Binding(get: { library.pendingDeletion != nil }, set: { if !$0 { library.pendingDeletion = nil } })
+    private func confirmDeletion() {
+        library.confirmDeletion()
+        endEditing()
     }
 
     private func toggleEditing() {

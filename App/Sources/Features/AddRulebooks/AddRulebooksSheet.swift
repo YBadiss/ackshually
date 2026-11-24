@@ -55,7 +55,7 @@ struct AddRulebooksSheet: View {
                             ReviewBookRow(book: book, cover: covers[book.fileName], role: nil,
                                           onRename: { startRenaming(.book(book.fileName), current: book.title) }, onSetRole: { _ in })
                                 .draggable(book.fileName)
-                                .contextMenu { moveMenu(book) }
+                                .contextMenu { menu(for: book) }
                                 .task(id: pixelWidth) { await loadCover(book.fileName, pixelWidth, displayScale) }
                         }
                     } header: {
@@ -99,22 +99,15 @@ struct AddRulebooksSheet: View {
                       onSetRole: { actions.setRole(book.fileName, $0) })
             .draggable(book.fileName)
             .dropDestination(for: String.self) { items, _ in actions.move(items, group.id, book.fileName) }
-            .contextMenu { moveMenu(book) }
+            .contextMenu { menu(for: book) }
             .task(id: pixelWidth) { await loadCover(book.fileName, pixelWidth, displayScale) }
     }
 
-    @ViewBuilder private func moveMenu(_ book: ImportBatch.Book) -> some View {
-        Menu("Move to…", systemImage: "arrow.right.square") {
-            ForEach(content.moveTargets(for: book.fileName)) { target in
-                Button(target.title) { actions.moveTo(book.fileName, target.kind) }
-            }
-            Divider()
-            Button("New Game", systemImage: "plus") { actions.moveToNewGame(book.fileName) }
-        }
-        Button("Rename", systemImage: "pencil") { startRenaming(.book(book.fileName), current: book.title) }
-        if batch.group(containing: book.fileName) != nil {
-            Button("Skip", systemImage: "nosign", role: .destructive) { actions.skip([book.fileName]) }
-        }
+    private func menu(for book: ImportBatch.Book) -> ReviewBookMenu {
+        ReviewBookMenu(targets: content.moveTargets(for: book.fileName), canSkip: batch.group(containing: book.fileName) != nil,
+                       onMove: { actions.moveTo(book.fileName, $0) }, onNewGame: { actions.moveToNewGame(book.fileName) },
+                       onRename: { startRenaming(.book(book.fileName), current: book.title) },
+                       onSkip: { actions.skip([book.fileName]) })
     }
 
     /// Thumbnails rendered a bit wider than shown so small text-size changes reuse them (as in My Games).
