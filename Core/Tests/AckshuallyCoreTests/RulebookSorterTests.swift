@@ -121,6 +121,7 @@ final class RulebookSorterTests: XCTestCase {
         let page3 = RulebookIndex.pageText(doc, at: 2).split(whereSeparator: \.isWhitespace).prefix(6).joined(separator: " ")
         if !page3.isEmpty, !RulebookIndex.pageText(doc, at: 0).contains(page3) { XCTAssertFalse(f.text.contains(page3)) }
         XCTAssertEqual(RulebookSorter.File.clip(String(repeating: "word  \n", count: 1000)).count, RulebookSorter.File.textLimit)
+        XCTAssertEqual(RulebookSorter.File.clip("\u{FFFC} \u{FFFC} Table of\nContents Y Lizard Cult\u{08}\u{FFFD}\u{FFFD}"), "Table of Contents Y Lizard Cult")
     }
 
     private func sorter() -> RulebookSorter {

@@ -40,9 +40,14 @@ public struct RulebookSorter: Sendable {
                       text: Self.clip(pages.joined(separator: "\n")))
         }
 
-        /// Whitespace collapsed (text layers are full of line breaks), then cut at `textLimit` characters.
+        /// Text-layer noise dropped (control characters, U+FFFC object and U+FFFD replacement characters), whitespace
+        /// collapsed (text layers are full of line breaks), then cut at `textLimit` characters.
         static func clip(_ s: String) -> String {
-            let collapsed = s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            let noise: Set<Unicode.Scalar> = ["\u{FFFC}", "\u{FFFD}"]
+            let kept = String(String.UnicodeScalarView(s.unicodeScalars.filter {
+                !noise.contains($0) && ($0.properties.generalCategory != .control || $0.properties.isWhitespace)
+            }))
+            let collapsed = kept.split(whereSeparator: \.isWhitespace).joined(separator: " ")
             return String(collapsed.prefix(textLimit))
         }
     }

@@ -11,6 +11,12 @@ public enum FixtureRulebook {
         public var paragraphs: [String]
         /// Figure rect normalized 0–1, origin top-left.
         public var figure: (box: NormalizedBox, label: String)?
+
+        public init(title: String, paragraphs: [String], figure: (box: NormalizedBox, label: String)? = nil) {
+            self.title = title
+            self.paragraphs = paragraphs
+            self.figure = figure
+        }
     }
 
     public static let pages: [Page] = [
