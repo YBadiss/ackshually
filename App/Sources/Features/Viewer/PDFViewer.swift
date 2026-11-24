@@ -190,20 +190,21 @@ struct PDFViewer: UIViewRepresentable {
             }
         }
 
-        func apply(_ focus: PDFFocus, animated: Bool, retries: Int = 20) {
+        func apply(_ focus: PDFFocus, animated: Bool) {
             guard let v = view, let doc = v.document,
                   let page = doc.page(at: min(max(focus.highlight.page, 1), doc.pageCount) - 1) else { return }
             v.layoutIfNeeded()
             let bounds = v.bounds
             guard bounds.width > 0, bounds.height > 0 else {
-                // Not laid out yet (first appearance): try again on the next run loop.
-                guard retries > 0 else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                // Not laid out yet (first appearance): the view applies it once it has a size
+                // (it used to poll every 50 ms).
+                (v as? FitPagePDFView)?.onSized = { [weak self] in
                     guard let self, self.applied != focus else { return }
-                    self.apply(focus, animated: false, retries: retries - 1)
+                    self.apply(focus, animated: false)
                 }
                 return
             }
+            (v as? FitPagePDFView)?.onSized = nil
             applied = focus
             observeScrollGestures()
             drawHighlights(focus.highlight, on: page)
@@ -303,8 +304,15 @@ final class FitPagePDFView: PDFView {
 
     required init?(coder: NSCoder) { super.init(coder: coder) }
 
+    /// Runs once, at the first layout with a size (a focus that arrived before it).
+    var onSized: (() -> Void)?
+
     override func layoutSubviews() {
         super.layoutSubviews()
+        if bounds.width > 0, bounds.height > 0, let run = onSized {
+            onSized = nil
+            run()
+        }
         guard fitWholePage, let page = currentPage ?? document?.page(at: 0) else { return }
         let pageRect = page.bounds(for: displayBox)
         let height = bounds.height - safeAreaInsets.top - safeAreaInsets.bottom

@@ -10,7 +10,7 @@ struct ValueRow: View {
     enum Accessory { case chevron, checkmark, none }
     @Environment(\.theme) private var theme
     /// Lines a stacked value up with the title text, past the label's icon.
-    @ScaledMetric(relativeTo: .body) private var iconIndent: CGFloat = 32
+    @ScaledMetric(relativeTo: .body) private var iconIndent: CGFloat = 28
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: theme.spacing.m) {
