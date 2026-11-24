@@ -127,12 +127,7 @@ final class ViewerModel {
         refocus()
     }
 
-    func backToStep() {
-        pdfFocus.followEvidence()
-        refocus()
-    }
-
-    /// S8 double-tap: evidence zoom ↔ full page.
+    /// S8 double-tap: back to the evidence after a pinch/pan, otherwise evidence zoom ↔ full page.
     func toggleZoom() {
         guard currentHighlight != nil else { return }
         pdfFocus.toggleZoom()

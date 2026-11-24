@@ -6,22 +6,22 @@ import XCTest
 final class ViewerUITests: UITestCase {
     private func launch(_ args: [String]) { launchSample(args) }
 
-    /// S8: the PDF stays pannable under the sheet → Back to Step; tapping the PDF never changes steps;
-    /// double-tap toggles evidence zoom and the whole page.
-    func testInspectBackToStepAndDoubleTap() {
+    /// S8: the PDF stays pannable under the sheet; tapping the PDF never changes steps; double-tap
+    /// goes back to the evidence after a pan, then toggles evidence zoom and the whole page.
+    func testInspectAndDoubleTap() {
         launch(["-present", "YES", "-card", "1"])
         let window = app.windows.firstMatch
         XCTAssertTrue(verdict.waitForExistence(timeout: 5))
         XCTAssertTrue(waitForCard("Card 2 of 3"))
         sleep(1)
-        // S8: the PDF stays pannable under the sheet (background interaction) → Back to Step.
-        XCTAssertFalse(app.buttons["backToStep"].exists)
+        // S8: the PDF stays pannable under the sheet (background interaction).
         let from = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
         from.press(forDuration: 0.05, thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)))
-        XCTAssertTrue(app.buttons["backToStep"].waitForExistence(timeout: 2))
         shot("s8-inspect")
-        app.buttons["backToStep"].tap()
-        XCTAssertTrue(app.buttons["backToStep"].waitForNonExistence(timeout: 2))
+        // Double-tap after a pan: back to the evidence; the sheet and the card stay put.
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).doubleTap()
+        XCTAssertTrue(waitForCard("Card 2 of 3"))
+        XCTAssertFalse(app.buttons["backToStep"].exists, "no floating Back to Step button any more")
         // Tapping the PDF never changes steps.
         window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
         XCTAssertTrue(waitForCard("Card 2 of 3"))
