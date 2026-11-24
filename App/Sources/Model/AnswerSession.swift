@@ -20,6 +20,8 @@ final class AnswerSession {
         case evidence([Evidence])
         /// Step `index` arrived (the carousel may move onto it).
         case step(Int)
+        /// The books in play changed (S13): the document, its matcher and the conversation are new.
+        case rulebookChanged
         /// Any other field of the answer.
         case updated
         case completed
@@ -36,14 +38,42 @@ final class AnswerSession {
     /// Thumbs up/down per answer, in memory for M2 (S11 storage is M3).
     private(set) var feedback: [UUID: Bool] = [:]
 
+    /// The document answers use and the viewer shows: the game's books in play.
+    private(set) var rulebook: LoadedRulebook
+    /// The next books in play while they load or wait for the next question (S13: a change applies from the
+    /// next question; the answer on screen stays with the document it cites).
+    private(set) var staged: Task<LoadedRulebook?, Never>?
+
     @ObservationIgnored var onChange: (Change) -> Void = { _ in }
-    @ObservationIgnored private let rulebook: LoadedRulebook
     @ObservationIgnored private let providers: any AnswerProviderFactory
     @ObservationIgnored private var task: Task<Void, Never>?
 
     init(rulebook: LoadedRulebook, providers: any AnswerProviderFactory) {
         self.rulebook = rulebook
         self.providers = providers
+    }
+
+    // MARK: Books in play (S13)
+
+    /// Changes the books in play. With nothing on screen the new document is shown as soon as it is loaded;
+    /// otherwise the current answer stays and the next question uses (and shows) the new books.
+    func stage(_ load: Task<LoadedRulebook?, Never>) {
+        staged = load
+        Task { [weak self] in
+            let rb = await load.value
+            guard let self, self.staged == load, let rb else { return }
+            if self.answer == nil && !self.isBusy { self.apply(rb) }
+        }
+    }
+
+    private func apply(_ rb: LoadedRulebook) {
+        staged = nil
+        guard rb !== rulebook else { return }
+        rulebook = rb
+        // Earlier turns cite pages of the old document and were answered without (or with) other books:
+        // a new set of books starts a new conversation.
+        turns = []
+        onChange(.rulebookChanged)
     }
 
     var isDemo: Bool { route == .demo }
@@ -63,7 +93,9 @@ final class AnswerSession {
     func ask(_ raw: String) {
         let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return }
+        let pending = staged
         // Never answer a real rulebook with the scripted demo: keep the question and ask for a credential.
+        // (A staged change keeps the game's books, so whether it is the sample doesn't change.)
         guard let (provider, route) = providers.provider(isSample: rulebook.isSample) else {
             draft = q
             onChange(.needsCredential)
@@ -77,8 +109,10 @@ final class AnswerSession {
         self.route = route
         onChange(.started)
         Self.log.debug("asking via \(route.rawValue, privacy: .public)")
-        let request = AnswerRequest(pdf: rulebook.data, documentTitle: rulebook.title, question: q, history: turns)
         task = Task { [weak self] in
+            // The books ticked since the last answer: wait for them (joining takes a moment), then show them.
+            if let pending, let rb = await pending.value, let self, !Task.isCancelled, self.staged == pending { self.apply(rb) }
+            guard !Task.isCancelled, let request = self?.request(for: q) else { return }
             do {
                 for try await event in provider.answer(request) {
                     guard let self, !Task.isCancelled else { return }
@@ -89,6 +123,12 @@ final class AnswerSession {
                 self.fail(AnswerFailure(error, route: route))
             }
         }
+    }
+
+    /// The question about the books in play, after the conversation so far.
+    private func request(for q: String) -> AnswerRequest {
+        AnswerRequest(pdf: rulebook.data, documentTitle: rulebook.title, question: q, history: turns,
+                      rulebook: rulebook.index, contents: rulebook.contents.needsPromptNote ? rulebook.contents : nil)
     }
 
     /// Stop (S4): before any step arrives the question goes back into the field to rephrase.

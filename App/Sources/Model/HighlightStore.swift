@@ -14,12 +14,14 @@ final class HighlightStore {
 
     @ObservationIgnored var onResolved: (Evidence, Highlight) -> Void = { _, _ in }
     @ObservationIgnored private var resolving: Set<String> = []
-    @ObservationIgnored private let place: Placer?
+    @ObservationIgnored private var place: Placer?
+    /// Bumped by `reset`: a placement still running for the old document is dropped.
+    @ObservationIgnored private var generation = 0
 
     /// Places evidence with Core's matcher on this rulebook (nil: nothing to match against).
     convenience init(matcher: QuoteMatcher?) {
         guard let matcher else { self.init(place: nil); return }
-        self.init(place: { @Sendable e in HighlightPlacer.place(e, matcher: matcher) })
+        self.init(place: Self.placer(matcher))
     }
 
     /// Unit tests: a counting or instant placer.
@@ -29,14 +31,28 @@ final class HighlightStore {
 
     subscript(_ e: Evidence) -> Highlight? { highlights[Self.key(e)] }
 
+    /// Another document (the books in play changed): earlier placements are of the old pages.
+    func reset(place: Placer?) {
+        self.place = place
+        highlights = [:]
+        resolving = []
+        generation += 1
+    }
+
+    /// Core's matcher on `matcher`'s document.
+    static func placer(_ matcher: QuoteMatcher) -> Placer {
+        { @Sendable e in HighlightPlacer.place(e, matcher: matcher) }
+    }
+
     /// Starts placing `e` off the main thread unless it is placed or being placed.
     func resolve(_ e: Evidence) {
         let k = Self.key(e)
         guard highlights[k] == nil, !resolving.contains(k), let place else { return }
         resolving.insert(k)
+        let gen = generation
         Task { [weak self] in
             let h = await Task.detached(priority: .userInitiated) { place(e) }.value
-            guard let self else { return }
+            guard let self, self.generation == gen else { return }
             self.resolving.remove(k)
             self.highlights[k] = h
             self.onResolved(e, h)

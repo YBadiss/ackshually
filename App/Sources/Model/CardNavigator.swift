@@ -125,6 +125,9 @@ final class CardNavigator {
 
     // MARK: View values
 
+    /// A cited page → its book and page in it ("Riverfolk p.4"; one book: "p.4").
+    func reference(_ page: Int) -> PageReference { session.rulebook.contents.reference(for: page) }
+
     /// The answer header: the active branch's verdict and condition while one is shown.
     var header: HeaderContent? {
         guard let a = session.answer else { return nil }
@@ -133,7 +136,7 @@ final class CardNavigator {
         let branch = activeBranch.flatMap { a.branches[safe: $0] }
         return HeaderContent(state: state, question: a.restated ?? a.question,
                              verdict: branch?.verdict ?? a.verdict, confidence: a.confidence,
-                             pages: branch.map { LiveAnswer.pages(of: $0.steps) } ?? a.pages,
+                             pages: (branch.map { LiveAnswer.pages(of: $0.steps) } ?? a.pages).map(reference).uniqued(),
                              condition: branch?.condition, isBusy: session.isBusy, stopped: a.stopped)
     }
 
@@ -142,9 +145,9 @@ final class CardNavigator {
         return cards.compactMap { id in
             switch id {
             case .step(let i):
-                a.steps[safe: i].map { CardItem(id: id, content: .step($0, number: i + 1)) }
+                a.steps[safe: i].map { CardItem(id: id, content: .step($0, number: i + 1, reference: reference)) }
             case .branchStep(let b, let i):
-                a.branches[safe: b]?.steps[safe: i].map { CardItem(id: id, content: .step($0, number: i + 1)) }
+                a.branches[safe: b]?.steps[safe: i].map { CardItem(id: id, content: .step($0, number: i + 1, reference: reference)) }
             case .loading:
                 CardItem(id: id, content: .loading(number: a.steps.count + 1))
             case .branch(let i):
@@ -158,7 +161,8 @@ final class CardNavigator {
         let a = session.answer
         let branchSteps = activeBranch.flatMap { a?.branches[safe: $0]?.steps }.flatMap { $0.isEmpty ? nil : $0 }
         return (branchSteps ?? a?.steps ?? []).enumerated().map {
-            StepRow(index: $0, title: $1.displayTitle(number: $0 + 1), text: $1.text, pages: $1.citedPages.sorted())
+            StepRow(index: $0, title: $1.displayTitle(number: $0 + 1), text: $1.text,
+                    pages: $1.citedPages.sorted().map(reference).uniqued())
         }
     }
 

@@ -33,21 +33,21 @@ enum Fixtures {
 
     static let headerArriving = HeaderContent(state: .arriving, question: answer.restatedQuestion, isBusy: true)
     static let headerStreaming = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: answer.verdict,
-                                               confidence: .stated, pages: [3], isBusy: true)
+                                               confidence: .stated, pages: [.page(3)], isBusy: true)
     static let headerStated = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: answer.verdict,
-                                            confidence: .stated, pages: [3, 4])
+                                            confidence: .stated, pages: [.page(3), .page(4)])
     static let headerInferred = HeaderContent(state: .answered, question: "Can I trade energy for coins with another player?",
                                               verdict: "No: energy can't be traded at all, so not for coins either.",
-                                              confidence: .inferred, pages: [3])
+                                              confidence: .inferred, pages: [.page(3)])
     static let headerNotCovered = HeaderContent(state: .answered, question: "Can a Windmill be sold back?",
                                                 verdict: "Probably not; the rules don't mention selling plants.",
                                                 confidence: .notCovered, pages: [])
     static let headerBranchActive = HeaderContent(state: .answered, question: answer.restatedQuestion, verdict: "Discard all 3.",
-                                                  confidence: .stated, pages: [3], condition: "Without a Battery")
+                                                  confidence: .stated, pages: [.page(3)], condition: "Without a Battery")
     /// Longer than the 3-line cap (old prompts produced verdicts like this).
     static let headerLongVerdict = HeaderContent(state: .answered, question: "If I can't place any color, what do I do?",
                                                  verdict: "You still must pick tiles, and any you can't or don't want to place go to your floor line, costing you minus points. Taking is not optional, and the starting player marker counts as a floor tile too.",
-                                                 confidence: .inferred, pages: [3, 4, 5])
+                                                 confidence: .inferred, pages: [.page(3), .page(4), .page(5)])
     // MARK: Settings
 
     static let routeBundled = RouteStatus(active: .bundledToken, serverHost: "ackshually.badyass.xyz")
@@ -63,10 +63,10 @@ enum Fixtures {
     // MARK: Cards
 
     static let cardStates: [StepCardContent] = [
-        .step(number: 1, title: "General rule", pages: [3], text: answer.steps[0].text, figure: false),
-        .step(number: 2, title: "Scoring track", pages: [4], text: "The scoring track shows 1 point per 3 energy spent.", figure: true),
+        .step(number: 1, title: "General rule", pages: [.page(3)], text: answer.steps[0].text, figure: false),
+        .step(number: 2, title: "Scoring track", pages: [.page(4)], text: "The scoring track shows 1 point per 3 energy spent.", figure: true),
         .loading(number: 3),
-        .step(number: 3, title: "Long step", pages: [4], text: longStepText, figure: false),
+        .step(number: 3, title: "Long step", pages: [.page(4)], text: longStepText, figure: false),
         .branch(condition: "No Battery", verdict: "Discard all 3."),
         .web(number: 2, WebFinding(site: "bgg.com", date: "2021", role: "Designer",
                                    quote: "Yes, as long as he has boots.", warning: "Designer disagrees")),
@@ -100,7 +100,7 @@ enum Fixtures {
     ]
 
     static let stepRows: [StepRow] = answer.steps.enumerated().map {
-        StepRow(index: $0, title: $1.displayTitle(number: $0 + 1), text: $1.text, pages: $1.citedPages)
+        StepRow(index: $0, title: $1.displayTitle(number: $0 + 1), text: $1.text, pages: $1.citedPages.map(PageReference.page))
     }
 
     static func branchRows(active: Int?) -> [BranchRow] {

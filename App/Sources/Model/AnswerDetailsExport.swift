@@ -18,7 +18,7 @@ struct AnswerDetailsExport: Encodable {
 
     /// The shown answer: its final fields (once there is a verdict) and the raw text of the turn that produced it.
     @MainActor
-    init(answer a: LiveAnswer, turns: [Turn], route: AnswerRoute.Kind?, highlights: HighlightStore) {
+    init(answer a: LiveAnswer, turns: [Turn], route: AnswerRoute.Kind?, highlights: HighlightStore, contents: RulebookContents? = nil) {
         question = a.question
         self.route = route
         answer = a.verdict.map {
@@ -26,7 +26,7 @@ struct AnswerDetailsExport: Encodable {
                    branches: a.branches, assumptions: a.assumptions, steps: a.steps, needsWeb: a.confidence != .stated)
         }
         rawText = turns.last { $0.question == a.question }?.rawAssistantText
-        evidence = EvidenceReport.reports(for: a, highlights: highlights)
+        evidence = EvidenceReport.reports(for: a, highlights: highlights, contents: contents)
     }
 
     var json: String {

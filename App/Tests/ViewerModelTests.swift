@@ -42,9 +42,9 @@ final class ViewerModelTests: XCTestCase {
         let m = presented()
         XCTAssertEqual(m.navigator.cardItems.map(\.id), [.step(0), .step(1), .step(2)])
         XCTAssertEqual(m.navigator.cardItems[1].content,
-                       .step(number: 2, title: "Battery exception", pages: [4], text: battery.steps[1].text, figure: false))
+                       .step(number: 2, title: "Battery exception", pages: [.page(4)], text: battery.steps[1].text, figure: false))
         XCTAssertEqual(m.navigator.stepRows.map(\.title), ["General rule", "Battery exception", "What's left over"])
-        XCTAssertEqual(m.navigator.stepRows[2].pages, [3, 4], "sorted")
+        XCTAssertEqual(m.navigator.stepRows[2].pages, [.page(3), .page(4)], "sorted")
     }
 
     func testBranchSelectionSwitchesCardsHeaderAndRows() {
@@ -55,7 +55,7 @@ final class ViewerModelTests: XCTestCase {
         XCTAssertEqual(m.navigator.cardID, .branchStep(branch: 0, step: 0))
         XCTAssertEqual(m.navigator.header?.verdict, "Discard all 3.")
         XCTAssertEqual(m.navigator.header?.condition, "Without a Battery")
-        XCTAssertEqual(m.navigator.header?.pages, [3])
+        XCTAssertEqual(m.navigator.header?.pages, [.page(3)])
         XCTAssertEqual(m.navigator.branchRows.map(\.isActive), [true])
         XCTAssertEqual(m.navigator.stepRows.count, 1)
         m.navigator.selectRow(0)

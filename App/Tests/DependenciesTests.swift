@@ -13,7 +13,9 @@ final class DependenciesTests: XCTestCase {
 
         let token = LiveAnswerProviders(credentials: InMemoryCredentials(bundledToken: "fake"), settings: InMemorySettings())
         XCTAssertEqual(token.provider(isSample: true)?.route, .server)
-        XCTAssertTrue(token.provider(isSample: false)?.provider is ClaudeProvider)
+        // Wrapped in page selection, which only steps in for documents too large to send whole (several joined
+        // books); everything else reaches Claude unchanged.
+        XCTAssertTrue(token.provider(isSample: false)?.provider is PageSelectingProvider)
         XCTAssertEqual(token.serverHost, "ackshually.badyass.xyz")
 
         let demo = LiveAnswerProviders(credentials: InMemoryCredentials(bundledToken: "fake"), settings: InMemorySettings(demoAnswers: true))

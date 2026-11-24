@@ -13,6 +13,8 @@ struct HighlightOverlay: View {
     var evidenceCount: Int
     var note: String?
     var noteKind: HighlightNoteKind = .info
+    /// Several books in play: the passage's book and page ("Riverfolk p.4"), shown in the pager.
+    var location: String? = nil
     var onNext: () -> Void
     @Environment(\.theme) private var theme
 
@@ -46,17 +48,34 @@ struct HighlightOverlay: View {
         }
     }
 
+    /// "Quote 1 of 2", or "Quote 1 of 2 · Riverfolk p.4" with several books.
+    private var pagerTitle: String {
+        let quote = "Quote \(evidenceIndex + 1) of \(evidenceCount)"
+        return location.map { "\(quote) · \($0)" } ?? quote
+    }
+
     @ViewBuilder private var pager: some View {
         if evidenceCount > 1 {
             Button(action: onNext) {
-                Label("Quote \(evidenceIndex + 1) of \(evidenceCount)", systemImage: "chevron.forward")
-                    .labelStyle(TrailingIconLabelStyle())
-                    .monospacedDigit()
-                    .lineLimit(1)
+                // One line when it fits; a book name too long for that goes on a second line, never off screen.
+                ViewThatFits(in: .horizontal) {
+                    Label(pagerTitle, systemImage: "chevron.forward")
+                        .lineLimit(1)
+                    Label {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Quote \(evidenceIndex + 1) of \(evidenceCount)").lineLimit(1)
+                            if let location { Text(location).font(theme.font.footnote) }
+                        }
+                    } icon: {
+                        Image(systemName: "chevron.forward")
+                    }
+                }
+                .labelStyle(TrailingIconLabelStyle())
+                .monospacedDigit()
             }
             .buttonStyle(.glass)
-            .fixedSize()
-            .accessibilityLabel("Quote \(evidenceIndex + 1) of \(evidenceCount)")
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel(pagerTitle)
             .accessibilityHint("Shows the next quote for this step")
             .accessibilityIdentifier("evidencePager")
         }
@@ -69,6 +88,7 @@ struct HighlightOverlay: View {
         HighlightOverlay(evidenceIndex: 0, evidenceCount: 1, note: "See the diagram, lower half") {}
         HighlightOverlay(evidenceIndex: 0, evidenceCount: 2, note: HighlightPlacer.partialNote, noteKind: .partial) {}
         HighlightOverlay(evidenceIndex: 1, evidenceCount: 2, note: HighlightPlacer.notFoundNote, noteKind: .miss) {}
+        HighlightOverlay(evidenceIndex: 1, evidenceCount: 2, note: nil, location: "Solar p.2") {}
     }
     .padding(.vertical)
     .frame(maxHeight: .infinity)
@@ -77,7 +97,7 @@ struct HighlightOverlay: View {
 }
 
 #Preview("iPhone SE width") {
-    HighlightOverlay(evidenceIndex: 1, evidenceCount: 3, note: HighlightPlacer.notFoundNote, noteKind: .miss) {}
+    HighlightOverlay(evidenceIndex: 1, evidenceCount: 3, note: HighlightPlacer.notFoundNote, noteKind: .miss, location: "Solar p.2") {}
         .frame(width: 320)
         .frame(maxHeight: .infinity)
         .background(Fixtures.pageBackdrop)

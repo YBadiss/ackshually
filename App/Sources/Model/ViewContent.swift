@@ -17,7 +17,8 @@ struct HeaderContent: Equatable {
     var question: String
     var verdict: String?
     var confidence: Confidence?
-    var pages: [Int] = []
+    /// Cited pages ("p.3", or "Riverfolk p.4" with several books).
+    var pages: [PageReference] = []
     /// Set while a branch is shown: "If no Battery".
     var condition: String?
     var isBusy = false
@@ -36,7 +37,7 @@ struct WebFinding: Equatable {
 
 /// One card of the step carousel.
 enum StepCardContent: Equatable {
-    case step(number: Int, title: String, pages: [Int], text: String, figure: Bool)
+    case step(number: Int, title: String, pages: [PageReference], text: String, figure: Bool)
     case loading(number: Int)
     case branch(condition: String, verdict: String)
     case web(number: Int, WebFinding)
@@ -54,6 +55,8 @@ struct HighlightChrome: Equatable {
     var evidenceCount: Int
     var note: String?
     var noteKind: HighlightNoteKind
+    /// Several books in play: where the passage is ("Riverfolk p.4"), shown in the pager.
+    var location: String? = nil
 }
 
 /// A row of the full-answer step list (S9).
@@ -62,7 +65,7 @@ struct StepRow: Identifiable, Equatable {
     var index: Int
     var title: String
     var text: String
-    var pages: [Int]
+    var pages: [PageReference]
 }
 
 /// A branch row ("Without a Battery … Discard all 3 ›").
@@ -82,9 +85,31 @@ extension Step {
 }
 
 extension StepCardContent {
-    static func step(_ s: Step, number: Int) -> StepCardContent {
-        .step(number: number, title: s.displayTitle(number: number), pages: s.citedPages, text: s.text,
+    /// `reference` maps a page of the sent document to its book and page (one book: the page itself).
+    static func step(_ s: Step, number: Int, reference: (Int) -> PageReference = PageReference.page) -> StepCardContent {
+        .step(number: number, title: s.displayTitle(number: number), pages: s.citedPages.map(reference).uniqued(), text: s.text,
               figure: s.evidence.contains { $0.quote == nil })
+    }
+}
+
+extension PageReference {
+    /// A page of a one-book document ("p.3").
+    static func page(_ p: Int) -> PageReference { PageReference(book: nil, page: p) }
+}
+
+extension [PageReference] {
+    /// "p.3, p.4"; with several books, pages grouped by book in order:
+    /// "Power Plant Rush p.3, p.4; Solar Expansion p.2".
+    var label: String {
+        var groups: [(book: String?, pages: [Int])] = []
+        for r in self {
+            if let last = groups.last, last.book == r.book { groups[groups.count - 1].pages.append(r.page) }
+            else { groups.append((r.book, [r.page])) }
+        }
+        return groups.map { g in
+            let pages = g.pages.map { "p.\($0)" }.joined(separator: ", ")
+            return g.book.map { "\($0) \(pages)" } ?? pages
+        }.joined(separator: "; ")
     }
 }
 

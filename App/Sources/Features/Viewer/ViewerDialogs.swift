@@ -6,6 +6,7 @@ struct ViewerDialogs: ViewModifier {
     @Bindable var presentation: ViewerPresentation
     var model: ViewerModel
     var active: Bool
+    @Environment(LibraryModel.self) private var library: LibraryModel?
 
     func body(content: Content) -> some View {
         content
@@ -18,6 +19,15 @@ struct ViewerDialogs: ViewModifier {
                                   onCopy: { UIPasteboard.general.string = model.answerDetails?.json },
                                   onDone: { presentation.answerDetails = false })
                     .themed()
+            }
+            // However it closes (Done or a swipe), the open game picks up the books now ticked.
+            .sheet(isPresented: active ? $presentation.playingWith : .constant(false),
+                   onDismiss: { if case .game(let id)? = model.route { library?.booksChanged(id) } }) {
+                if case .game(let id)? = model.route {
+                    PlayingWithScreen(gameID: id, purpose: .change) { presentation.playingWith = false }
+                        .presentationDetents([.medium, .large])
+                        .themed()
+                }
             }
     }
 }

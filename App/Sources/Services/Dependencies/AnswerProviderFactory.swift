@@ -25,7 +25,9 @@ struct LiveAnswerProviders: AnswerProviderFactory {
     func provider(isSample: Bool) -> (provider: any AnswerProvider, route: AnswerRoute.Kind)? {
         let demo = settings.demoAnswers
         if !demo, let route = credentials.route {
-            return (ClaudeProvider(config: route.claudeConfig(model: Self.model)), route.kind)
+            // Page selection only steps in for a document too large to send whole (several joined books);
+            // everything else goes to Claude unchanged (full PDF).
+            return (PageSelectingProvider(base: ClaudeProvider(config: route.claudeConfig(model: Self.model))), route.kind)
         }
         guard isSample || demo else { return nil }
         return (DemoProvider(answer: settings.demoAnswer ?? DemoProvider.batteryAnswer, pace: settings.demoPace), .demo)

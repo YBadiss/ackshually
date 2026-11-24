@@ -107,19 +107,20 @@ const S = [
     <div class="qrow"><div>Ties in turn order?</div><div>Highest plant number goes first</div></div></div>
    <div class="tap" style="top:24px;right:2px;width:34px"></div>`}
 ,
- {t:'13 · Playing with', ms:'Opening a game with add-ons · M3', li:['Shows <b>every time</b> a game has add-ons','Core books always on; <b>tap</b> an add-on to tick it','Starts from last time: <b>Play</b> is one tap','Viewer title button changes it mid-game'],
-  h:`${chrome('Root')}
+ {t:'13 · Playing with', ms:'Opening a game with add-ons · M3', li:['Shows <b>every time</b> a game has add-ons','Core books always on; <b>tap</b> an add-on to tick it','Starts from last time: <b>Play</b> is one tap','<b>Swipe left</b> → Remove · long-press → Make Core / Add-on, Rename','Viewer title button changes it mid-game'],
+  h:`${chrome('My Games')}
    <div class="sheet" style="top:58px;padding:10px 12px">
-    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px">Playing with</b><span class="btn">Play</span></div>
-    <div class="sect">Always</div>
-    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px;opacity:.55"><span style="flex:1">Law of Root</span><span style="color:var(--muted);font-size:8.5px">Reference</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
-    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px;opacity:.55"><span style="flex:1">Learning to Play</span><span style="color:var(--muted);font-size:8.5px">Guide</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--muted)">✕</span><span style="text-align:center;line-height:1.1"><b style="font-size:12px">Root</b><br><span style="color:var(--muted);font-size:8.5px">Playing with</span></span><span class="btn">Play</span></div>
+    <div class="sect">Core</div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Law of Root</span><span style="width:10px;color:var(--muted);font-weight:700">✓</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Learning to Play</span><span style="width:10px;color:var(--muted);font-weight:700">✓</span></div>
     <div class="sect">Add-ons</div>
-    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Riverfolk</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
-    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Underworld</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
-    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Marauder</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
-    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Homeland</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
-    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Law of Rootbotics</span><span style="color:var(--muted);font-size:8.5px">Bots</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Riverfolk</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Underworld</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Marauder</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Homeland</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Law of Rootbotics</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    <div class="qrow" style="padding:5px 8px;color:var(--accent)">＋ Add a Rulebook</div>
     </div>
    <div class="tap" style="top:186px;right:10px;width:26px"></div>`}
 ];

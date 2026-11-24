@@ -65,7 +65,7 @@ extension StepCarousel {
     static func accessibilityLabel(_ item: CardItem) -> String {
         switch item.content {
         case let .step(n, title, pages, text, _):
-            "Step \(n), \(title)\(pages.isEmpty ? "" : ", page \(pages.map(String.init).joined(separator: ", "))"). \(text)"
+            "Step \(n), \(title)\(pages.isEmpty ? "" : ", \(pages.map(\.spokenLabel).joined(separator: ", "))"). \(text)"
         case .loading: "Next step loading"
         case let .branch(c, v): "If \(c): \(v)"
         case let .web(_, w): "\(w.site), \(w.role): \(w.quote)"
