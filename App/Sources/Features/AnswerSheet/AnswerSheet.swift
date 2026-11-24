@@ -76,15 +76,20 @@ struct AnswerSheet: View {
     /// Fallback before the first measurement.
     private static let unmeasuredFraction: CGFloat = 0.22
 
+    /// Detent heights are whole points. Measured heights drift in their last bits as the keyboard and the
+    /// sheet move the content (141.0484363383815, then 141.04843633838152), and each value is a new `.height`
+    /// detent: SwiftUI logged "A presentation preference is rapidly switching between values" and dropped the
+    /// update (console check, 2026-11-24). Rounded up so the content still fits.
     private var collapsedHeight: CGFloat {
         guard metrics.collapsed > 0 else { return containerHeight * Self.unmeasuredFraction }
         return min(metrics.collapsed + theme.spacing.s + bottomInset, containerHeight * theme.layout.sheetCollapsedMaxFraction)
+            .rounded(.up)
     }
 
     /// Same as collapsed until there is more than the header (S4: before the cards arrive).
     private var mediumHeight: CGFloat {
         guard metrics.medium > metrics.collapsed + theme.spacing.xl else { return collapsedHeight }
-        return min(metrics.medium + bottomInset, containerHeight * theme.layout.sheetMediumMaxFraction)
+        return min(metrics.medium + bottomInset, containerHeight * theme.layout.sheetMediumMaxFraction).rounded(.up)
     }
 
     private var collapsed: PresentationDetent {

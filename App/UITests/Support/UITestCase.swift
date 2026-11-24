@@ -8,6 +8,17 @@ class UITestCase: XCTestCase {
 
     override func setUp() async throws {
         continueAfterFailure = false
+        app.launchEnvironment.merge(Self.forwardedEnvironment) { _, new in new }
+    }
+
+    /// Runner variables named `APP_X` reach the app as `X`, so a debugging switch can be set from the command
+    /// line: `TEST_RUNNER_APP_AG_TRAP_CYCLES=1 xcodebuild test …` (xcodebuild strips `TEST_RUNNER_`).
+    nonisolated static var forwardedEnvironment: [String: String] {
+        var env: [String: String] = [:]
+        for (key, value) in ProcessInfo.processInfo.environment where key.hasPrefix("APP_") {
+            env[String(key.dropFirst(4))] = value
+        }
+        return env
     }
 
     /// The sample rulebook with demo answers, instant by default (`-demoPace 0`: the whole answer at once).

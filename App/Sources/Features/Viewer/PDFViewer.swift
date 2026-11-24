@@ -50,6 +50,29 @@ struct PDFViewer: UIViewRepresentable {
         c.onDoubleTap = onDoubleTap
         c.style = style
         v.backgroundColor = UIColor(theme.colors.canvas)
+        guard v.document === document else {
+            // A new set of books (S13) is a new document. Setting it removes the old page views, and after a tap
+            // one of them is the first responder: resigning it inside this SwiftUI update re-entered the view
+            // graph ("Cycle detected through attribute", PDFDocumentSwapTests). So the swap waits for this
+            // update to end; the last update before it wins.
+            c.pendingUpdate = { [self] in show(in: v, c) }
+            if !c.swapScheduled {
+                c.swapScheduled = true
+                // A main-actor task runs on a later turn of the main queue, after this update.
+                Task { @MainActor in
+                    c.swapScheduled = false
+                    c.pendingUpdate?()
+                    c.pendingUpdate = nil
+                }
+            }
+            return
+        }
+        c.pendingUpdate = nil
+        show(in: v, c)
+    }
+
+    /// Swaps in `document` if needed (outside a SwiftUI update), then follows `focus`.
+    private func show(in v: PDFView, _ c: Coordinator) {
         if v.document !== document {
             v.document = document
             c.applied = nil
@@ -84,6 +107,9 @@ struct PDFViewer: UIViewRepresentable {
             didSet { for o in overlays.values { o.style = style.spotlight } }
         }
         var applied: PDFFocus?
+        /// A document swap waiting for the current SwiftUI update to end (see `updateUIView`).
+        var swapScheduled = false
+        var pendingUpdate: (() -> Void)?
         var bottomObscured: CGFloat = 0
         var topObscured: CGFloat = 0
         var onUserMove: () -> Void = {}

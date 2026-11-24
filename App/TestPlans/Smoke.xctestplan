@@ -12,6 +12,7 @@
       "parallelizable": false,
       "selectedTests": [
         "AnswerSheetUITests/testSwipeBranchAndDetents()",
+        "ConsoleTourUITests/testTourEveryScreen()",
         "LibraryUITests/testTrySampleOpenGoBackAndResume()",
         "ServerRouteUITests/testBundledTokenAnswersThroughServer()"
       ],
