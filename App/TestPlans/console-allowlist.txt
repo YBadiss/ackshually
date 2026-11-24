@@ -1,0 +1,46 @@
+# Console check ignore list (App/TestPlans/console-check.sh): log lines from the Ackshually process that are
+# known system or simulator noise. Everything else the app logs at error/fault level (or that names a view bug)
+# fails the check.
+#
+# Format: one extended regex per line, matched against the message text (multi-line messages are joined with
+# spaces), then " # " and why it's noise. A pattern without a reason is rejected. Add a line only after checking
+# the message isn't ours (see CLAUDE.md): say where else it shows up (a bare app, a system process, the owner's
+# log) so the next person can re-check it.
+
+# --- The keyboard (software keyboard and the hardware-keyboard prediction bar) ---
+may only be set for UIKBDynamicRenderFactory, changes not saved   # UIKit keyboard renderer, 5 lines each time the keyboard shows; owner's log ×95 each
+Unable to simultaneously satisfy constraints\..*TUIPredictionViewCell   # the keyboard's prediction bar cells (TextInputUI), not our views
+Error creating CHHapticPattern: .*hapticpatternlibrary\.plist   # the keyboard's key-click haptics: the simulator has no haptic library
+CHHapticPattern\.mm:[0-9]+ .*hapticpatternlibrary\.plist   # same, from CoreHaptics
+Invalid UIScreen coordinate space conversion: Attempting to convert rect \{\{0, 0\}, \{[0-9.]+, 62\}\}   # the 62 pt prediction bar shown with a hardware keyboard
+UIKeyboardLayoutStar implements focusItemsInRect   # UIKit's own keyboard view, once per keyboard
+perform input operation requires a valid sessionID\. .*customInfoType = UIEmojiSearchOperations   # RemoteTextInput: the keyboard's emoji search before its session exists; the owner's manual sessions log it too
+Sandbox extension request for asset set: com\.apple\.linguisticdata failed   # keyboard language assets the simulator can't fetch
+Failed to grant sandbox extension   # same (UAFAssetManager, keyboard assets)
+
+# --- The system and the simulator ---
+cannot add handler to 0 from 0 - dropping   # Core Animation, also logged by a bare SwiftUI app on the same simulator
+non-launching port is incompatible with service identifier "com\.apple\.PointerUI\.pointeruid   # pointer service at launch, also in a bare SwiftUI app
+Unable to get ISSymbol for UTI: com\.apple\.ios-simulator   # the document picker (DocumentManager) has no icon for the simulator device
+EspressoModelWrapper::initialize Cannot create MPS context   # Live Text on PDF pages (TextRecognition): the simulator has no Metal Performance Shaders
+IOSurfaceClientSetSurfaceNotify failed   # simulator IOSurface, once per session
+Failed to send CA Event for app launch measurements   # CoreAnalytics has no XPC connection in the simulator
+\(libCoreFSCache\.dylib\) fopen failed for data file|^fopen failed for data file: errno = 2   # system cache lookup; ~15 system processes (SpringBoard, posters, backboardd) log it too
+NSPredicate: -\[NSPredicate copy\] called on a predicate that has _evaluationBlocked set   # Foundation, once per launch; the app uses no NSPredicate
+connection to com\.apple\.appprotectiond\.extensioninfo interrupted   # a system daemon's XPC connection, once per session
+Decomposition of '(bounds|position)' was requested on layer \(delegate UIViewInProcessLayerAnimationCoordinator\)   # UIKit sheet animations; the system document picker process logs it too
+# CVPixelBufferCreate -6680 (RGBA): on the owner's simulator only (×80 in its log). Checked 2026-11-24: the system
+# processes WeatherPoster and CGPDFService log the same error there, and on a new simulator neither a bare SwiftUI
+# app with a material, glass and a sheet nor a full Smoke run of this app logs it. Not our covers, thumbnails or
+# spotlight (those draw with UIGraphicsImageRenderer / Core Graphics, not CVPixelBuffer).
+CVPixelBufferCreate returned err -6680\. width [0-9]+, height [0-9]+, pixel format RGBA   # see the note above
+
+# --- Xcode's Thread Performance Checker (only when the app runs from Xcode; hidden from Xcode's console) ---
+# Main-thread I/O from our own code (NSFileManager calls in the import path) is NOT listed: it is a bug to fix.
+"antipattern trigger":"dlopen"   # frameworks loading at launch, not a call of ours
+"antipattern trigger":"-\[NSBundle bundleIdentifier\]"   # system frameworks at launch; the app never asks for its bundle identifier
+
+# --- XCUITest, inside the app process while tests drive it ---
+Automation type mismatch; legacy system derived element type   # XCTest's accessibility snapshots
+Unknown client: Ackshually   # Accessibility runtime, when XCTest connects as an accessibility client
+Unexpectedly received animationDidStop without a matching animationDidStart   # XCTest's idle-animation monitor
