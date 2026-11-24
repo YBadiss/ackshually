@@ -7,7 +7,10 @@ struct EvidenceReport: Identifiable, Equatable, Encodable {
     var id: String
     /// Section title: "Step 1 · Picking is mandatory".
     var step: String
+    /// Page of the sent document (the joined one with several books).
     var page: Int
+    /// Several books: that page in its own book ("Solar Expansion p.2"). nil with one book.
+    var book: PageReference? = nil
     var quote: String?
     var box: NormalizedBox?
     /// nil while the matcher is still running.
@@ -17,12 +20,13 @@ struct EvidenceReport: Identifiable, Equatable, Encodable {
 extension EvidenceReport {
     /// Every cited passage of `answer` (main steps, then each branch's) with how it was placed.
     @MainActor
-    static func reports(for answer: LiveAnswer, highlights: HighlightStore) -> [EvidenceReport] {
+    static func reports(for answer: LiveAnswer, highlights: HighlightStore, contents: RulebookContents? = nil) -> [EvidenceReport] {
         var reports: [EvidenceReport] = []
         func add(_ steps: [Step], prefix: String, section: (Int, Step) -> String) {
             for (i, s) in steps.enumerated() {
                 for (j, e) in s.evidence.enumerated() {
-                    reports.append(EvidenceReport(id: "\(prefix)\(i + 1).\(j + 1)", step: section(i, s), page: e.page,
+                    let book = contents.flatMap { $0.isJoined ? $0.reference(for: e.page) : nil }
+                    reports.append(EvidenceReport(id: "\(prefix)\(i + 1).\(j + 1)", step: section(i, s), page: e.page, book: book,
                                                   quote: e.quote, box: e.box, match: highlights[e]?.match))
                 }
             }
@@ -33,6 +37,9 @@ extension EvidenceReport {
         }
         return reports
     }
+
+    /// "p.12", or "Solar Expansion p.2" with several books.
+    var location: String { book?.label ?? "p.\(page)" }
 
     /// Consecutive reports of the same step, in order (one list section per step).
     static func sections(_ reports: [EvidenceReport]) -> [(title: String, rows: [EvidenceReport])] {

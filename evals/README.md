@@ -16,6 +16,7 @@ Runs a question set against rulebook PDFs through the same `AckshuallyCore` code
    | Root — Learning to Play | `root-learning.pdf` | contains `root` |
    | Azul | `azul.pdf` | contains `azul` |
    | Dune: Imperium | `dune-imperium.pdf` | contains `dune` |
+   | Root, several books (`root-sets.json`) | `root-law.pdf`, `root-learning.pdf`, `root-riverfolk-learning.pdf`, `root-underworld-learning.pdf`, `root-marauder-learning.pdf`, `root-homeland-learning.pdf`, `root-clockwork-law.pdf` (Leder Games' resources page) | – |
 
    Missing PDFs are skipped (reported as *skipped*, not failures). PDFs are git-ignored.
 2. **API key**: `export ANTHROPIC_API_KEY=sk-ant-...`. Without it `bench run` exits with code 2 and
@@ -109,6 +110,29 @@ read / **followup** = same session with conversation context):
       "follows": "az-03"                  // optional: follow-up in the same session
 } ] } ] }
 ```
+
+### Several rulebooks per game (S13)
+
+A game can list its books instead of one `pdf`. Core books are always sent; a question ticks add-ons by id.
+The books in play are joined into one PDF (`RulebookJoiner`, same code as the app), with the table of contents,
+order of authority and not-in-play note in the prompt. A joined PDF over 22 MB is sent as an excerpt of selected
+pages (`PageSelectingProvider.oversizeOptions`), as in the app.
+
+```jsonc
+{ "id": "root-sets", "name": "Root",
+  "books": [
+    { "id": "law", "title": "Law of Root", "role": "core", "pdf": "assets/rulebooks/root-law.pdf" },
+    { "id": "riverfolk", "title": "Riverfolk", "role": "add_on", "pdf": "assets/rulebooks/root-riverfolk-learning.pdf" }
+  ],
+  "questions": [ {
+    "id": "rs-01-on", "question": "...", "expected_verdict": "...",
+    "add_ons": ["riverfolk"],                                   // ticked add-ons; none = core books only
+    "expected_book_pages": [{ "book": "law", "page": 11 }]      // pages of each book's own PDF
+} ] }
+```
+
+The report adds a *Rulebooks sent* table (books, PDF size, excerpt or not, cited pages as "Riverfolk p.4").
+Set: `questions/root-sets.json` (6 questions that need an add-on, each asked with it ticked and unticked).
 
 Once the PDFs are in, fill `expected_pages` (and boxes for `az-04..06`) in `questions/m1.json`,
 then re-run; until then the page metric shows TODO.

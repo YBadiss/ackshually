@@ -20,6 +20,15 @@ final class PDFFocusModel {
         focus = PDFFocus(token: token, highlight: h, zoom: zoom)
     }
 
+    /// A whole page the reader asked for (the book switcher): shown like a page they scrolled to, so detent
+    /// changes don't pull the PDF back to the evidence.
+    func showPage(_ page: Int) {
+        token += 1
+        zoom = .page
+        focus = PDFFocus(token: token, highlight: Highlight(page: page, kind: .wholePage), zoom: .page)
+        userMovedPDF = true
+    }
+
     /// Back to the evidence zoom, following it again (new card, next quote).
     func followEvidence() {
         zoom = .evidence

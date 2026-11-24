@@ -1,0 +1,361 @@
+{
+  "description": "S13 several-rulebook set: Root with its two core books (Law of Root Oct 2025, Learning to Play) and five add-ons. Each question needs an add-on and is asked twice: with only that add-on ticked (-on) and with no add-on ticked (-off). The Law of Root covers the Riverfolk, Underworld, Marauder and Homeland factions, so -off answers keep the ruling but must flag the add-on as not in play; Rootbotics is only in its own Law, so rs-06-off is not covered. Pages are pages of each book's own PDF (expected_book_pages); the bench maps them to the joined document.",
+  "games": [
+    {
+      "id": "root-sets",
+      "name": "Root",
+      "books": [
+        {
+          "id": "law",
+          "title": "Law of Root",
+          "role": "core",
+          "pdf": "assets/rulebooks/root-law.pdf",
+          "pdf_match": [
+            "root",
+            "law"
+          ]
+        },
+        {
+          "id": "learning",
+          "title": "Learning to Play",
+          "role": "core",
+          "pdf": "assets/rulebooks/root-learning.pdf",
+          "pdf_match": [
+            "root",
+            "learning"
+          ]
+        },
+        {
+          "id": "riverfolk",
+          "title": "Riverfolk",
+          "role": "add_on",
+          "pdf": "assets/rulebooks/root-riverfolk-learning.pdf"
+        },
+        {
+          "id": "underworld",
+          "title": "Underworld",
+          "role": "add_on",
+          "pdf": "assets/rulebooks/root-underworld-learning.pdf"
+        },
+        {
+          "id": "marauder",
+          "title": "Marauder",
+          "role": "add_on",
+          "pdf": "assets/rulebooks/root-marauder-learning.pdf"
+        },
+        {
+          "id": "homeland",
+          "title": "Homeland",
+          "role": "add_on",
+          "pdf": "assets/rulebooks/root-homeland-learning.pdf"
+        },
+        {
+          "id": "clockwork",
+          "title": "Law of Rootbotics",
+          "role": "add_on",
+          "pdf": "assets/rulebooks/root-clockwork-law.pdf"
+        }
+      ],
+      "questions": [
+        {
+          "id": "rs-01-on",
+          "question": "I'm playing the Lizard Cult. Can I use a bird card as wild to pay for a ritual?",
+          "expected_verdict": "No: bird cards are not wild for Lizard Cult rituals (Hatred of Birds).",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "riverfolk",
+            "add-on",
+            "ticked"
+          ],
+          "source": "own",
+          "add_ons": [
+            "riverfolk"
+          ],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 11
+            },
+            {
+              "book": "riverfolk",
+              "page": 3
+            }
+          ],
+          "expected_quote": "Bird cards are not wild for Cult rituals.",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Add-on riverfolk p.3: “cards are not wild when performing rituals”"
+        },
+        {
+          "id": "rs-01-off",
+          "question": "I'm playing the Lizard Cult. Can I use a bird card as wild to pay for a ritual?",
+          "expected_verdict": "No: bird cards are not wild for Cult rituals (Law of Root 10.2.2), flagged as Riverfolk content that isn't in play.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "riverfolk",
+            "add-on",
+            "unticked"
+          ],
+          "source": "own",
+          "add_ons": [],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 11
+            }
+          ],
+          "expected_quote": "Bird cards are not wild for Cult rituals.",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Unticked: the core Law of Root also covers this faction, so the ruling is the same, but the answer must flag that the riverfolk add-on is not in play tonight (assumption, branch or verdict). Applying it silently as if ticked is partially correct."
+        },
+        {
+          "id": "rs-02-on",
+          "question": "The Riverfolk have 5 funds and someone just removed one of their trade posts. How many funds do they lose, and can they build that trade post again?",
+          "expected_verdict": "They lose 3 funds (half, rounded up) and the trade post leaves the game for good. The Law of Root (rules reference, 11.2.5 Trade Disruption) adds 'rounded up', which the Riverfolk learning guide leaves out; it overrides the guide.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "riverfolk",
+            "authority",
+            "add-on",
+            "ticked"
+          ],
+          "source": "own",
+          "add_ons": [
+            "riverfolk"
+          ],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 12
+            },
+            {
+              "book": "riverfolk",
+              "page": 5
+            }
+          ],
+          "expected_quote": "the Riverfolk remove half of their funds, rounded up, and remove the trade post from the game permanently",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Add-on riverfolk p.5: “remove half of your funds and return that trade post to the box”"
+        },
+        {
+          "id": "rs-02-off",
+          "question": "The Riverfolk have 5 funds and someone just removed one of their trade posts. How many funds do they lose, and can they build that trade post again?",
+          "expected_verdict": "They lose 3 funds (half, rounded up) and the trade post is removed from the game permanently (Law of Root 11.2.5), flagged as Riverfolk content that isn't in play.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "riverfolk",
+            "authority",
+            "add-on",
+            "unticked"
+          ],
+          "source": "own",
+          "add_ons": [],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 12
+            }
+          ],
+          "expected_quote": "the Riverfolk remove half of their funds, rounded up, and remove the trade post from the game permanently",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Unticked: the core Law of Root also covers this faction, so the ruling is the same, but the answer must flag that the riverfolk add-on is not in play tonight (assumption, branch or verdict). Applying it silently as if ticked is partially correct."
+        },
+        {
+          "id": "rs-03-on",
+          "question": "I guessed the type of a facedown Corvid plot and got it wrong. What happens?",
+          "expected_verdict": "The plot stays face down and you give the card you showed to the Corvids.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "underworld",
+            "add-on",
+            "ticked"
+          ],
+          "source": "own",
+          "add_ons": [
+            "underworld"
+          ],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 15
+            },
+            {
+              "book": "underworld",
+              "page": 4
+            }
+          ],
+          "expected_quote": "If incorrect, the Corvids say “no,” and the enemy gives that card to the Corvids.",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Add-on underworld p.4: “If incorrect, the token remains face down, and they give the card to the Corvids.”"
+        },
+        {
+          "id": "rs-03-off",
+          "question": "I guessed the type of a facedown Corvid plot and got it wrong. What happens?",
+          "expected_verdict": "The plot stays face down and you give the shown card to the Corvids (Law of Root 13.2.4 Exposure), flagged as Underworld content that isn't in play.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "underworld",
+            "add-on",
+            "unticked"
+          ],
+          "source": "own",
+          "add_ons": [],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 15
+            }
+          ],
+          "expected_quote": "If incorrect, the Corvids say “no,” and the enemy gives that card to the Corvids.",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Unticked: the core Law of Root also covers this faction, so the ruling is the same, but the answer must flag that the underworld add-on is not in play tonight (assumption, branch or verdict). Applying it silently as if ticked is partially correct."
+        },
+        {
+          "id": "rs-04-on",
+          "question": "I removed one of the Keepers in Iron's relics. How many points do I get, and where does the relic go?",
+          "expected_verdict": "You score 2 points (one extra) and place the relic face up in any forest (Prized Trophies).",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "marauder",
+            "add-on",
+            "ticked"
+          ],
+          "source": "own",
+          "add_ons": [
+            "marauder"
+          ],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 17
+            },
+            {
+              "book": "marauder",
+              "page": 7
+            }
+          ],
+          "expected_quote": "they place it in any forest face up and score an extra victory point (for a total of two)",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Add-on marauder p.7: “the enemy scores two points instead of one, and they place the relic back in any forest”"
+        },
+        {
+          "id": "rs-04-off",
+          "question": "I removed one of the Keepers in Iron's relics. How many points do I get, and where does the relic go?",
+          "expected_verdict": "2 points, and the relic goes face up into any forest (Law of Root 15.2.5 Prized Trophies), flagged as Marauder content that isn't in play.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "marauder",
+            "add-on",
+            "unticked"
+          ],
+          "source": "own",
+          "add_ons": [],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 17
+            }
+          ],
+          "expected_quote": "they place it in any forest face up and score an extra victory point (for a total of two)",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Unticked: the core Law of Root also covers this faction, so the ruling is the same, but the answer must flag that the marauder add-on is not in play tonight (assumption, branch or verdict). Applying it silently as if ticked is partially correct."
+        },
+        {
+          "id": "rs-05-on",
+          "question": "With the frogs in the game, can I draw from the Pond instead of the deck when I draw cards?",
+          "expected_verdict": "Yes, but only the first card you draw: it may come from the top of the Pond instead of the shared deck.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "homeland",
+            "add-on",
+            "ticked"
+          ],
+          "source": "own",
+          "add_ons": [
+            "homeland"
+          ],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 19
+            },
+            {
+              "book": "homeland",
+              "page": 3
+            }
+          ],
+          "expected_quote": "they may draw the first card from the top of the Pond instead of the shared deck",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Add-on homeland p.3: “they may take the first card they draw from the top of the Pond instead of the shared deck”"
+        },
+        {
+          "id": "rs-05-off",
+          "question": "With the frogs in the game, can I draw from the Pond instead of the deck when I draw cards?",
+          "expected_verdict": "Yes, the first card you draw may come from the top of the Pond (Law of Root 16.2.3), flagged as Homeland content that isn't in play.",
+          "expected_confidence": "stated",
+          "tags": [
+            "faction",
+            "homeland",
+            "add-on",
+            "unticked"
+          ],
+          "source": "own",
+          "add_ons": [],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 19
+            }
+          ],
+          "expected_quote": "they may draw the first card from the top of the Pond instead of the shared deck",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Unticked: the core Law of Root also covers this faction, so the ruling is the same, but the answer must flag that the homeland add-on is not in play tonight (assumption, branch or verdict). Applying it silently as if ticked is partially correct."
+        },
+        {
+          "id": "rs-06-on",
+          "question": "An effect lets me take a card from the bot's hand. What do I get?",
+          "expected_verdict": "Bots have no hand: you draw a card instead (Law of Rootbotics 2.8.1 Poor Manual Dexterity).",
+          "expected_confidence": "stated",
+          "tags": [
+            "bots",
+            "clockwork",
+            "add-on",
+            "ticked"
+          ],
+          "source": "own",
+          "add_ons": [
+            "clockwork"
+          ],
+          "expected_book_pages": [
+            {
+              "book": "clockwork",
+              "page": 2
+            }
+          ],
+          "expected_quote": "If a human would take a card from a bot, that human draws a card instead.",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page)."
+        },
+        {
+          "id": "rs-06-off",
+          "question": "An effect lets me take a card from the bot's hand. What do I get?",
+          "expected_verdict": "Not covered by the books in play: bots are in the Law of Rootbotics, which isn't ticked tonight. The Law of Root only says bots follow the Law of Rootbotics (A.3). The answer must not invent a bot rule.",
+          "expected_confidence": "not_covered",
+          "tags": [
+            "bots",
+            "clockwork",
+            "add-on",
+            "unticked"
+          ],
+          "source": "own",
+          "add_ons": [],
+          "expected_book_pages": [
+            {
+              "book": "law",
+              "page": 22
+            }
+          ],
+          "expected_quote": "As a group, you may choose to play with bots, as described in the Law of Rootbotics.",
+          "notes": "Verified against the PDFs 2026-11-24 (bench match: every quote matched on its page). Correct only if the answer says the books in play don't cover it (not_covered, or inferred flagged as not stated) and points to Rootbotics."
+        }
+      ]
+    }
+  ]
+}

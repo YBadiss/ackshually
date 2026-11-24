@@ -107,6 +107,19 @@ final class HostedView {
         return condition()
     }
 
+    /// Waits until two renders ~150 ms apart are identical (up to ~3 s): PDFKit draws its page tiles
+    /// asynchronously, sharper as they finish, so a capture right after layout can catch a blurry tile
+    /// when the machine is busy (other tests just ran).
+    func settleRendering() async {
+        var last = image(scale: 1).pngData()
+        for _ in 0..<20 {
+            try? await Task.sleep(for: .milliseconds(150))
+            let next = image(scale: 1).pngData()
+            if next == last { return }
+            last = next
+        }
+    }
+
     /// Renders the window like the screen does (materials and glass included).
     func image(scale: CGFloat? = nil) -> UIImage {
         let format = UIGraphicsImageRendererFormat()

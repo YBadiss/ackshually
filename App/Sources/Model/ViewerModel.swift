@@ -14,7 +14,8 @@ import AckshuallyCore
 @MainActor
 @Observable
 final class ViewerModel {
-    let rulebook: LoadedRulebook
+    /// What My Games pushed for this session (nil in previews and tests).
+    let route: GameRoute?
     let session: AnswerSession
     let navigator: CardNavigator
     let highlights: HighlightStore
@@ -22,13 +23,23 @@ final class ViewerModel {
     let presentation = ViewerPresentation()
     let providers: any AnswerProviderFactory
 
+    /// The document on screen and asked about: the game's books in play (S13), joined.
+    var rulebook: LoadedRulebook { session.rulebook }
+
     var detent: SheetDetent = .medium
     /// The reader closed the answer (header ✕, Hide Answer). The only stored input of `sheetVisible`.
     private(set) var sheetClosed = false
 
-    init(rulebook: LoadedRulebook, providers: any AnswerProviderFactory, place: HighlightStore.Placer? = nil) {
-        self.rulebook = rulebook
+    /// The set of books last handed to `session.stage` (`Library.signature`), so it is staged once.
+    @ObservationIgnored var stagedSignature: String?
+    /// Unit tests' placer, kept when the books in play change.
+    @ObservationIgnored private let placeOverride: HighlightStore.Placer?
+
+    init(rulebook: LoadedRulebook, providers: any AnswerProviderFactory, route: GameRoute? = nil,
+         place: HighlightStore.Placer? = nil) {
+        self.route = route
         self.providers = providers
+        placeOverride = place
         session = AnswerSession(rulebook: rulebook, providers: providers)
         navigator = CardNavigator(session: session)
         highlights = place.map(HighlightStore.init(place:)) ?? HighlightStore(matcher: rulebook.matcher)
@@ -87,6 +98,10 @@ final class ViewerModel {
             detent = .medium
         case .needsCredential:
             presentation.settings = true
+        case .rulebookChanged:
+            // A new document: placements and the PDF position were for the old one's pages.
+            highlights.reset(place: placeOverride ?? HighlightStore.placer(rulebook.matcher))
+            pdfFocus.clear()
         case .evidence(let evidence):
             evidence.forEach(highlights.resolve)
         case .step(let i):
@@ -117,14 +132,24 @@ final class ViewerModel {
         let note = h?.note ?? (h?.kind == .wholePage ? HighlightPlacer.notFoundNote : nil)
         let count = navigator.currentStep?.evidence.count ?? 0
         guard note != nil || count > 1 else { return nil }
+        // Several books: the pager says which book the passage is in ("Riverfolk p.4").
+        let contents = rulebook.contents
+        let location = contents.isJoined ? navigator.currentEvidence.map { contents.reference(for: $0.page).label } : nil
         return HighlightChrome(evidenceIndex: navigator.evidenceIndex, evidenceCount: count, note: note,
-                               noteKind: h.map { HighlightNoteKind($0.match) } ?? .info)
+                               noteKind: h.map { HighlightNoteKind($0.match) } ?? .info, location: location)
     }
 
     func nextEvidence() {
         guard navigator.nextEvidence() else { return }
         pdfFocus.followEvidence()
         refocus()
+    }
+
+    /// The book switcher (several books in play): the PDF jumps to that book's first page and stays there
+    /// (like a pan) until a new card, a double-tap or the next quote.
+    func showBook(_ index: Int) {
+        guard let part = rulebook.contents.parts[safe: index] else { return }
+        pdfFocus.showPage(part.firstPage)
     }
 
     /// S8 double-tap: back to the evidence after a pinch/pan, otherwise evidence zoom ↔ full page.
@@ -148,7 +173,8 @@ final class ViewerModel {
     // MARK: Answer Details
 
     var answerDetails: AnswerDetailsExport? {
-        session.answer.map { AnswerDetailsExport(answer: $0, turns: session.turns, route: session.route, highlights: highlights) }
+        session.answer.map { AnswerDetailsExport(answer: $0, turns: session.turns, route: session.route, highlights: highlights,
+                                         contents: rulebook.contents) }
     }
 
     var routeLabel: String? { session.route?.label(serverHost: providers.serverHost) }

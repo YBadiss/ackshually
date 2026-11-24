@@ -1,4 +1,5 @@
 import SwiftUI
+import AckshuallyCore
 
 /// One card of the carousel (S5/S6), styled as a system shelf card (App Store / Music):
 /// rounded, no border or shadow. Caption = step title + page, then the step text, capped at
@@ -53,8 +54,9 @@ struct StepCard: View {
         TruncatingText(text: text, lineLimit: theme.layout.cardMaxLines, font: font ?? theme.font.cardBody, onMore: onMore)
     }
 
-    static func pageText(_ pages: [Int]) -> String? {
-        pages.isEmpty ? nil : pages.map { "p.\($0)" }.joined(separator: ", ")
+    /// "p.3, p.4", or "Riverfolk p.4" with several books.
+    static func pageText(_ pages: [PageReference]) -> String? {
+        pages.isEmpty ? nil : pages.label
     }
 }
 

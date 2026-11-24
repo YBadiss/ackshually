@@ -36,7 +36,28 @@ public final class PageSelectingProvider: AnswerProvider, @unchecked Sendable {
 
     // MARK: Streaming
 
-    public func answer(_ request: AnswerRequest) -> AsyncThrowingStream<AnswerEvent, Error> {
+    /// Page selection for a document too large to send whole (several joined rulebooks, S13): generous, and
+    /// never the full PDF (it would be refused), so no full-document fallback either.
+    public static let oversizeOptions = PageSelectionOptions(topK: 6, neighbors: 1, maxPages: 16, fullIfCoverage: 2,
+                                                             fallbackOnNotCovered: false)
+
+    /// What `request` will send: its own choice, except that a document over `ClaudeProvider.maxDocumentBytes`
+    /// is never sent whole.
+    public static func effectiveSelection(for request: AnswerRequest) -> PageSelectionMode {
+        guard request.isOversize else { return request.pageSelection }
+        switch request.pageSelection {
+        case .fullDocument: return .automatic(oversizeOptions)
+        case .automatic(var o):
+            o.fallbackOnNotCovered = false
+            o.fullIfCoverage = 2
+            if o.maxPages == nil { o.maxPages = oversizeOptions.maxPages }
+            return .automatic(o)
+        case .pages: return request.pageSelection
+        }
+    }
+
+    public func answer(_ original: AnswerRequest) -> AsyncThrowingStream<AnswerEvent, Error> {
+        let request = { var r = original; r.pageSelection = Self.effectiveSelection(for: original); return r }()
         if case .fullDocument = request.pageSelection { return base.answer(request) }
         return AsyncThrowingStream { continuation in
             let task = Task {
@@ -73,7 +94,7 @@ public final class PageSelectingProvider: AnswerProvider, @unchecked Sendable {
     func prepareExcerpt(_ r: AnswerRequest) -> (excerpt: ClaudeProvider.Excerpt?, selection: PageSelection?, options: PageSelectionOptions) {
         var options = PageSelectionOptions(fallbackOnNotCovered: false)
         guard let book = r.rulebook ?? rulebook(for: r.pdf) else { return (nil, nil, options) }
-        let selection: PageSelection
+        var selection: PageSelection
         switch r.pageSelection {
         case .fullDocument:
             return (nil, nil, options)
@@ -86,8 +107,18 @@ public final class PageSelectingProvider: AnswerProvider, @unchecked Sendable {
         }
         // Citations on a text excerpt would locate characters, not pages: always send a PDF there.
         if config.mode == .citations { options.representation = .pdf }
+        if selection.isFullDocument && r.isOversize {
+            // The whole document would be refused: send its best-ranked pages (or its first ones) instead.
+            let cap = options.maxPages ?? Self.oversizeOptions.maxPages ?? 16
+            let pages = selection.ranked.isEmpty ? Array(1...min(cap, book.pageCount)) : Array(selection.ranked.prefix(cap))
+            var s = book.selection(pages: pages)
+            s.ranked = selection.ranked
+            s.confidence = selection.confidence
+            s.reason = "document too large to send whole" + (selection.reason.map { " (\($0))" } ?? "")
+            selection = s
+        }
         guard !selection.isFullDocument else { return (nil, selection, options) }
-        let note = selection.excerptNote(title: r.documentTitle)
+        let note = selection.excerptNote(title: r.documentTitle, fullDocumentFollows: options.fallbackOnNotCovered)
         switch options.representation {
         case .pdf:
             guard let data = book.excerptPDF(selection) else { return (nil, selection, options) }

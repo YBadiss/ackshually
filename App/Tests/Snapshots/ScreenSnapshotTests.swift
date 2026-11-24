@@ -70,6 +70,7 @@ final class ScreenSnapshotTests: XCTestCase {
         defer { h.close() }
         _ = await h.settle { h.element("pdfView")?.value.hasPrefix("Zoomed, spotlight") == true }
         await h.settle()
+        await h.settleRendering()
         try assertScreen(h, named: "answer-column")
     }
 
@@ -80,6 +81,29 @@ final class ScreenSnapshotTests: XCTestCase {
                 HighlightOverlay(evidenceIndex: 0, evidenceCount: 1, note: "See the diagram, lower half") {}
                 HighlightOverlay(evidenceIndex: 0, evidenceCount: 2, note: HighlightPlacer.partialNote, noteKind: .partial) {}
                 HighlightOverlay(evidenceIndex: 1, evidenceCount: 2, note: HighlightPlacer.notFoundNote, noteKind: .miss) {}
+            }
+            .padding(.vertical).frame(maxHeight: .infinity, alignment: .top).background(Fixtures.pageBackdrop)
+        }
+    }
+
+    // MARK: Several rulebooks (S13)
+
+    func testPlayingWith() async throws {
+        try await snap("play", safeArea: true) { PlayingWithFixtures.sheet(PlayingWithFixtures.content) }
+        try await snap("play-dark", dark: true, safeArea: true) { PlayingWithFixtures.sheet(PlayingWithFixtures.content) }
+        try await snap("add-rulebook", safeArea: true) {
+            AddRulebookSheet(bookTitle: "Solar Expansion", games: PlayingWithFixtures.addTargets, onNewGame: {}, onAdd: { _, _ in }, onCancel: {})
+        }
+    }
+
+    /// Book names on the proof line, the cards and the pager when two books are joined.
+    func testSeveralBooksAnswer() async throws {
+        try await snap("medium") { column(Fixtures.setModel(card: 1), .sheet(.medium)) }
+        try await snap("pager", size: CGSize(width: 402, height: 200)) {
+            VStack(spacing: 16) {
+                HighlightOverlay(evidenceIndex: 0, evidenceCount: 2, note: nil, location: "Solar Expansion p.2") {}
+                HighlightOverlay(evidenceIndex: 1, evidenceCount: 2, note: HighlightPlacer.partialNote, noteKind: .partial,
+                                 location: "Power Plant Rush p.3") {}
             }
             .padding(.vertical).frame(maxHeight: .infinity, alignment: .top).background(Fixtures.pageBackdrop)
         }

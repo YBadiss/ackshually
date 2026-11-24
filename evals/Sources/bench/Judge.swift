@@ -19,8 +19,13 @@ struct Judge {
 
     /// `pageTexts`: text of the rulebook pages the answer cites plus the expected pages, so the judge
     /// can check extra claims against the source instead of treating anything outside the expected ruling as invented.
-    func judge(question q: Question, answer a: Answer, pageTexts: [(page: Int, text: String)] = []) async -> Judgement? {
-        let excerpts = pageTexts.map { "--- page \($0.page) ---\n\($0.text.prefix(6000))" }.joined(separator: "\n")
+    func judge(question q: Question, answer a: Answer, pageTexts: [(page: Int, label: String, text: String)] = [],
+               books: [String] = [], notInPlay: [String] = []) async -> Judgement? {
+        let excerpts = pageTexts.map { "--- \($0.label) ---\n\($0.text.prefix(6000))" }.joined(separator: "\n")
+        let assumptions = a.assumptions.map { "- \($0)" }.joined(separator: "\n")
+        let inPlay = books.count > 1 || !notInPlay.isEmpty
+            ? "Rulebooks in play: \(books.joined(separator: ", "))." + (notInPlay.isEmpty ? "" : " Not in play: \(notInPlay.joined(separator: ", ")).") + "\n"
+            : ""
         let branches = a.branches.map { "- if \($0.condition): \($0.verdict)" }.joined(separator: "\n")
         let prompt = """
         You grade a board-game rules assistant. Compare its ruling with the expected ruling.
@@ -34,12 +39,12 @@ struct Judge {
         If the expected ruling says the rulebook does not cover it, a response that clearly says so \
         (confidence not_covered or inferred, flagged as not stated) is correct.
 
-        Question: \(q.question)
+        \(inPlay)Question: \(q.question)
         Expected ruling: \(q.expectedVerdict)\(q.expectedConfidence.map { " (expected confidence: \($0))" } ?? "")
 
         Assistant verdict: \(a.verdict)
         Assistant confidence: \(a.confidence.rawValue)
-        \(branches.isEmpty ? "" : "Assistant branches:\n\(branches)\n")Assistant reasoning steps:
+        \(branches.isEmpty ? "" : "Assistant branches:\n\(branches)\n")\(assumptions.isEmpty ? "" : "Assistant assumptions:\n\(assumptions)\n")Assistant reasoning steps:
         \(a.steps.enumerated().map { "\($0.offset + 1). \($0.element.text)" }.joined(separator: "\n"))
 
         RULEBOOK PAGES (text layer):

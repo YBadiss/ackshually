@@ -1,8 +1,11 @@
 import SwiftUI
 
-/// One game in My Games: cover, name, and when it was last opened.
+/// One game in My Games: cover, name, how many rulebooks it has (when more than one), and when it was last
+/// opened.
 struct GameRow: View {
     var title: String
+    /// "7 rulebooks"; nil for a game with one.
+    var books: String? = nil
     var lastOpened: Date
     var cover: UIImage?
     @Environment(\.theme) private var theme
@@ -14,6 +17,11 @@ struct GameRow: View {
                 Text(title)
                     .font(theme.font.gameTitle)
                     .foregroundStyle(theme.colors.label)
+                if let books {
+                    Text(books)
+                        .font(theme.font.gameDetail)
+                        .foregroundStyle(theme.colors.secondaryLabel)
+                }
                 Text("Opened \(lastOpened, format: .relative(presentation: .named))")
                     .font(theme.font.gameDetail)
                     .foregroundStyle(theme.colors.secondaryLabel)
@@ -28,12 +36,13 @@ struct GameRow: View {
     List {
         GameRow(title: "Power Plant Rush", lastOpened: .now.addingTimeInterval(-90), cover: LibraryFixtures.cover)
         GameRow(title: "Azul", lastOpened: .now.addingTimeInterval(-86_400 * 2), cover: nil)
+        GameRow(title: "Woodland Court", books: "7 rulebooks", lastOpened: .now.addingTimeInterval(-86_400 * 9), cover: nil)
         GameRow(title: "Root: The Law of Root, Learning to Play edition", lastOpened: .now.addingTimeInterval(-86_400 * 40), cover: nil)
     }
     .themed()
 }
 #Preview("AX5") {
-    List { GameRow(title: "Power Plant Rush", lastOpened: .now.addingTimeInterval(-3600), cover: LibraryFixtures.cover) }
+    List { GameRow(title: "Power Plant Rush", books: "2 rulebooks", lastOpened: .now.addingTimeInterval(-3600), cover: LibraryFixtures.cover) }
         .themed()
         .dynamicTypeSize(.accessibility5)
 }

@@ -1,0 +1,5 @@
+- Date: 2026-11-24 16:22:29 +0000
+- Questions: `root-sets.json`
+- Model: `claude-sonnet-5-5` · effort `low` · evidence mode `json` (structured outputs)
+- Verdict correctness is graded by an **LLM judge** (`claude-sonnet-5-5`), not by a human.
+- Pages sent: full PDF

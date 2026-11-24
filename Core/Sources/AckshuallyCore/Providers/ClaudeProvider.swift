@@ -105,6 +105,11 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
         self.session = session
     }
 
+    /// Largest PDF sent whole. The API takes 32 MB per request and base64 adds a third, so ~22 MB of PDF
+    /// leaves room for the prompt and the conversation. Larger documents (several joined rulebooks) are sent
+    /// as an excerpt of selected pages (`PageSelectingProvider`).
+    public static let maxDocumentBytes = 22_000_000
+
     static let fallbackModels: Set<String> = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-opus-5", "claude-fable-5-2", "claude-fable-5-1"]
 
     // MARK: Request
@@ -117,6 +122,11 @@ public final class ClaudeProvider: AnswerProvider, @unchecked Sendable {
     func requestBody(for r: AnswerRequest, excerpt: Excerpt?) -> JSONValue {
         let citations = config.mode == .citations
         var firstContent: [JSONValue] = []
+        // Several books (S13): table of contents, order of authority, what is not in play. Before the
+        // document, inside the cached prefix (stable for a given set of books).
+        if let contents = r.contents, contents.needsPromptNote {
+            firstContent.append(["type": "text", "text": .string(contents.promptNote)])
+        }
         if let excerpt, let text = excerpt.text {
             firstContent.append(["type": "text", "text": .string(excerpt.note)])
             firstContent.append(["type": "text", "text": .string(text), "cache_control": config.cacheTTL.cacheControl])

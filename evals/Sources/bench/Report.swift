@@ -147,6 +147,18 @@ enum Report {
             md += "\n"
         }
 
+        // Several-book games (S13): what each question sent and where its evidence landed.
+        let multi = asked.filter { $0.books != nil }
+        if !multi.isEmpty {
+            md += "\n## Rulebooks sent\n\n| Id | Books in play | PDF sent | Confidence | Cited |\n|---|---|---|---|---|\n"
+            for r in multi {
+                let size = r.documentBytes.map { String(format: "%.1f MB", Double($0) / 1_000_000) } ?? "–"
+                let sent = r.retrieval.map { $0.fullDocument ? size : "\(size) → excerpt of \($0.pages.count) pages" } ?? size
+                let cited = r.highlights.map { $0.reference ?? "p.\($0.page)" }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+                md += "| \(r.id) | \(r.books?.joined(separator: " + ") ?? "–") | \(sent) | \(r.answer?.confidence.rawValue ?? "–") | \(cited.joined(separator: ", ")) |\n"
+            }
+        }
+
         // Details worth reading
         md += "\n## Misses\n\n"
         var any = false
