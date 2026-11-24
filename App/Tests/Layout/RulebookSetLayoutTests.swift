@@ -3,7 +3,7 @@ import SwiftUI
 import AckshuallyCore
 @testable import Ackshually
 
-/// Several rulebooks per game (S13), hosted in-process: the "Playing with" list, the ＋ choice, the viewer's
+/// Several rulebooks per game (S13), hosted in-process: the "Playing with" list, the viewer's
 /// title button and book switcher, book names on the pager and the cards, and "N rulebooks" in My Games.
 @MainActor
 final class RulebookSetLayoutTests: XCTestCase {
@@ -39,7 +39,7 @@ final class RulebookSetLayoutTests: XCTestCase {
             }
         }
         let h = await hosted { PlayingWithFixtures.sheet(PlayingWithFixtures.content) }
-        XCTAssertNotNil(h.frame("addBook"), "＋ Add a Rulebook at the bottom")
+        XCTAssertNotNil(h.frame("addBook"), "＋ Add Rulebooks at the bottom")
     }
 
     func testFromTheViewerItSaysDoneAndWhileOpeningItShowsProgress() async throws {
@@ -49,14 +49,6 @@ final class RulebookSetLayoutTests: XCTestCase {
         h = await hosted { PlayingWithFixtures.sheet(PlayingWithFixtures.opening) }
         XCTAssertNil(h.frame("playingWithConfirm"), "Play is replaced by progress while the books are joined")
         XCTAssertTrue(h.elements.contains { $0.label == "Opening the rulebooks" })
-    }
-
-    func testAddRulebookOffersNewGameAndEveryGame() async throws {
-        let h = await hosted {
-            AddRulebookSheet(bookTitle: "Solar Expansion", games: PlayingWithFixtures.addTargets, onNewGame: {}, onAdd: { _, _ in }, onCancel: {})
-        }
-        XCTAssertNotNil(h.frame("newGame"))
-        for g in PlayingWithFixtures.addTargets { XCTAssertNotNil(h.frame("addTo-\(g.id)"), g.title) }
     }
 
     /// The viewer's title is a button with the ticked add-ons; several books in play add the book switcher.

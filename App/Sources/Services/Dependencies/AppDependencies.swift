@@ -8,12 +8,15 @@ struct AppDependencies: Sendable {
     var settings: any AppSettings
     var library: any LibraryStorage
     var providers: any AnswerProviderFactory
+    /// Which game each picked rulebook belongs to (S14).
+    var suggestions: any RulebookSuggestions
 
     static func live() -> AppDependencies {
         let credentials = LiveCredentials()
         let settings = UserDefaultsSettings()
         return AppDependencies(credentials: credentials, settings: settings, library: FileLibraryStorage(),
-                               providers: LiveAnswerProviders(credentials: credentials, settings: settings))
+                               providers: LiveAnswerProviders(credentials: credentials, settings: settings),
+                               suggestions: LiveRulebookSuggestions(credentials: credentials))
     }
 }
 

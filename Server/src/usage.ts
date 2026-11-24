@@ -27,6 +27,8 @@ interface Price {
 const prices: Record<string, Price> = {
   'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.1 },
   'claude-opus-5-5': { input: 4, output: 20, cacheRead: 0.2 },
+  // Rulebook sorting (S14).
+  'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheRead: 0.01 },
   // Server-side refusal fallback target for claude-sonnet-5-5.
   'claude-sonnet-5': { input: 2, output: 10, cacheRead: 0.2 },
 }

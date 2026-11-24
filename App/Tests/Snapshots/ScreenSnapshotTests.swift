@@ -91,9 +91,14 @@ final class ScreenSnapshotTests: XCTestCase {
     func testPlayingWith() async throws {
         try await snap("play", safeArea: true) { PlayingWithFixtures.sheet(PlayingWithFixtures.content) }
         try await snap("play-dark", dark: true, safeArea: true) { PlayingWithFixtures.sheet(PlayingWithFixtures.content) }
-        try await snap("add-rulebook", safeArea: true) {
-            AddRulebookSheet(bookTitle: "Solar Expansion", games: PlayingWithFixtures.addTargets, onNewGame: {}, onAdd: { _, _ in }, onCancel: {})
-        }
+    }
+
+    // MARK: Adding rulebooks (S14)
+
+    func testAddRulebooks() async throws {
+        try await snap("suggested", safeArea: true) { AddRulebooksFixtures.sheet(AddRulebooksFixtures.suggested) }
+        try await snap("sorting", safeArea: true) { AddRulebooksFixtures.sheet(AddRulebooksFixtures.sorting) }
+        try await snap("unsorted-dark", dark: true, safeArea: true) { AddRulebooksFixtures.sheet(AddRulebooksFixtures.unsorted) }
     }
 
     /// Book names on the proof line, the cards and the pager when two books are joined.
@@ -113,6 +118,7 @@ final class ScreenSnapshotTests: XCTestCase {
 
     func testLibrary() async throws {
         try await snap("games", safeArea: true) { LibraryScreen(library: LibraryFixtures.model(), voice: AskController()) }
+        try await snap("editing", safeArea: true) { LibraryFixtures.editing(selected: ["tile-garden.pdf", "woodland-court.pdf"]) }
         try await snap("empty", safeArea: true) { LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController()) }
         try await snap("empty-dark", dark: true, safeArea: true) {
             LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController())

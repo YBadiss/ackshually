@@ -33,6 +33,17 @@ const coreBody = (): { messages: { role: string; content: string | Record<string
   ],
 })
 
+/** The body RulebookSorter sends (S14): Haiku, text only, small max_tokens, thinking off. */
+const sortBody = (): Record<string, unknown> => ({
+  model: 'claude-haiku-5-5',
+  max_tokens: 1500,
+  stream: true,
+  system: 'You sort board game rulebook PDFs into games…',
+  thinking: { type: 'disabled' },
+  output_config: { effort: 'low', format: { type: 'json_schema', schema: { type: 'object' } } },
+  messages: [{ role: 'user', content: 'Games already in the library: (none)\n\nFiles to sort: …' }],
+})
+
 const sse = (events: object[]) => events.map((e) => `event: ${(e as { type: string }).type}\ndata: ${JSON.stringify(e)}\n\n`).join('')
 
 const upstreamStream = sse([
@@ -117,6 +128,30 @@ describe('server', () => {
     assert.equal(h['anthropic-beta'], 'server-side-fallback-2026-07-01')
     assert.equal(h.authorization, undefined)
     assert.deepEqual(JSON.parse(seen[0]!.body), coreBody())
+  })
+
+  it('forwards a sorting request', async () => {
+    const res = await post(sortBody())
+    assert.equal(res.status, 200)
+    await res.text()
+    assert.deepEqual(JSON.parse(seen[0]!.body), sortBody())
+  })
+
+  it('refuses sorting requests outside their shape', async () => {
+    const pdf = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'JVBERi0=' } }
+    for (const body of [
+      { ...sortBody(), max_tokens: 16000 },
+      { ...sortBody(), messages: [{ role: 'user', content: [pdf, { type: 'text', text: 'sort' }] }] },
+      { ...sortBody(), messages: [...(sortBody().messages as object[]), { role: 'assistant', content: 'x' }] },
+      { ...sortBody(), thinking: { type: 'adaptive' } },
+      { ...sortBody(), cache_control: { type: 'ephemeral' } },
+      { ...sortBody(), tools: [] },
+      { ...coreBody(), model: 'claude-haiku-5-5', max_tokens: 1000 },
+    ]) {
+      const res = await post(body)
+      assert.equal(res.status, 400, JSON.stringify(body).slice(0, 120))
+    }
+    assert.equal(seen.length, 0)
   })
 
   it('records usage and cost', async () => {
@@ -205,13 +240,18 @@ describe('usage', () => {
 })
 
 describe('validate', () => {
-  const limits = { allowedModels: new Set(['claude-sonnet-5-5']), maxTokens: 16000 }
+  const limits = { allowedModels: new Set(['claude-sonnet-5-5']), maxTokens: 16000, sortModels: new Set(['claude-haiku-5-5']), sortMaxTokens: 4096 }
   it('accepts the Core body, including citations mode', () => {
     assert.deepEqual(validate(coreBody(), limits), { model: 'claude-sonnet-5-5', maxTokens: 16000 })
     const citations = coreBody()
     ;(citations.messages[0]!.content as Record<string, unknown>[])[0]!.citations = { enabled: true }
     delete (citations.output_config as { format?: unknown }).format
     validate(citations, limits)
+  })
+  it('accepts the sorting body and keeps Haiku out of answers', () => {
+    assert.deepEqual(validate(sortBody(), limits), { model: 'claude-haiku-5-5', maxTokens: 1500 })
+    validate({ ...sortBody(), messages: [{ role: 'user', content: [{ type: 'text', text: 'files' }] }] }, limits)
+    assert.throws(() => validate({ ...sortBody(), model: 'claude-sonnet-5-5' }, limits), ValidationError)
   })
   it('refuses documents in assistant turns', () => {
     const b = coreBody()
