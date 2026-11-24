@@ -19,12 +19,18 @@ struct PlayingWithScreen: View {
                 onSetRole: { library.setRole($0, in: gameID, to: $1) },
                 onRename: { library.renameBook($0, in: gameID, to: $1) },
                 onRenameGame: { library.renameGame(gameID, to: $0) },
+                onDeleteGame: {
+                    library.deleteGame(gameID)
+                    onDismiss()
+                },
                 onAdd: { importing = true },
                 onConfirm: confirm,
                 onClose: onDismiss)
-                .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf]) { result in
-                    if case .success(let url) = result { library.addBook(picked: url, to: gameID) }
+                .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
+                    if case .success(let urls) = result { library.addRulebooks(urls, to: gameID) }
                 }
+                // S14 with this game suggested.
+                .addRulebooksSheet(library, from: gameID)
         } else {
             ContentUnavailableView("Game Removed", systemImage: "book.closed")
         }

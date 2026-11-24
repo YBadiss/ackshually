@@ -10,14 +10,20 @@ struct LibraryScreen: View {
     @State private var importing = false
     @State private var settings = false
     @State private var windowSize = CGSize.zero
+    @State private var editMode = EditMode.inactive
+    @State private var selection = Set<String>()
 
     var body: some View {
         NavigationStack(path: $library.navigationPath) {
             content
                 .navigationTitle("My Games")
                 .toolbar {
-                    LibraryToolbar(onAdd: { importing = true }, onSettings: { settings = true })
+                    LibraryToolbar(isEditing: editMode.isEditing, selectedCount: selection.count,
+                                   canEdit: !library.games.isEmpty,
+                                   onAdd: { importing = true }, onSettings: { settings = true },
+                                   onToggleEditing: toggleEditing, onDeleteSelected: deleteSelected)
                 }
+                .environment(\.editMode, $editMode)
                 .themeBackground(\.groupedBackground)
                 .navigationDestination(for: GameRoute.self) { route in
                     ViewerScreen(model: library.session(for: route), voice: voice, windowSize: windowSize,
@@ -25,9 +31,11 @@ struct LibraryScreen: View {
                 }
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { windowSize = $0 }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf]) { result in
-            if case .success(let url) = result { library.importPicked(url) }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { library.addRulebooks(urls) }
         }
+        // On a Mac (Designed for iPad), PDFs dropped on My Games go the same way as ＋.
+        .dropDestination(for: URL.self) { urls, _ in library.addRulebooks(urls) }
         .sheet(isPresented: $settings) {
             SettingsSheet { settings = false }
                 .themed()
@@ -38,20 +46,31 @@ struct LibraryScreen: View {
                 .presentationDetents([.medium, .large])
                 .themed()
         }
-        // ＋ → New Game, or Add to a game. Cancel removes the copy, so the sheet can't be swiped away.
-        .sheet(item: $library.pendingImport, onDismiss: { library.importSheetDismissed() }) { p in
-            AddRulebookSheet(bookTitle: p.title, games: addTargets,
-                             onNewGame: { library.importAsNewGame() },
-                             onAdd: { library.importInto($0, as: $1) },
-                             onCancel: { library.cancelImport() })
-                .interactiveDismissDisabled()
-                .themed()
-        }
+        // S14: ＋ → "Add N Rulebooks".
+        .addRulebooksSheet(library)
+        .confirmationDialog(library.pendingDeletion?.question ?? "", item: $library.pendingDeletion, titleVisibility: .visible) { _ in
+            Button("Delete", role: .destructive, action: confirmDeletion)
+                .accessibilityIdentifier("confirmDelete")
+        } message: { Text($0.detail) }
         .environment(library)
     }
 
-    private var addTargets: [AddRulebookSheet.Game] {
-        library.games.map { AddRulebookSheet.Game(id: $0.id, title: $0.title, detail: $0.bookCountText) }
+    private func confirmDeletion() {
+        library.confirmDeletion()
+        endEditing()
+    }
+
+    private func toggleEditing() {
+        if editMode.isEditing { endEditing() } else { editMode = .active }
+    }
+
+    private func endEditing() {
+        editMode = .inactive
+        selection = []
+    }
+
+    private func deleteSelected() {
+        library.requestDelete(library.games.filter { selection.contains($0.id) })
     }
 
     @ViewBuilder private var content: some View {
@@ -60,9 +79,9 @@ struct LibraryScreen: View {
         } else if library.games.isEmpty {
             EmptyLibraryView(error: library.error, onAdd: { importing = true }, onSample: { library.addSample() })
         } else {
-            GameList(games: library.games, covers: library.covers,
+            GameList(games: library.games, covers: library.covers, selection: $selection,
                      loadCover: { await library.loadCover(for: $0, pixelWidth: $1, scale: $2) },
-                     onDelete: { library.delete($0) })
+                     onDelete: { library.requestDelete($0) })
                 .alert("Couldn't Open the Rulebook", item: $library.error) { _ in } message: { Text($0) }
         }
     }

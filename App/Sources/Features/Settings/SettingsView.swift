@@ -8,12 +8,19 @@ struct SettingsView: View {
     var onSave: (String, CredentialItem) -> Void
     var onRemove: (CredentialItem) -> Void
     var onDone: () -> Void
+    /// Games in My Games (Developer → Remove All Games).
+    var gameCount = 0
+    var onRemoveAllGames: () -> Void = {}
+    @State private var confirmingRemoveAll = false
     /// Seeded once: open when nothing is set up, so the way to fix it is on screen.
     @State private var showsDeveloper: Bool
     @Environment(\.theme) private var theme
 
     init(status: RouteStatus, demo: Binding<Bool>, onSave: @escaping (String, CredentialItem) -> Void,
-         onRemove: @escaping (CredentialItem) -> Void, onDone: @escaping () -> Void) {
+         onRemove: @escaping (CredentialItem) -> Void, onDone: @escaping () -> Void,
+         gameCount: Int = 0, onRemoveAllGames: @escaping () -> Void = {}) {
+        self.gameCount = gameCount
+        self.onRemoveAllGames = onRemoveAllGames
         self.status = status
         _demo = demo
         self.onSave = onSave
@@ -45,6 +52,15 @@ struct SettingsView: View {
                         CredentialField(title: "Use My Own Anthropic API Key", prompt: "sk-ant-…", isSaved: status.apiKeySaved,
                                         fieldID: "apiKeyField", onSave: { onSave($0, .apiKey) },
                                         onRemove: { onRemove(.apiKey) })
+                        Button("Remove All Games", role: .destructive, action: askToRemoveAll)
+                            .disabled(gameCount == 0)
+                            .accessibilityIdentifier("removeAllGames")
+                            .confirmationDialog("Remove all \(gameCount) games?", isPresented: $confirmingRemoveAll,
+                                                titleVisibility: .visible) {
+                                Button("Remove All Games", role: .destructive, action: onRemoveAllGames)
+                            } message: {
+                                Text("Every rulebook PDF in My Games is removed from this device.")
+                            }
                     }
                     .accessibilityIdentifier("developerSection")
                 } footer: {
@@ -67,6 +83,8 @@ struct SettingsView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(role: .confirm, action: onDone) } }
         }
     }
+
+    private func askToRemoveAll() { confirmingRemoveAll = true }
 }
 
 #Preview("Bundled token") {
@@ -74,7 +92,8 @@ struct SettingsView: View {
         .themed()
 }
 #Preview("Nothing set up") {
-    SettingsView(status: Fixtures.routeNone, demo: .constant(false), onSave: { _, _ in }, onRemove: { _ in }, onDone: {})
+    SettingsView(status: Fixtures.routeNone, demo: .constant(false), onSave: { _, _ in }, onRemove: { _ in }, onDone: {},
+                 gameCount: 4)
         .themed()
 }
 #Preview("Own key, dark, AX5") {

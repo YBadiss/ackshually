@@ -20,6 +20,9 @@ usage:
   bench rescore DIR [--out DIR] [--questions FILE] [--render DIR] [--continuous-only]
                                    offline: re-match a recorded run's quotes with the current matcher
   bench pages PDF                  print per-page text-layer status
+  bench sort [--set FILE] [--model ID] [--base-url URL] [--out DIR]
+                                   rulebook sorter (S14) on questions/sort-set.json: grouping, role and
+                                   not-a-rulebook flag per file, empty library and with existing games
 
 defaults: --questions questions/m1.json --model claude-sonnet-5-5 --mode json --effort low
           --judge-model claude-sonnet-5-5 --timeout 120 --pages all   (paths relative to evals/ or repo root)
@@ -234,6 +237,31 @@ case "run":
     let md = Report.markdown(records, title: "Bench report — \(model) / \(mode.rawValue) / effort \(effort)", config: config)
     try md.write(to: outDir.appendingPathComponent("report.md"), atomically: true, encoding: .utf8)
     print(outDir.appendingPathComponent("report.md").path)
+
+case "sort":
+    let set = resolveLocal(option("--set") ?? "questions/sort-set.json")
+    let model = option("--model") ?? RulebookSorter.model
+    let baseURL = URL(string: option("--base-url") ?? "https://api.anthropic.com")!
+    let stamp: String = { let f = DateFormatter(); f.dateFormat = "yyyyMMdd-HHmmss"; return f.string(from: Date()) }()
+    let outDir = option("--out").map(resolveLocal) ?? benchDir.appendingPathComponent("out/\(stamp)-sort-\(model)")
+    if !args.isEmpty { print("unknown arguments: \(args)\n\n\(usage)"); exit(1) }
+    let env = ProcessInfo.processInfo.environment
+    let credential: Credential
+    if let t = env["ACKSHUALLY_APP_TOKEN"], !t.isEmpty, baseURL.host != "api.anthropic.com" {
+        credential = .appToken(t)
+    } else if let k = env["ANTHROPIC_API_KEY"], !k.isEmpty {
+        credential = .apiKey(k)
+    } else {
+        log("⏸  ANTHROPIC_API_KEY is not set — nothing was sent. Export it and re-run the same command.")
+        exit(2)
+    }
+    let repo = benchDir.deletingLastPathComponent()
+    let rows = try await SortSet.run(spec: set, resolve: { repo.appending(path: $0) }, credential: credential,
+                                     baseURL: baseURL, model: model, outDir: outDir)
+    let config = "- Date: \(Date())\n- Set: `\(set.lastPathComponent)` · model `\(model)` · \(baseURL.host ?? "")\n- Input per file: name, PDF title, page count, first \(RulebookSorter.File.pagesRead) pages' text (≤\(RulebookSorter.File.textLimit) chars); no PDF"
+    try SortSet.report(rows, config: config).write(to: outDir.appending(path: "report.md"), atomically: true, encoding: .utf8)
+    print(outDir.appending(path: "report.md").path)
+    exit(rows.allSatisfy(\.right) ? 0 : 1)
 
 default:
     print(usage)

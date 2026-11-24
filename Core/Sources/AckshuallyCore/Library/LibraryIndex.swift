@@ -56,6 +56,9 @@ public struct LibraryEntry: Codable, Hashable, Sendable, Identifiable {
 
     public func book(_ fileName: String) -> LibraryBook? { books.first { $0.fileName == fileName } }
 
+    /// The game's only book: removing it means deleting the game.
+    public func isOnlyBook(_ fileName: String) -> Bool { books.count == 1 && books[0].fileName == fileName }
+
     /// A game keeps at least one core book: its last one can't be removed or become an add-on.
     public func isLastCore(_ fileName: String) -> Bool {
         book(fileName)?.role == .core && coreCount == 1
@@ -153,6 +156,45 @@ public struct LibraryIndex: Codable, Equatable, Sendable {
     public mutating func remove(_ id: String) -> LibraryEntry? {
         guard let i = index(of: id) else { return nil }
         return entries.remove(at: i)
+    }
+
+    /// Edit → Delete: several games at once. Returns the games removed (their files are the caller's to delete).
+    @discardableResult
+    public mutating func remove(_ ids: some Sequence<String>) -> [LibraryEntry] {
+        ids.compactMap { remove($0) }
+    }
+
+    /// Settings → Developer → Remove All Games. Returns every game that was there.
+    @discardableResult
+    public mutating func removeAll() -> [LibraryEntry] {
+        defer { entries = [] }
+        return entries
+    }
+
+    /// Add on the "Add N Rulebooks" sheet (S14): books for existing games go after their others (ticked), each
+    /// new group becomes a game (its id is its first core book's file name). Skipped files are not added.
+    /// Returns the ids of the new games, in the batch's order.
+    @discardableResult
+    public mutating func add(_ batch: ImportBatch, at date: Date = .now) -> [String] {
+        var created: [String] = []
+        for g in batch.groups where !g.books.isEmpty {
+            let books = g.books.map { LibraryBook(fileName: $0.fileName, title: $0.title, role: $0.role, ticked: true) }
+            switch g.target {
+            case .existing(let id):
+                guard index(of: id) != nil else { fallthrough }
+                for b in books { addBook(b, to: id) }
+            case .new:
+                var books = books
+                if !books.contains(where: { $0.role == .core }) { books[0].role = .core }
+                for b in books { removeBookEverywhere(b.fileName) }
+                let id = books.first { $0.role == .core }?.fileName ?? books[0].fileName
+                entries.removeAll { $0.id == id }
+                entries.append(LibraryEntry(id: id, title: g.name, added: date, lastOpened: date, books: books))
+                created.append(id)
+            }
+        }
+        sort()
+        return created
     }
 
     // MARK: Books

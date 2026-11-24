@@ -5,9 +5,13 @@ Keeps the Anthropic API key off the phone. The app's `ClaudeProvider` (Core) sen
 server:
 
 1. checks the token (only sha256 hashes are stored) and a per-client rate limit and daily spend cap,
-2. checks the body against an allowlist of the shape Core sends ([`src/validate.ts`](src/validate.ts)): allowed
-   models, `max_tokens` cap, `stream: true`, text and PDF blocks only, no tools, so a leaked token isn't a
-   general-purpose Claude relay,
+2. checks the body against an allowlist of the two shapes Core sends ([`src/validate.ts`](src/validate.ts)), so a
+   leaked token isn't a general-purpose Claude relay:
+   - **answers** (`ClaudeProvider`): `ALLOWED_MODELS`, `max_tokens` ≤ `MAX_TOKENS`, `stream: true`, text and PDF
+     blocks only, no tools;
+   - **rulebook sorting** (`RulebookSorter`, spec S14): `SORT_MODELS` (Haiku), `max_tokens` ≤ `SORT_MAX_TOKENS`
+     (4096), `stream: true`, one user message of text (no document), `thinking` disabled, no tools. It sends file
+     names, PDF titles and the first pages' text to suggest which game each picked PDF belongs to,
 3. forwards it with the real key and pins `anthropic-version`,
 4. pipes the SSE stream back byte for byte, reading usage from `message_start` / `message_delta` on the way, and
    logs one row per request (tokens, cost, duration; never prompts or answers) to SQLite.
@@ -38,7 +42,8 @@ ACKSHUALLY_APP_TOKEN=ack_... swift run bench run --questions questions/fixture.j
 ```
 
 When Core starts sending a new request field, add it to `src/validate.ts` (and its test). Core's
-`testRequestFieldsAreAllowedByServer` fails first as a reminder.
+`testRequestFieldsAreAllowedByServer` (answers) and `RulebookSorterTests.testRequestBodyShape` (sorting) fail first
+as a reminder.
 
 ## Deploy
 

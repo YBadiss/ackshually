@@ -1,0 +1,21 @@
+{
+  "description": "S14 rulebook sorting: the owner's 11 rulebook PDFs plus two generated non-rulebooks (a score sheet, a player aid). Expected: Root = the Law of Root and Learning to Play as core, the four expansion booklets, the Law of Rootbotics and the walkthrough as add-ons; Azul, Dune Imperium and Power Grid each a game of their own (core); the two generated files flagged as not rulebooks. Scenarios: an empty library, and Root already in My Games with its Law of Root.",
+  "files": [
+    { "pdf": "assets/rulebooks/root-law.pdf", "game": "Root", "role": "core" },
+    { "pdf": "assets/rulebooks/root-learning.pdf", "game": "Root", "role": "core" },
+    { "pdf": "assets/rulebooks/root-riverfolk-learning.pdf", "game": "Root", "role": "add_on" },
+    { "pdf": "assets/rulebooks/root-underworld-learning.pdf", "game": "Root", "role": "add_on" },
+    { "pdf": "assets/rulebooks/root-marauder-learning.pdf", "game": "Root", "role": "add_on" },
+    { "pdf": "assets/rulebooks/root-homeland-learning.pdf", "game": "Root", "role": "add_on" },
+    { "pdf": "assets/rulebooks/root-clockwork-law.pdf", "game": "Root", "role": "add_on" },
+    { "pdf": "assets/rulebooks/root-walkthrough.pdf", "game": "Root", "role": "add_on" },
+    { "pdf": "assets/rulebooks/azul.pdf", "game": "Azul", "role": "core" },
+    { "pdf": "assets/rulebooks/dune-imperium.pdf", "game": "Dune Imperium", "role": "core" },
+    { "pdf": "assets/rulebooks/powergrid.pdf", "game": "Power Grid", "role": "core" },
+    { "pdf": "generated:score-sheet", "not_a_rulebook": true },
+    { "pdf": "generated:player-aid", "not_a_rulebook": true }
+  ],
+  "existing": [
+    { "id": "root-law-existing.pdf", "game": "Root", "books": ["Law of Root"], "replaces": "assets/rulebooks/root-law.pdf" }
+  ]
+}

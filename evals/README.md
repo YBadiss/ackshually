@@ -73,6 +73,7 @@ swift run bench match-set                                  # matcher regression 
 swift run bench match-set --render out/handcheck           # … plus a crop of each placement, to check by eye (git-ignored)
 swift run bench rescore results/<dir> [--continuous-only]  # re-match a recorded run's quotes offline → out/rescore-<dir>/
 swift run bench fixture                                    # regenerate fixtures/fake-rulebook.pdf
+swift run bench sort                                       # rulebook sorter (S14) on questions/sort-set.json (Haiku, one call per scenario)
 ```
 
 ## What is measured
@@ -136,6 +137,17 @@ Set: `questions/root-sets.json` (6 questions that need an add-on, each asked wit
 
 Once the PDFs are in, fill `expected_pages` (and boxes for `az-04..06`) in `questions/m1.json`,
 then re-run; until then the page metric shows TODO.
+
+### Rulebook sorting (S14, `questions/sort-set.json`)
+
+`bench sort` runs `RulebookSorter` (Claude Haiku, the same request the app sends through the server) on the owner's
+11 rulebook PDFs plus two generated non-rulebooks (a score sheet and a player aid, made up in `SortSet.swift`), in two
+scenarios: an empty library, and Root already in My Games with its Law of Root. Each file scores on its group (the
+files sharing its suggested game are exactly the files of its expected game, and Root's go to the existing game in
+the second scenario), its role (core / add-on) and the not-a-rulebook flag. It sends only file names, PDF titles,
+page counts and the first two pages' text (≤1,500 characters each; ~4.5k input tokens for the set). Exits 1 when any
+file is wrong. `ANTHROPIC_API_KEY` calls Anthropic directly; `ACKSHUALLY_APP_TOKEN` + `--base-url` goes through the
+server, as the app does.
 
 ## Results: what gets committed
 

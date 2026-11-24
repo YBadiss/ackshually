@@ -3,8 +3,8 @@ import Observation
 import AckshuallyCore
 
 /// My Games (S1) and the books of each game (S13): the persisted list of games, the navigation path into the
-/// viewer, the covers, the "Playing with" list shown before a game with add-ons opens, the choice a picked PDF
-/// waits for (New Game or Add to a game), and one viewer session per open game. Opening a game creates its
+/// viewer, the covers, the "Playing with" list shown before a game with add-ons opens, the "Add N Rulebooks"
+/// review of picked PDFs (S14), deletions waiting for a confirmation, and one viewer session per open game. Opening a game creates its
 /// `ViewerModel` (or brings back the one it had), so going back and re-opening a game keeps its answer; the last
 /// `sessionLimit` games keep theirs, older ones are dropped to bound memory (each holds the PDF and a matcher).
 @MainActor
@@ -17,11 +17,22 @@ final class LibraryModel {
         var id: String
     }
 
-    /// A picked PDF, already copied into the library, waiting for New Game / Add to a game.
-    struct PendingImport: Identifiable, Equatable {
-        var fileName: String
-        var title: String
-        var id: String { fileName }
+    /// Games about to be deleted, waiting for "Delete Root and its 7 rulebooks?".
+    struct Deletion: Identifiable, Equatable {
+        var games: [LibraryEntry]
+        var id: [String] { games.map(\.id) }
+        var bookCount: Int { games.reduce(0) { $0 + $1.books.count } }
+
+        /// "Delete Root and its 7 rulebooks?", "Delete 3 games and their 9 rulebooks?".
+        var question: String {
+            if games.count == 1 {
+                let g = games[0]
+                return g.books.count == 1 ? "Delete \(g.title)?" : "Delete \(g.title) and its \(g.books.count) rulebooks?"
+            }
+            return "Delete \(games.count) games and their \(bookCount) rulebooks?"
+        }
+
+        var detail: String { bookCount == 1 ? "The PDF is removed from this device." : "The PDFs are removed from this device." }
     }
 
     private(set) var index: LibraryIndex
@@ -34,13 +45,19 @@ final class LibraryModel {
     var error: String?
     /// S13: a game with add-ons asks what you play with every time it is opened from My Games.
     var checklist: Checklist?
-    /// "Add a Rulebook" picked a PDF: New Game, or Add to a game (as core or add-on). The app never guesses.
-    var pendingImport: PendingImport?
+    /// S14: picked PDFs (copied, not in the index yet) grouped into games for review. Nothing is saved until Add.
+    private(set) var review: ImportBatch?
+    /// Asked before deleting (Edit → Delete, or a swipe on a game with several books).
+    var pendingDeletion: Deletion?
     /// A game whose books are being joined before it opens (its Play button shows progress).
     private(set) var opening: String?
 
     @ObservationIgnored private let storage: any LibraryStorage
     @ObservationIgnored private let providers: any AnswerProviderFactory
+    @ObservationIgnored private let suggestions: any RulebookSuggestions
+    @ObservationIgnored private var sortTask: Task<Void, Never>?
+    /// What happens once the review sheet is gone (one sheet can't present while another dismisses).
+    @ObservationIgnored private var afterReview: (@MainActor () -> Void)?
 
     /// False until the index is read; the list shows nothing (not "No Games Yet") until then.
     private(set) var isLoaded: Bool
@@ -55,6 +72,7 @@ final class LibraryModel {
     init(dependencies: AppDependencies, loadIndex: Bool = true) {
         storage = dependencies.library
         providers = dependencies.providers
+        suggestions = dependencies.suggestions
         index = loadIndex ? dependencies.library.loadIndex() : LibraryIndex()
         isLoaded = loadIndex
     }
@@ -237,17 +255,10 @@ final class LibraryModel {
         Task { await storage.delete(fileName: fileName) }
     }
 
-    /// ＋ Add a Rulebook in "Playing with": an add-on of this game, ticked.
-    func addBook(picked: URL, to id: String) {
+    /// Remove on a game's only book, after "Delete <game>?" (S13): the game goes with it.
+    func deleteGame(_ id: String) {
         guard let game = index.entry(id: id) else { return }
-        do {
-            let url = try storage.importPDF(from: picked)
-            index.addBook(LibraryBook(fileName: url.lastPathComponent, title: Self.bookTitle(storage.title(of: url), in: game),
-                                      role: .addOn, ticked: true), to: id)
-            storage.save(index)
-        } catch {
-            self.error = "Import failed: \(error.localizedDescription)"
-        }
+        delete([game])
     }
 
     /// A book added to "Root" named "Root Riverfolk" is shown as "Riverfolk" (the game's name is implied).
@@ -262,53 +273,105 @@ final class LibraryModel {
 
     // MARK: Adding
 
-    /// "Add a Rulebook": copy the picked PDF into the library. With no games yet it is a new game, opened right
-    /// away; otherwise the user says where it goes (New Game, or Add to a game as core or add-on).
-    func importPicked(_ picked: URL) {
-        do {
-            let url = try storage.importPDF(from: picked)
-            if index.isEmpty {
-                addNewGame(url)
-            } else {
-                pendingImport = PendingImport(fileName: url.lastPathComponent, title: storage.title(of: url))
+    /// ＋ (My Games, or a game's "Playing with" with `gameID`), or PDFs dropped on My Games: copy them into the
+    /// library folder and open the review (S14) at once, every file under "Sorting…". The suggestion then
+    /// groups them; with no server route, or when it fails, each file stays its own game ("Sort these yourself").
+    func addRulebooks(_ picked: [URL], to gameID: String? = nil) {
+        guard review == nil else { return }
+        error = nil
+        let target = gameID.flatMap { index.entry(id: $0) }
+        var copied: [(fileName: String, title: String)] = []
+        for url in picked where url.pathExtension.lowercased() == "pdf" {
+            do {
+                let copy = try storage.importPDF(from: url)
+                let title = storage.title(of: copy)
+                copied.append((copy.lastPathComponent, target.map { Self.bookTitle(title, in: $0) } ?? title))
+            } catch {
+                self.error = "Import failed: \(error.localizedDescription)"
             }
+        }
+        guard !copied.isEmpty else { return }
+        review = ImportBatch(files: copied, preferredGameID: target?.id)
+        sortTask = Task { await sortReview() }
+    }
+
+    private func sortReview() async {
+        guard let batch = review else { return }
+        let games = index.entries
+        guard suggestions.isAvailable else {
+            review?.leaveUnsorted(games: games)
+            return
+        }
+        let storage = storage
+        let names = batch.sorting.map(\.fileName)
+        let files = await Task.detached(priority: .userInitiated) {
+            names.compactMap { RulebookSorter.File(fileName: $0, url: storage.url(for: $0)) }
+        }.value
+        let result: [RulebookSorter.Suggestion]?
+        do {
+            result = try await suggestions.suggest(files, games: games.map(RulebookSorter.Game.init),
+                                                   preferredGameID: batch.preferredGameID)
         } catch {
-            self.error = "Import failed: \(error.localizedDescription)"
+            result = nil
+        }
+        guard !Task.isCancelled, review != nil else { return }
+        if let result { review?.apply(result, games: index.entries) } else { review?.leaveUnsorted(games: index.entries) }
+    }
+
+    // Review edits (S14).
+    func moveBook(_ fileName: String, toGroup id: String, before: String? = nil) { review?.move(fileName, toGroup: id, before: before) }
+    func moveBook(_ fileName: String, toGame id: String) {
+        guard let game = index.entry(id: id) else { return }
+        review?.move(fileName, toGame: game)
+    }
+    func moveBookToNewGame(_ fileName: String) { review?.moveToNewGame(fileName) }
+    func skipBook(_ fileName: String) { review?.skip(fileName) }
+    func setReviewRole(_ fileName: String, _ role: BookRole) { review?.setRole(fileName, role) }
+    func renameReviewBook(_ fileName: String, to title: String) { review?.renameBook(fileName, to: title) }
+    func renameReviewGroup(_ id: String, to name: String) { review?.renameGroup(id, to: name) }
+
+    /// Add: the groups go into the library; skipped copies are removed. One new game from My Games opens
+    /// (its "Playing with" first if it has add-ons); otherwise the sheet just closes.
+    func confirmReview() {
+        guard let batch = review, !batch.isSorting else { return }
+        sortTask?.cancel()
+        let created = index.add(batch)
+        storage.save(index)
+        for id in batch.groups.compactMap({ if case .existing(let id) = $0.target { id } else { nil } }) {
+            if let s = session(for: .game(id: id)), let game = index.entry(id: id) { restage(s, for: game) }
+        }
+        let storage = storage
+        for b in batch.skipped { Task { await storage.delete(fileName: b.fileName) } }
+        review = nil
+        if batch.preferredGameID == nil, created.count == 1, batch.groups.count == 1, let id = created.first {
+            afterReview = { [weak self] in self?.openAdded(id) }
         }
     }
 
-    /// New Game: the picked book on its own, opened right away (S2).
-    func importAsNewGame() {
-        guard let p = pendingImport else { return }
-        pendingImport = nil
-        addNewGame(storage.url(for: p.fileName))
-    }
-
-    /// Add to <game>, as a core book or an add-on (ticked). That game's "Playing with" list follows, once the
-    /// import sheet is gone (`importSheetDismissed`: one sheet can't present while another dismisses).
-    func importInto(_ id: String, as role: BookRole) {
-        guard let p = pendingImport, let game = index.entry(id: id) else { return }
-        pendingImport = nil
-        index.addBook(LibraryBook(fileName: p.fileName, title: Self.bookTitle(p.title, in: game), role: role, ticked: true), to: id)
-        storage.save(index)
-        checklistAfterImport = id
-    }
-
-    /// The game whose list shows after the import sheet closes.
-    private(set) var checklistAfterImport: String?
-
-    func importSheetDismissed() {
-        guard let id = checklistAfterImport else { return }
-        checklistAfterImport = nil
-        checklist = Checklist(id: id)
-    }
-
-    /// Cancel: the copy is removed again.
-    func cancelImport() {
-        guard let p = pendingImport else { return }
-        pendingImport = nil
+    /// Cancel: every copy is removed again.
+    func cancelReview() {
+        guard let batch = review else { return }
+        sortTask?.cancel()
+        review = nil
+        afterReview = nil
         let storage = storage
-        Task { await storage.delete(fileName: p.fileName) }
+        for name in batch.fileNames { Task { await storage.delete(fileName: name) } }
+    }
+
+    func reviewDismissed() {
+        let next = afterReview
+        afterReview = nil
+        next?()
+    }
+
+    /// A new game just added: open it, or show its "Playing with" first.
+    private func openAdded(_ id: String) {
+        guard let game = index.entry(id: id) else { return }
+        if game.hasAddOns {
+            checklist = Checklist(id: id)
+        } else if open(game) {
+            path = [.game(id: id)]
+        }
     }
 
     /// "Try the Sample": the bundled Power Plant Rush, as a game in the list.
@@ -356,18 +419,46 @@ final class LibraryModel {
 
     // MARK: Removing
 
-    /// Swipe to delete: the game, every one of its books' copies and covers, and its session.
-    func delete(_ entries: [LibraryEntry]) {
-        for e in entries {
-            index.remove(e.id)
-            sessions.removeAll { $0.route == .game(id: e.id) }
-            for b in e.books {
-                covers[b.fileName] = nil
-                let storage = storage
-                Task { await storage.delete(fileName: b.fileName) }
-            }
+    /// Swipe → Delete or Edit → Delete: a single game with one book goes at once; several games, or a game with
+    /// several books, wait for a confirmation (`pendingDeletion`).
+    func requestDelete(_ entries: [LibraryEntry]) {
+        guard !entries.isEmpty else { return }
+        if entries.count == 1, entries[0].books.count == 1 {
+            delete(entries)
+        } else {
+            pendingDeletion = Deletion(games: entries)
         }
+    }
+
+    func confirmDeletion() {
+        guard let d = pendingDeletion else { return }
+        pendingDeletion = nil
+        delete(d.games)
+    }
+
+    /// The game, every one of its books' copies and covers, its session, and its place on the stack.
+    func delete(_ entries: [LibraryEntry]) {
+        let removed = index.remove(entries.map(\.id))
+        forget(removed)
         storage.save(index)
+    }
+
+    /// Settings → Developer → Remove All Games (after its confirmation).
+    func removeAllGames() {
+        forget(index.removeAll())
+        storage.save(index)
+    }
+
+    private func forget(_ games: [LibraryEntry]) {
+        let ids = Set(games.map(\.id))
+        sessions.removeAll { if case .game(let id) = $0.route { ids.contains(id) } else { false } }
+        path.removeAll { if case .game(let id) = $0 { ids.contains(id) } else { false } }
+        if let c = checklist, ids.contains(c.id) { checklist = nil }
+        let storage = storage
+        for b in games.flatMap(\.books) {
+            covers[b.fileName] = nil
+            Task { await storage.delete(fileName: b.fileName) }
+        }
     }
 
     /// `-emptyLibrary YES`: start from no games.
@@ -383,6 +474,11 @@ final class LibraryModel {
     /// Renders (or reads from cache) the cover book's first page at `pixelWidth`, off the main thread.
     func loadCover(for entry: LibraryEntry, pixelWidth: Int, scale: CGFloat) async {
         guard let file = entry.coverBook?.fileName else { return }
+        await loadCover(fileName: file, pixelWidth: pixelWidth, scale: scale)
+    }
+
+    /// Any book's first page (the review's thumbnails, S14).
+    func loadCover(fileName file: String, pixelWidth: Int, scale: CGFloat) async {
         if let c = covers[file], Int(c.size.width * c.scale) >= pixelWidth { return }
         guard let img = await storage.cover(for: storage.url(for: file), pixelWidth: pixelWidth),
               let cg = img.cgImage else { return }
