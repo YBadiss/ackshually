@@ -17,13 +17,13 @@ const footer = `<div class="fb" style="margin:6px 11px 0"><span style="flex:4;te
 const dots = n => `<div class="dots">${[0,1,2].map(i=>`<i${i===n?' class="on"':''}></i>`).join('')}</div>`;
 
 const S = [
- {t:'1 · My Games', ms:'Home · M2 (sessions + export in M3)', li:['App <b>opens here</b>; most recently used first','<b>Tap a game</b> → viewer, Back returns here','<b>＋</b> → file picker, opens the new game','<b>Swipe left</b> → Delete'],
+ {t:'1 · My Games', ms:'Home · M2 (sessions + export in M3)', li:['App <b>opens here</b>; most recently used first','<b>Tap a game</b> → viewer, Back returns here','<b>＋</b> → file picker → new game, or add to a game','<b>Swipe left</b> → Delete'],
   h:`<div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="home">
    <div style="display:flex;justify-content:space-between;color:var(--accent);font-size:13px;margin:2px 0 4px"><span>⚙︎</span><span>＋</span></div>
    <div style="font-size:19px;font-weight:700;margin-bottom:8px">My Games</div>
    <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Power plant rush</b><span>Opened 2 minutes ago</span></div><span style="color:var(--muted)">›</span></div>
    <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Azul</b><span>Opened yesterday</span></div><span style="color:var(--muted)">›</span></div>
-   <div class="game" style="padding-right:56px"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div><b>Root</b><span>Opened 4 days ago</span></div><div class="swipeacts"><span style="background:#a2412b">Delete</span></div></div>
+   <div class="game" style="padding-right:56px"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div><b>Root</b><span>7 rulebooks</span></div><div class="swipeacts"><span style="background:#a2412b">Delete</span></div></div>
    <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Dune Imperium</b><span>Opened 3 weeks ago</span></div><span style="color:var(--muted)">›</span></div>
    </div>
    <div class="gest" style="top:232px;left:56px">← swipe</div>`},
@@ -106,6 +106,22 @@ const S = [
     <div class="qrow"><div>When does step 3 start?</div><div>When the Step 3 card is drawn</div></div>
     <div class="qrow"><div>Ties in turn order?</div><div>Highest plant number goes first</div></div></div>
    <div class="tap" style="top:24px;right:2px;width:34px"></div>`}
+,
+ {t:'13 · Playing with', ms:'Opening a game with add-ons · M3', li:['Shows <b>every time</b> a game has add-ons','Core books always on; <b>tap</b> an add-on to tick it','Starts from last time: <b>Play</b> is one tap','Viewer title button changes it mid-game'],
+  h:`${chrome('Root')}
+   <div class="sheet" style="top:58px;padding:10px 12px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px">Playing with</b><span class="btn">Play</span></div>
+    <div class="sect">Always</div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px;opacity:.55"><span style="flex:1">Law of Root</span><span style="color:var(--muted);font-size:8.5px">Reference</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px;opacity:.55"><span style="flex:1">Learning to Play</span><span style="color:var(--muted);font-size:8.5px">Guide</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    <div class="sect">Add-ons</div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Riverfolk</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Underworld</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Marauder</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Homeland</span><span style="color:var(--muted);font-size:8.5px">Expansion</span><span style="width:10px;color:var(--accent);font-weight:700"></span></div>
+    <div class="qrow" style="display:flex;align-items:center;gap:6px;padding:5px 8px;margin-bottom:4px"><span style="flex:1">Law of Rootbotics</span><span style="color:var(--muted);font-size:8.5px">Bots</span><span style="width:10px;color:var(--accent);font-weight:700">✓</span></div>
+    </div>
+   <div class="tap" style="top:186px;right:10px;width:26px"></div>`}
 ];
 
 // Render: gallery into #grid, or any element with data-screen="s5" (phone only, or with notes if data-notes is set).
