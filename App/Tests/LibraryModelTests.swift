@@ -37,6 +37,18 @@ final class LibraryModelTests: XCTestCase {
 
     private func back() { library.navigationPath = [] }
 
+    /// Launch reads the index in the background: the model starts empty and unloaded (the list shows
+    /// nothing rather than "No Games Yet"), then `load()` brings the saved games in.
+    func testLaunchLoadsTheIndexInTheBackground() async throws {
+        _ = try addGames(2)
+        let launching = LibraryModel(dependencies: .inMemory(library: storage, providers: ScriptedProviders()), loadIndex: false)
+        XCTAssertFalse(launching.isLoaded)
+        XCTAssertTrue(launching.games.isEmpty)
+        await launching.load()
+        XCTAssertTrue(launching.isLoaded)
+        XCTAssertEqual(launching.games.count, 2)
+    }
+
     func testReopeningAGameKeepsItsSession() throws {
         let games = try addGames(2)
         let a = try XCTUnwrap(open(games[0]))

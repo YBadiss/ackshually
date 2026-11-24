@@ -140,6 +140,30 @@ final class AnswerSheetUITests: UITestCase {
         XCTAssertTrue(eventually(timeout: 5) { self.verdict.frame.height > capped * 1.3 }, "expanded shows the whole verdict")
     }
 
+    /// The expanded sheet unfolds the cards into the step list in place: each part shows once (the
+    /// carousel, follow-up field and thumbs used to appear again further down). A branch whose verdict
+    /// is a whole sentence puts it under the condition instead of one letter per line beside it.
+    func testExpandedShowsEachPartOnceAndLongBranchVerdictStacks() throws {
+        let path = try demoAnswer(
+            verdict: "Unused energy is lost.",
+            steps: [("Rule", "Unused energy is discarded.", 3, Self.goodQuote), ("Timing", "At the end of the round.", 3, Self.goodQuote)],
+            branches: [("If you meant the bonus tiles rather than the energy cubes",
+                        "Bonus tiles are never discarded; they stay in front of you and count at the end of the game.")])
+        launchSample(["-present", "YES", "-demoAnswer", path, "-detent", "expanded"])
+        let row = app.buttons["stepRow-1"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.scrollViews["carousel"].exists, "expanded shows the step list instead of the cards")
+        XCTAssertEqual(app.textFields.matching(identifier: "followUpField").count, 1)
+        XCTAssertEqual(app.buttons.matching(identifier: "thumbsUp").count, 1)
+        let branch = app.buttons["branch-0"]
+        XCTAssertTrue(branch.exists)
+        // Stacked: condition (2 lines) + verdict (about 3) — a one-letter column ran to 20+ lines.
+        XCTAssertLessThan(branch.frame.height, branch.frame.width * 0.75)
+        shot("s9-expanded-once")
+        row.tap()
+        XCTAssertTrue(waitForCard("Card 2 of 2"), "picking a step goes back to its card")
+    }
+
     /// While an answer streams, the sheet stays put: content fills in place. Before the fix the detents
     /// were re-measured on every streamed event, so the sheet shrank under the verdict and grew back each
     /// time (the "panel hides and reappears" bug). This is the one UI test that watches a stream.
@@ -223,15 +247,16 @@ final class AnswerSheetUITests: UITestCase {
             XCTAssertGreaterThanOrEqual(sheet.maxX - close.maxX, edge, "close button clears the corner (\(detent))")
             XCTAssertGreaterThanOrEqual(verdict.frame.minX - sheet.minX, edge, "verdict margin (\(detent))")
             if detent != "collapsed" {
-                let card = app.descendants(matching: .any).matching(identifier: "stepCard").firstMatch.frame
-                XCTAssertGreaterThanOrEqual(card.minX - sheet.minX, edge, "card margin (\(detent))")
-                if detent == "medium" {
-                    let field = any("followUpField")
-                    let thumbsDown = app.buttons["thumbsDown"].firstMatch
-                    XCTAssertTrue(field.exists && thumbsDown.exists)
-                    XCTAssertGreaterThanOrEqual(field.frame.minX - sheet.minX, edge, "follow-up field margin")
-                    XCTAssertGreaterThanOrEqual(sheet.maxX - thumbsDown.frame.maxX, edge, "thumbs margin")
-                }
+                // Medium shows the step cards; expanded unfolds them into the step list.
+                let steps = detent == "medium"
+                    ? app.descendants(matching: .any).matching(identifier: "stepCard").firstMatch.frame
+                    : app.buttons["stepRow-0"].frame
+                XCTAssertGreaterThanOrEqual(steps.minX - sheet.minX, edge, "steps margin (\(detent))")
+                let field = any("followUpField")
+                let thumbsDown = app.buttons["thumbsDown"].firstMatch
+                XCTAssertTrue(field.exists && thumbsDown.exists)
+                XCTAssertGreaterThanOrEqual(field.frame.minX - sheet.minX, edge, "follow-up field margin (\(detent))")
+                XCTAssertGreaterThanOrEqual(sheet.maxX - thumbsDown.frame.maxX, edge, "thumbs margin (\(detent))")
             }
             shot("margins-\(detent)")
             app.terminate()

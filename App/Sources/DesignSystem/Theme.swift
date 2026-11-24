@@ -5,7 +5,10 @@ import UIKit
 /// `@Environment(\.theme)`. Views use only these semantic tokens. Every color is a dynamic
 /// light/dark pair, so the same token also works inside UIKit (PDFKit) and follows the
 /// appearance by itself. Spacing and sizes are scaled with Dynamic Type by `ThemeProvider`.
-struct Theme: Sendable {
+/// Equatable so the environment can tell an unchanged theme from a new one: `ThemeProvider` rebuilds
+/// it on every pass, and as a non-Equatable value every rebuild invalidated every view reading it,
+/// whose UIKit trait updates re-ran the provider (on a cold launch the viewer never settled).
+struct Theme: Sendable, Equatable {
     var colors: Colors
     var radius: Radius
     var spacing: Spacing
@@ -13,7 +16,7 @@ struct Theme: Sendable {
     var font: Fonts
     var layout: Layout
 
-    struct Colors: Sendable {
+    struct Colors: Sendable, Equatable {
         /// App tint (brick red): buttons, links, selection.
         var tint: Color
         /// Navigation bar: a clearly darker warm tone than the sheet and the canvas, so bar, PDF
@@ -50,7 +53,7 @@ struct Theme: Sendable {
         var highlightOutline: Color
     }
 
-    struct Radius: Sendable {
+    struct Radius: Sendable, Equatable {
         /// Step cards (App Store / Music shelf cards).
         var card: CGFloat = 18
         /// Inline field on the sheet.
@@ -64,7 +67,7 @@ struct Theme: Sendable {
         var note: CGFloat = 16
     }
 
-    struct Spacing: Sendable {
+    struct Spacing: Sendable, Equatable {
         var xxs: CGFloat = 2
         var xs: CGFloat = 4
         var s: CGFloat = 6
@@ -85,7 +88,7 @@ struct Theme: Sendable {
         }
     }
 
-    struct Sizes: Sendable {
+    struct Sizes: Sendable, Equatable {
         /// HIG minimum tap area.
         var minTapTarget: CGFloat = 44
         var cardMinHeight: CGFloat = 92
@@ -112,7 +115,7 @@ struct Theme: Sendable {
     }
 
     /// Text styles only (Dynamic Type). Hierarchy comes from size and weight, not decoration.
-    struct Fonts: Sendable {
+    struct Fonts: Sendable, Equatable {
         var verdict = Font.title3.weight(.bold)
         var proof = Font.subheadline
         var question = Font.subheadline
@@ -132,7 +135,7 @@ struct Theme: Sendable {
     }
 
     /// Relative layout rules (fractions, thresholds), never absolute frames.
-    struct Layout: Sendable {
+    struct Layout: Sendable, Equatable {
         /// Each neighbour card peeks this fraction of the carousel width.
         var cardPeekFraction: CGFloat = 0.08
         /// Medium detent: content-sized, capped at this fraction of the window height.

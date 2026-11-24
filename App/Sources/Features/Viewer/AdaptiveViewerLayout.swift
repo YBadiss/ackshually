@@ -3,8 +3,9 @@ import PDFKit
 
 /// The one place that decides the viewer's layout:
 /// - compact / portrait: PDF full-bleed, the answer in a system sheet with detents (S4–S9)
-/// - wide (iPad, Mac): the answer in the standard inspector column beside the PDF; phone landscape
-///   (compact width) gets the same content as a trailing column
+/// - wide (iPad, Mac, phone landscape): the answer in a trailing column beside the PDF. Our own
+///   column, not `.inspector`: on iPhone `.inspector` falls back to a second sheet next to the
+///   answer sheet, and the two kept a cold launch's first layout from ever finishing (100% CPU)
 /// Also owns the floating chrome over the PDF (ask field, "Back to Step N") and tells the PDF
 /// how much of it the sheet / field covers: the sheet's target detent height, so the PDF moves
 /// together with the sheet instead of waiting for it to settle.
@@ -12,7 +13,7 @@ struct AdaptiveViewerLayout: View {
     var model: ViewerModel
     var voice: AskController
     var document: PDFDocument
-    /// The whole window (measured outside the inspector, so opening it can't flip the layout).
+    /// The whole window (measured outside the answer column, so opening it can't flip the layout).
     var windowSize: CGSize
     @Environment(\.theme) private var theme
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -67,7 +68,7 @@ struct AdaptiveViewerLayout: View {
             } action: { container = $0 }
             if columnPresented {
                 Rectangle().fill(theme.colors.chromeSeparator).frame(width: 1 / displayScale).ignoresSafeArea()
-                AnswerInspector(model: model, voice: voice, idealWidth: inspectorIdealWidth)
+                AnswerInspector(model: model, voice: voice)
                     .frame(width: inspectorIdealWidth)
                     .transition(.move(edge: .trailing))
             }
@@ -93,9 +94,6 @@ struct AdaptiveViewerLayout: View {
                         containerHeight: container.size.height + container.safeBottom) { sheetCovered = $0 }
                 .themed()
         }
-        .inspector(isPresented: inspectorBinding) {
-            AnswerInspector(model: model, voice: voice, idealWidth: inspectorIdealWidth)
-        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(model.sheetVisible ? "Hide Answer" : "Show Answer", systemImage: "sidebar.trailing", action: toggleAnswer)
@@ -120,13 +118,8 @@ struct AdaptiveViewerLayout: View {
         Binding { sheetPresented } set: { _ in }
     }
 
-    private var inspectorBinding: Binding<Bool> {
-        Binding { measured && model.sheetVisible && wide && sizeClass == .regular } set: { _ in }
-    }
-
-    /// Phone landscape: wide enough for a column, but compact width, where `.inspector` would
-    /// become a sheet. Same content, laid out as a trailing column.
-    private var columnPresented: Bool { measured && model.sheetVisible && wide && sizeClass != .regular }
+    /// Wide layouts show the answer as a trailing column beside the PDF.
+    private var columnPresented: Bool { measured && model.sheetVisible && wide }
 
     // MARK: PDF
 

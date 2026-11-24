@@ -106,7 +106,7 @@
   <li><b>＋</b> → iOS file picker → the PDF is copied into the app and opens right away (S2).</li>
   <li><b>Swipe left</b> → Delete (removes the game and its copy). Export comes with S12 sessions.</li>
   <li>No games yet: "Add a Rulebook" or "Try the Sample".</li>
-  <li>iPad / wide: the same stack; the viewer keeps its answer inspector column.</li></ul>
+  <li>iPad / wide: the same stack; the viewer keeps its answer column.</li></ul>
 </div><div class="shot" data-screen="s1"></div></section>
 
 <section class="screen" id="s2"><div>
@@ -169,9 +169,9 @@
 
 <section class="screen" id="s9"><div>
   <h3>S9 · Full answer <span class="mtag">M2</span></h3>
-  <ul><li><b>Drag the sheet up</b> (large detent) → restated question, header, then grouped rows: Steps (<b>tap</b> to jump), If…, Assumes, Was this right?, follow-up.</li>
+  <ul><li><b>Drag the sheet up</b> (large detent) → restated question, header, then the step cards unfold in place into grouped Steps rows (<b>tap</b> one to drop back to its card), then the same follow-up + thumbs row as medium, If…, Assumes. Nothing shows twice. A branch whose verdict is a sentence puts it under the condition.</li>
   <li><b>Tap a branch row</b> → the header shows that branch's verdict and the step cards switch to the branch's own steps (<code>branches[].steps</code>); a "Main Answer" row returns.</li>
-  <li><b>Wide screens</b> (iPad, Mac, phone landscape): the same content in the standard inspector column beside the PDF; a toolbar button shows/hides it.</li></ul>
+  <li><b>Wide screens</b> (iPad, Mac, phone landscape): the same content in a trailing column beside the PDF; a toolbar button shows/hides it.</li></ul>
   <p>Screenshots of the built app: <a href="m2-screenshots/restyle/">m2-screenshots/restyle/</a> (they supersede the mockups' visual treatment).</p>
 </div><div class="shot" data-screen="s9"></div></section>
 
@@ -201,7 +201,7 @@
 <h2 id="style">3 · Visual style</h2>
 <p><b>Direction (2026-11-21): native iOS, warm.</b> Use standard components and let the warm palette tint them. Reference: <a href="design/native-ios.html">design/native-ios.html</a>. It overrides the visual treatment of the S-mockups above (which still define layout and interactions) until they are redrawn.</p>
 <ul>
-<li><b>System components first:</b> system sheet with detents, navigation bar with a standard ⋯ menu, inspector on wide screens, grouped rows (like Settings), SF Symbols, native page/scroll behavior, Liquid Glass for controls floating over the PDF (ask field, Back to Step, passage pager, close/stop). No custom pills, outlined chips or boxed web-style cards.</li>
+<li><b>System components first:</b> system sheet with detents, navigation bar with a standard ⋯ menu, an answer column on wide screens, grouped rows (like Settings), SF Symbols, native page/scroll behavior, Liquid Glass for controls floating over the PDF (ask field, passage pager, close/stop). No custom pills, outlined chips or boxed web-style cards.</li>
 <li><b>Text hierarchy instead of decoration:</b> bold verdict (title3), then one secondary line of proof ("checkmark.seal Stated in the rules · p.3, p.4"; inferred: exclamationmark.triangle, not covered: questionmark.circle). The restated question shows only while waiting and in the expanded view. "Demo answer" is a footnote in the expanded view and a note in the ⋯ menu, never on the verdict.</li>
 <li><b>Step cards keep the peek</b>, styled as system cards (App Store / Music shelves): rounded, no borders or shadows; caption = step title + page.</li>
 <li><b>Branches, steps, feedback</b> are standard rows with chevrons / values.</li>
@@ -342,6 +342,9 @@ Server/  Node 24 service at ackshually.badyass.xyz: holds the API key, checks an
   <tr><td>2026-11-22</td><td>Answer sheet: standard margins (<code>sheetMargin</code> 20 pt, <code>sheetTop</code> 28 pt under the grabber); detent heights are set once from the first token (placeholder card + follow-up row reserve the space), frozen while streaming, then grow-only; a detent whose height changes stays in the set for one transition</td><td>Owner on the iPhone 18 Pro: the verdict touched the grabber, and the panel "hid and reappeared" while the answer streamed. Cause: detents re-measured on every streamed event (the sheet shrank under the verdict, then grew), and replacing the selected <code>.height</code> detent made the system sheet snap for a moment</td></tr>
   <tr><td>2026-11-23</td><td>After a streamed answer completes, the sheet and cards fit the finished content once (shrinking too), instead of keeping the placeholder height; the PDF re-centres from the sheet's target detent height, not after the sheet settles</td><td>Owner: short steps sat in tall empty cards after streaming. Re-centring from the live sheet edge needed a delayed retry and logged "onChange(of: Settle) … multiple times per frame"</td></tr>
   <tr><td>2026-11-23</td><td>The viewer is split into per-game sessions (<code>ViewerModel</code> coordinating <code>AnswerSession</code>, <code>CardNavigator</code>, <code>HighlightStore</code>, <code>PDFFocusModel</code>) with injected dependencies; answer logic is unit-tested against a scripted provider, UI tests are tiered (Smoke, per-area, Full) and run in parallel; page selection is a wrapper provider in Core; the Xcode project is generated from <code>project.yml</code> and no longer checked in</td><td>One model held everything and read globals, so behaviour could only be checked through slow UI tests (24 tests, 8–15 min, one flaky); several flags decided the sheet together, where the streaming-jump bug lived; S11 history needs a session per game; parallel PRs kept conflicting on <code>project.pbxproj</code></td></tr>
+  <tr><td>2026-11-24</td><td>Expanded sheet (S9): the step list replaces the cards in place and the follow-up + thumbs row stays where it is at medium; the separate "Was this right?" and "Follow-up" sections are inspector-only. Row values too long to sit beside their label go under it</td><td>Owner: expanded showed the cards and then the steps, thumbs and follow-up again further down; a long branch verdict was squeezed to one letter per line</td></tr>
+  <tr><td>2026-11-24</td><td>Wide layouts (iPad, Mac, phone landscape) all use our own trailing answer column; the system <code>.inspector</code> is gone. <code>Theme</code> is <code>Equatable</code></td><td>On iPhone <code>.inspector</code> falls back to a sheet beside the answer sheet: on a cold launch the viewer's first layout never finished (100% CPU, beige or empty screen, "Observation tracking feedback loop"), which also failed Smoke on fresh simulator clones. One column path instead of two. A non-Equatable theme counted as changed on every pass</td></tr>
+  <tr><td>2026-11-24</td><td>My Games reads its index off the main thread after the first frame (the list shows nothing until it is loaded)</td><td>Owner: the first launch from Xcode sat on the beige launch screen; the debugger's main-thread I/O checks cost ~1 s per file call during <code>App.init</code></td></tr>
 </table></div>
 
 <!-- ============================================================ -->

@@ -34,7 +34,9 @@ struct LibraryScreen: View {
     }
 
     @ViewBuilder private var content: some View {
-        if library.games.isEmpty {
+        if !library.isLoaded {
+            Color.clear
+        } else if library.games.isEmpty {
             EmptyLibraryView(error: library.error, onAdd: { importing = true }, onSample: { library.addSample() })
         } else {
             GameList(games: library.games, covers: library.covers,
