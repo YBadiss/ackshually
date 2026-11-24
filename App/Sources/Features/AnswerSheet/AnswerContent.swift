@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The whole answer in one scrolling column, wired to the injected `ViewerModel`. The sheet
-/// reveals it top-down (collapsed → header, medium → + step cards and branches, large → + steps,
-/// assumptions, feedback, follow-up); the inspector shows all of it.
+/// reveals it top-down (collapsed → header, medium → + step cards, follow-up row and branches, large →
+/// the cards unfold into the step list, + assumptions); the inspector shows all of it.
 /// Margins are the scroll view's content margins (`spacing.sheetMargin` at the sides,
 /// `spacing.sheetTop` under the sheet's grabber); only the step shelf runs edge to edge.
 /// While an answer streams, the shelf (a loading card) and the follow-up row are laid out from
@@ -36,14 +36,20 @@ struct AnswerContent: View {
                             }
                     }
                     if showsShelf {
-                        AnswerShelf(model: model)
-                            // Edge to edge: the cards peek from the sheet's sides.
-                            .padding(.horizontal, -theme.spacing.sheetMargin)
-                            .hiddenWhenCollapsed(placement.isCollapsed)
+                        if listsSteps {
+                            // The expanded sheet unfolds the cards into the full step list, in place.
+                            StepListRows(rows: model.navigator.stepRows, current: model.navigator.focusedRow, onSelect: selectStep)
+                        } else {
+                            AnswerShelf(model: model)
+                                // Edge to edge: the cards peek from the sheet's sides.
+                                .padding(.horizontal, -theme.spacing.sheetMargin)
+                                .hiddenWhenCollapsed(placement.isCollapsed)
+                        }
                     }
-                    // Sheet below large: follow-up + thumbs in their own row (expanded / inspector
-                    // have them in the full sections below). Shown, disabled, while streaming.
-                    if model.session.canFollowUp || model.session.isBusy, !placement.isExpanded {
+                    // On the sheet, follow-up + thumbs in their own row under the steps, at every
+                    // detent (the inspector has them in the full sections below). Shown, disabled,
+                    // while streaming.
+                    if model.session.canFollowUp || model.session.isBusy, placement != .inspector {
                         AnswerFooterRow(draft: Bindable(model.session).draft, voice: voice, rating: model.session.currentRating,
                                         onRate: model.session.rate, onSend: model.session.ask)
                             .disabled(!model.session.canFollowUp)
@@ -60,11 +66,13 @@ struct AnswerContent: View {
                             metrics.medium = $0 + topMargin
                             onMetrics(metrics)
                         }
-                    if answered {
-                        FullAnswerSections(model: model, collapsesOnSelect: placement != .inspector)
+                    if answered, placement == .inspector {
+                        FullAnswerSections(model: model)
+                    } else if answered, let a = model.session.answer?.assumptions, !a.isEmpty {
+                        AssumptionRows(assumptions: a)
                             .hiddenWhenCollapsed(placement.isCollapsed)
                     }
-                    if model.session.canFollowUp, placement.isExpanded {
+                    if model.session.canFollowUp, placement == .inspector {
                         FollowUpSection(session: model.session, voice: voice)
                     }
                     if model.session.isDemo, answered { DemoNote() }
@@ -88,6 +96,15 @@ struct AnswerContent: View {
             }
         }
         .accessibilityIdentifier("answerSheet")
+    }
+
+    /// The expanded sheet shows the step list where the cards were (so nothing appears twice).
+    private var listsSteps: Bool { answered && placement == .sheet(.expanded) }
+
+    /// A step picked in the expanded list: back to medium, on its card.
+    private func selectStep(_ i: Int) {
+        model.navigator.selectRow(i)
+        withAnimation(.snappy) { model.detent = .medium }
     }
 
     private func stop() { withAnimation(.snappy) { model.session.stop() } }

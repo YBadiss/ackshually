@@ -64,13 +64,14 @@ class UITestCase: XCTestCase {
     }
 
     /// Writes a spec §4 answer for `-demoAnswer` (the sample rulebook's pages 3–4 hold the quotes).
-    func demoAnswer(verdict: String, steps: [(title: String, text: String, evidence: [(page: Int, quote: String)])]) throws -> String {
+    func demoAnswer(verdict: String, steps: [(title: String, text: String, evidence: [(page: Int, quote: String)])],
+                    branches: [(condition: String, verdict: String)] = []) throws -> String {
         let json: [String: Any] = [
             "restated_question": "What happens to unused energy?", "verdict": verdict, "confidence": "stated",
             "steps": steps.map { s in
                 ["title": s.title, "text": s.text, "evidence": s.evidence.map { ["page": $0.page, "quote": $0.quote, "box": NSNull()] }]
             },
-            "branches": [], "assumptions": [], "needs_web": false,
+            "branches": branches.map { ["condition": $0.condition, "verdict": $0.verdict, "steps": []] }, "assumptions": [], "needs_web": false,
         ]
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("demo-\(UUID().uuidString).json")
         try JSONSerialization.data(withJSONObject: json).write(to: url)
@@ -78,8 +79,9 @@ class UITestCase: XCTestCase {
     }
 
     /// One passage per step.
-    func demoAnswer(verdict: String, steps: [(title: String, text: String, page: Int, quote: String)]) throws -> String {
-        try demoAnswer(verdict: verdict, steps: steps.map { ($0.title, $0.text, [($0.page, $0.quote)]) })
+    func demoAnswer(verdict: String, steps: [(title: String, text: String, page: Int, quote: String)],
+                    branches: [(condition: String, verdict: String)] = []) throws -> String {
+        try demoAnswer(verdict: verdict, steps: steps.map { ($0.title, $0.text, [($0.page, $0.quote)]) }, branches: branches)
     }
 
     static let goodQuote = "you must discard all unused energy"

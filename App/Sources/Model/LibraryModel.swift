@@ -22,12 +22,26 @@ final class LibraryModel {
     @ObservationIgnored private let storage: any LibraryStorage
     @ObservationIgnored private let providers: any AnswerProviderFactory
 
+    /// False until the index is read; the list shows nothing (not "No Games Yet") until then.
+    private(set) var isLoaded: Bool
+
     var games: [LibraryEntry] { index.entries }
 
-    init(dependencies: AppDependencies) {
+    /// `loadIndex: false` starts empty: the app calls `load()`, which reads the index off the main
+    /// thread, so launch does no file I/O before the first frame (with Xcode's debugger attached,
+    /// each main-thread file call costs ~1 s of diagnostics: launch sat on a blank screen for 12 s).
+    init(dependencies: AppDependencies, loadIndex: Bool = true) {
         storage = dependencies.library
         providers = dependencies.providers
-        index = dependencies.library.loadIndex()
+        index = loadIndex ? dependencies.library.loadIndex() : LibraryIndex()
+        isLoaded = loadIndex
+    }
+
+    /// Reads the saved index in the background.
+    func load() async {
+        let storage = storage
+        index = await Task.detached(priority: .userInitiated) { storage.loadIndex() }.value
+        isLoaded = true
     }
 
     // MARK: Sessions

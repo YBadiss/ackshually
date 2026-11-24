@@ -11,7 +11,7 @@ struct AckshuallyApp: App {
     init() {
         let d = AppDependencies.live()
         dependencies = d
-        _library = State(initialValue: LibraryModel(dependencies: d))
+        _library = State(initialValue: LibraryModel(dependencies: d, loadIndex: false))
     }
 
     var body: some Scene {
@@ -19,7 +19,10 @@ struct AckshuallyApp: App {
             LibraryScreen(library: library, voice: voice)
                 .environment(\.dependencies, dependencies)
                 .themed()
-                .task { LaunchOptions.apply(to: library) }
+                .task {
+                    await library.load()
+                    LaunchOptions.apply(to: library)
+                }
         }
     }
 }

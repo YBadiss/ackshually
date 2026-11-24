@@ -41,11 +41,12 @@ enum Library {
     /// M2 remembered only the last rulebook; read once to migrate it into the index.
     private static let legacyLastKey = "lastRulebookPath"
 
-    static var folder: URL {
+    /// Created once, on first use (it used to be re-created on every access).
+    static let folder: URL = {
         let u = URL.applicationSupportDirectory.appending(path: "Rulebooks", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
-    }
+    }()
 
     static var indexURL: URL { folder.appending(path: "library.json") }
 
