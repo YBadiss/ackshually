@@ -20,7 +20,8 @@ struct LibraryScreen: View {
                 }
                 .themeBackground(\.groupedBackground)
                 .navigationDestination(for: GameRoute.self) { route in
-                    ViewerScreen(model: library.session(for: route), voice: voice, windowSize: windowSize)
+                    ViewerScreen(model: library.session(for: route), voice: voice, windowSize: windowSize,
+                                 title: library.playingTitle(for: route))
                 }
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { windowSize = $0 }
@@ -31,6 +32,26 @@ struct LibraryScreen: View {
             SettingsSheet { settings = false }
                 .themed()
         }
+        // S13: a game with add-ons asks what you play with before it opens.
+        .sheet(item: $library.checklist) { c in
+            PlayingWithScreen(gameID: c.id, purpose: .play) { library.checklist = nil }
+                .presentationDetents([.medium, .large])
+                .themed()
+        }
+        // ＋ → New Game, or Add to a game. Cancel removes the copy, so the sheet can't be swiped away.
+        .sheet(item: $library.pendingImport, onDismiss: { library.importSheetDismissed() }) { p in
+            AddRulebookSheet(bookTitle: p.title, games: addTargets,
+                             onNewGame: { library.importAsNewGame() },
+                             onAdd: { library.importInto($0, as: $1) },
+                             onCancel: { library.cancelImport() })
+                .interactiveDismissDisabled()
+                .themed()
+        }
+        .environment(library)
+    }
+
+    private var addTargets: [AddRulebookSheet.Game] {
+        library.games.map { AddRulebookSheet.Game(id: $0.id, title: $0.title, detail: $0.bookCountText) }
     }
 
     @ViewBuilder private var content: some View {
@@ -61,3 +82,8 @@ struct LibraryScreen: View {
 }
 #Preview("AX5") { LibraryScreen(library: LibraryFixtures.model(), voice: AskController()).themed().dynamicTypeSize(.accessibility5) }
 #Preview("Dark") { LibraryScreen(library: LibraryFixtures.model(), voice: AskController()).themed().preferredColorScheme(.dark) }
+#Preview("Playing with") {
+    let library = PlayingWithFixtures.library()
+    library.checklist = .init(id: PlayingWithFixtures.sampleID)
+    return LibraryScreen(library: library, voice: AskController()).themed()
+}

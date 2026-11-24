@@ -35,9 +35,22 @@ public enum FixtureRulebook {
         ], figure: (NormalizedBox(x: 0.15, y: 0.55, w: 0.7, h: 0.3), "Figure 1: scoring track")),
     ]
 
-    /// Writes the fixture PDF and returns its URL.
+    /// A made-up add-on for the sample ("Solar Expansion"), for several-rulebook tests and previews (S13).
+    /// Its Battery rule overrides the base game's on purpose.
+    public static let expansionPages: [Page] = [
+        Page(title: "Solar Expansion — Rules", paragraphs: [
+            "The Solar Expansion adds 4 solar plant cards and a weather die. Shuffle the solar plants into the plant deck.",
+            "Solar plants produce 2 energy on a sunny roll of the weather die and nothing otherwise.",
+        ]),
+        Page(title: "Changes to the base game", paragraphs: [
+            "Storage: with this expansion, a player who owns a Battery keeps up to 3 unused energy at the end of the turn.",
+            "Weather: the first player rolls the weather die at the start of each round.",
+        ]),
+    ]
+
+    /// Writes the fixture PDF (the base game, or `pages` such as `expansionPages`) and returns its URL.
     @discardableResult
-    public static func write(to url: URL) throws -> URL {
+    public static func write(to url: URL, pages: [Page] = pages) throws -> URL {
         var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
         guard let consumer = CGDataConsumer(url: url as CFURL),
               let ctx = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {

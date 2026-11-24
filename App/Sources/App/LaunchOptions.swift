@@ -8,6 +8,7 @@ import AckshuallyCore
 ///   -sample YES                open the generated sample rulebook
 ///   -emptyLibrary YES          start with no games (clears the index and the imported copies)
 ///   -seedSample YES            add the sample to My Games, like "Try the Sample" (persisted)
+///   -seedSampleSet YES         the sample plus its made-up Solar Expansion as a ticked add-on (S13)
 ///   -demo YES                  scripted answers, no API calls (also when no key is set)
 ///   -demoAnswer /abs/a.json    scripted Answer JSON (spec §4 contract) for the demo provider
 ///   -demoPace 3                stretch the demo stream's delays (UI tests sample the sheet while it streams);
@@ -27,6 +28,7 @@ enum LaunchOptions {
         CredentialStore.resetIsolatedIfRequested()
         if d.bool(forKey: "emptyLibrary") { library.reset() }
         if d.bool(forKey: "seedSample") { library.seedSample() }
+        if d.bool(forKey: "seedSampleSet") { library.seedSampleSet() }
         if let p = d.string(forKey: "pdfPath") {
             // Launch-argument documents (UI tests, screenshots) are never added to My Games, so
             // test runs don't change the list the app shows on the next normal launch.

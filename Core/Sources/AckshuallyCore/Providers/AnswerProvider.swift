@@ -119,16 +119,32 @@ public struct AnswerRequest: Sendable {
     /// Optional prebuilt index of `pdf` (saves parsing it on the first question). Built and cached
     /// by the provider when nil.
     public var rulebook: RulebookIndex?
+    /// The game's books in play (S13): `pdf` is them joined, and this is its table of contents and page map.
+    /// nil = one rulebook and nothing else (the request is exactly the single-book one).
+    public var contents: RulebookContents?
 
     public init(pdf: Data, documentTitle: String, question: String, history: [Turn] = [],
-                pageSelection: PageSelectionMode = .fullDocument, rulebook: RulebookIndex? = nil) {
+                pageSelection: PageSelectionMode = .fullDocument, rulebook: RulebookIndex? = nil,
+                contents: RulebookContents? = nil) {
         self.pdf = pdf
         self.documentTitle = documentTitle
         self.question = question
         self.history = history
         self.pageSelection = pageSelection
         self.rulebook = rulebook
+        self.contents = contents
     }
+
+    /// The ticked books, joined (`RulebookJoiner`): the document is titled after the game.
+    public init(books: JoinedRulebook, question: String, history: [Turn] = [],
+                pageSelection: PageSelectionMode = .fullDocument, rulebook: RulebookIndex? = nil) {
+        self.init(pdf: books.pdf, documentTitle: books.contents.gameTitle, question: question, history: history,
+                  pageSelection: pageSelection, rulebook: rulebook,
+                  contents: books.contents.needsPromptNote ? books.contents : nil)
+    }
+
+    /// Too large to attach whole (`ClaudeProvider.maxDocumentBytes`): only selected pages can be sent.
+    public var isOversize: Bool { pdf.count > ClaudeProvider.maxDocumentBytes }
 }
 
 /// Provider-agnostic interface (SPEC §1 #15). App and bench use the same code path.

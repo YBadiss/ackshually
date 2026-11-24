@@ -22,11 +22,19 @@ final class InMemoryLibraryStorage: LibraryStorage {
     func delete(fileName: String) async { try? FileManager.default.removeItem(at: url(for: fileName)) }
     func cover(for url: URL, pixelWidth: Int) async -> UIImage? { nil }
 
-    func importPDF(from picked: URL) throws -> URL {
-        let dest = url(for: picked.lastPathComponent)
-        try? FileManager.default.removeItem(at: dest)
-        try FileManager.default.copyItem(at: picked, to: dest)
-        return dest
+    func importPDF(from picked: URL) throws -> URL { try Library.importPDF(from: picked, into: folder) }
+
+    func load(_ game: LibraryEntry) -> LoadedRulebook? {
+        let joined = folder.appending(path: "Joined", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: joined, withIntermediateDirectories: true)
+        return Library.load(game, url: url(for:), joined: joined)
+    }
+
+    /// The made-up Solar Expansion (S13 previews and tests), written into the folder on first use.
+    func sampleExpansion() throws -> URL {
+        let u = url(for: Library.sampleExpansionFileName)
+        if !FileManager.default.fileExists(atPath: u.path) { try FixtureRulebook.write(to: u, pages: FixtureRulebook.expansionPages) }
+        return u
     }
 
     func sampleRulebook() throws -> URL {

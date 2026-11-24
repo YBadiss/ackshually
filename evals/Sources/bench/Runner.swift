@@ -1,9 +1,12 @@
 import Foundation
+import PDFKit
 import AckshuallyCore
 
 struct HighlightResult: Codable {
     var step: Int
     var page: Int
+    /// Several-book games: the cited page in its own book ("Riverfolk p.4").
+    var reference: String?
     var quote: String?
     var outcome: String          // matched | matched_other_page | partial | not_matched | no_quote
     var detail: String
@@ -98,6 +101,30 @@ struct Record: Codable {
     var expectedVerdict: String
     var tags: [String]
     var retrieval: RetrievalRecord?
+    /// Several-book games: titles of the books sent (core + ticked add-ons), and the sent PDF's size.
+    var books: [String]?
+    var documentBytes: Int?
+}
+
+/// What one question sends: a game's books in play joined (one book: its PDF unchanged), with a matcher and
+/// a page index on the same bytes.
+struct SentDocument {
+    var key: String
+    var books: [BookSpec]
+    var joined: JoinedRulebook
+    var matcher: QuoteMatcher
+    var rulebook: RulebookIndex
+
+    /// `expected_pages` (pages of a one-PDF game) or `expected_book_pages` mapped to pages of this document;
+    /// pages of books not sent are dropped.
+    func expectedPages(_ q: Question) -> [Int] {
+        if let bp = q.expectedBookPages {
+            return bp.compactMap { p in
+                books.first { $0.id == p.book }.flatMap { joined.contents.documentPage(book: $0.title, page: p.page) }
+            }
+        }
+        return q.expectedPages ?? []
+    }
 }
 
 struct RunOptions {
@@ -155,44 +182,76 @@ final class Runner {
 
         var count = 0
         for g in set.games where opts.onlyGames.isEmpty || opts.onlyGames.contains(g.id) {
-            guard let pdfURL = Paths.findPDF(for: g, questionsFile: opts.questionsFile),
-                  let pdf = try? Data(contentsOf: pdfURL), let matcher = QuoteMatcher(url: pdfURL),
-                  let rulebook = RulebookIndex(data: pdf) else {
-                log("⚠️  \(g.name): PDF not found (\(g.pdf)) — skipping \(g.questions.count) questions")
+            let specs = g.bookSpecs
+            var sources: [String: (spec: BookSpec, data: Data, url: URL)] = [:]
+            for b in specs {
+                if let u = Paths.findPDF(for: b, questionsFile: opts.questionsFile), let d = try? Data(contentsOf: u) {
+                    sources[b.id] = (b, d, u)
+                }
+            }
+            let missing = specs.filter { sources[$0.id] == nil }
+            guard missing.isEmpty else {
+                let paths = missing.map(\.pdf).joined(separator: ", ")
+                log("⚠️  \(g.name): PDF not found (\(paths)) — skipping \(g.questions.count) questions")
                 for q in g.questions where !done.contains(q.id) {
                     try emit(Record(id: q.id, game: g.id, question: q.question, model: opts.model, mode: opts.mode.rawValue,
-                                    effort: opts.effort, position: "-", status: "skipped", error: "PDF missing: \(g.pdf)",
+                                    effort: opts.effort, position: "-", status: "skipped", error: "PDF missing: \(paths)",
                                     highlights: [], expectedVerdict: q.expectedVerdict, tags: q.tags ?? []))
                 }
                 continue
             }
-            log("📘 \(g.name): \(pdfURL.lastPathComponent), \(matcher.pageCount) pages, \(pdf.count / 1024) KB")
+            // One sent document per set of ticked add-ons (core books always), joined once and reused, so
+            // later questions on the same set read it from the prompt cache like the app does.
+            var documents: [String: SentDocument] = [:]
+            func document(for q: Question) -> SentDocument? {
+                let ticked = Set(q.addOns ?? [])
+                let key = ticked.sorted().joined(separator: "+")
+                if let d = documents[key] { return d }
+                let inPlay = specs.filter { $0.role == .core || ticked.contains($0.id) }
+                let notInPlay = specs.filter { $0.role == .addOn && !ticked.contains($0.id) }.map(\.title)
+                let started = Date()
+                guard let joined = RulebookJoiner.join(inPlay.map { RulebookSource(title: $0.title, role: $0.role, pdf: sources[$0.id]!.data) },
+                                                       gameTitle: g.name, notInPlay: notInPlay),
+                      let matcherDoc = PDFDocument(data: joined.pdf), let rulebook = RulebookIndex(data: joined.pdf) else { return nil }
+                let d = SentDocument(key: key, books: inPlay, joined: joined, matcher: QuoteMatcher(document: matcherDoc), rulebook: rulebook)
+                log("📘 \(g.name) [\(inPlay.map(\.title).joined(separator: " + "))]: \(matcherDoc.pageCount) pages, "
+                    + "\(joined.pdf.count / 1024) KB\(inPlay.count > 1 ? String(format: ", joined in %.1f s", Date().timeIntervalSince(started)) : "")"
+                    + (AnswerRequest(books: joined, question: "").isOversize ? " (over \(ClaudeProvider.maxDocumentBytes / 1_000_000) MB: page selection)" : ""))
+                documents[key] = d
+                return d
+            }
             var turnsByID: [String: [Turn]] = [:]   // conversation up to and including question id
-            var first = true
+            var seen: Set<String> = []              // documents already asked about (cold vs warm)
             for q in g.questions {
                 if let limit = opts.limit, count >= limit { break }
                 if !opts.onlyIDs.isEmpty && !opts.onlyIDs.contains(q.id) { continue }
+                let key = Set(q.addOns ?? []).sorted().joined(separator: "+")
                 if done.contains(q.id) {
                     // Resumed: rebuild conversation context from the earlier run.
-                    first = false
+                    seen.insert(key)
                     if let r = records.first(where: { $0.id == q.id }) {
                         let h = q.follows.flatMap { turnsByID[$0] } ?? []
                         turnsByID[q.id] = h + [Turn(question: q.question, answer: r.answer, rawAssistantText: r.rawText ?? "")]
                     }
                     continue
                 }
+                guard let doc = document(for: q) else {
+                    log("⚠️  \(q.id): couldn't build the document"); continue
+                }
                 count += 1
                 let history = q.follows.flatMap { turnsByID[$0] } ?? []
-                let position = q.follows != nil ? "followup" : (first ? "cold" : "warm")
-                first = false
+                let position = q.follows != nil ? "followup" : (seen.contains(key) ? "warm" : "cold")
+                seen.insert(key)
                 log("  → \(q.id) [\(position)] \(q.question.prefix(70))")
-                var rec = await ask(q: q, game: g, pdf: pdf, title: g.name, history: history, matcher: matcher, position: position,
-                                    rulebook: rulebook)
+                var rec = await ask(q: q, game: g, doc: doc, history: history, position: position)
                 if let a = rec.answer, let judge {
-                    let cited = Set(a.steps.flatMap { $0.evidence.map(\.page) } + (q.expectedPages ?? []))
-                    let texts = cited.sorted().filter { $0 >= 1 && $0 <= matcher.pageCount }
-                        .map { (page: $0, text: matcher.document.page(at: $0 - 1)?.string ?? "") }
-                    rec.judge = await judge.judge(question: q, answer: a, pageTexts: texts)
+                    let cited = Set(a.steps.flatMap { $0.evidence.map(\.page) } + doc.expectedPages(q))
+                    let c = doc.joined.contents
+                    let texts = cited.sorted().filter { $0 >= 1 && $0 <= doc.matcher.pageCount }
+                        .map { p in (page: p, label: c.isJoined ? "page \(p) (\(c.reference(for: p).label))" : "page \(p)",
+                                     text: doc.matcher.document.page(at: p - 1)?.string ?? "") }
+                    rec.judge = await judge.judge(question: q, answer: a, pageTexts: texts,
+                                                  books: doc.books.map(\.title), notInPlay: c.notInPlay)
                 }
                 turnsByID[q.id] = history + [Turn(question: q.question, answer: rec.answer, rawAssistantText: rec.rawText ?? "")]
                 log("    \(summary(rec))")
@@ -203,15 +262,20 @@ final class Runner {
         return records
     }
 
-    private func ask(q: Question, game: GameQuestions, pdf: Data, title: String, history: [Turn],
-                     matcher: QuoteMatcher, position: String, rulebook: RulebookIndex) async -> Record {
+    private func ask(q: Question, game: GameQuestions, doc: SentDocument, history: [Turn], position: String) async -> Record {
         var rec = Record(id: q.id, game: game.id, question: q.question, model: opts.model, mode: opts.mode.rawValue,
                          effort: opts.effort, position: position, status: "ok", highlights: [],
                          expectedVerdict: q.expectedVerdict, tags: q.tags ?? [])
+        if game.books != nil {
+            rec.books = doc.books.map(\.title)
+            rec.documentBytes = doc.joined.pdf.count
+        }
+        let matcher = doc.matcher
+        let expectedPages = doc.expectedPages(q)
         let start = Date()
         func t() -> Double { Date().timeIntervalSince(start) }
-        let stream = provider.answer(AnswerRequest(pdf: pdf, documentTitle: title, question: q.question, history: history,
-                                                   pageSelection: opts.pages, rulebook: rulebook))
+        let stream = provider.answer(AnswerRequest(books: doc.joined, question: q.question, history: history,
+                                                   pageSelection: opts.pages, rulebook: doc.rulebook))
         let timeout = opts.timeout
         let box = RecordBox(rec)
         do {
@@ -234,7 +298,7 @@ final class Runner {
                                 $0.rawText = r.rawText
                                 if r.answer == nil { $0.status = "invalid_output" }
                                 if let ri = r.retrieval {
-                                    let exp = Set(q.expectedPages ?? [])
+                                    let exp = Set(expectedPages)
                                     let sent = Set(ri.selection.pages)
                                     $0.retrieval = RetrievalRecord(
                                         pages: ri.selection.pages, pageCount: ri.selection.pageCount,
@@ -267,25 +331,28 @@ final class Runner {
         }
         rec = box.value
         if rec.tTotal == nil && rec.status == "ok" { rec.status = "invalid_output"; rec.error = rec.error ?? "stream ended without answer" }
-        if let a = rec.answer { score(&rec, q: q, answer: a, matcher: matcher) }
+        if let a = rec.answer { score(&rec, q: q, answer: a, doc: doc) }
         return rec
     }
 
-    private func score(_ rec: inout Record, q: Question, answer: Answer, matcher: QuoteMatcher) {
+    private func score(_ rec: inout Record, q: Question, answer: Answer, doc: SentDocument) {
+        let matcher = doc.matcher
         let cited = Set(answer.steps.flatMap { $0.evidence.map(\.page) })
-        if let exp = q.expectedPages, !exp.isEmpty {
+        let exp = doc.expectedPages(q)
+        if !exp.isEmpty {
             rec.evidencePageCorrect = !cited.isDisjoint(with: exp)
         }
         for (si, s) in answer.steps.enumerated() {
             for e in s.evidence {
                 var h = HighlightResult(step: si, page: e.page, quote: e.quote, outcome: "no_quote", detail: "")
+                if doc.joined.contents.isJoined { h.reference = doc.joined.contents.reference(for: e.page).label }
                 if let quote = e.quote {
                     h.apply(matcher.match(quote: quote, page: e.page))
                 }
                 if let b = e.box {
                     h.box = b
                     h.boxCheck = QuoteMatcher.check(box: b).rawValue
-                    if let eb = q.expectedBox, q.expectedPages?.first == e.page {
+                    if let eb = q.expectedBox, exp.first == e.page {
                         h.boxIoU = b.iou(eb)
                         let c = b.center
                         h.boxCenterInExpected = eb.contains(x: c.0, y: c.1)

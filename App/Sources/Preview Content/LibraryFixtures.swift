@@ -8,7 +8,7 @@ enum LibraryFixtures {
     static let games: [LibraryEntry] = LibraryIndex(entries: [
         entry("power-plant-rush.pdf", "Power plant rush", ago: 120),
         entry("tile-garden.pdf", "Tile Garden", ago: 86_400 * 2),
-        entry("woodland-court.pdf", "Woodland Court: Learning to Play", ago: 86_400 * 9),
+        woodlandCourt(ago: 86_400 * 9),
         entry("spice-desert.pdf", "Spice Desert", ago: 86_400 * 45),
     ]).entries
 
@@ -24,6 +24,21 @@ enum LibraryFixtures {
         let m = LibraryModel(dependencies: .inMemory(library: InMemoryLibraryStorage(index: LibraryIndex(entries: games))))
         if let cover { m.setCover(cover, for: "power-plant-rush.pdf") }
         return m
+    }
+
+    /// A game with seven rulebooks (S13): two core books and five add-ons, two of them ticked.
+    private static func woodlandCourt(ago: TimeInterval) -> LibraryEntry {
+        let d = Date.now.addingTimeInterval(-ago)
+        let books = [
+            LibraryBook(fileName: "woodland-court.pdf", title: "Law of Woodland Court", role: .core),
+            LibraryBook(fileName: "woodland-court-learning.pdf", title: "Learning to Play", role: .core),
+            LibraryBook(fileName: "woodland-rivers.pdf", title: "Rivers", role: .addOn, ticked: true),
+            LibraryBook(fileName: "woodland-tunnels.pdf", title: "Tunnels", role: .addOn, ticked: false),
+            LibraryBook(fileName: "woodland-raiders.pdf", title: "Raiders", role: .addOn, ticked: false),
+            LibraryBook(fileName: "woodland-marsh.pdf", title: "Marsh", role: .addOn, ticked: true),
+            LibraryBook(fileName: "woodland-gears.pdf", title: "Gears", role: .addOn, ticked: false),
+        ]
+        return LibraryEntry(id: "woodland-court.pdf", title: "Woodland Court", added: d, lastOpened: d, books: books)
     }
 
     private static func entry(_ file: String, _ title: String, ago: TimeInterval) -> LibraryEntry {

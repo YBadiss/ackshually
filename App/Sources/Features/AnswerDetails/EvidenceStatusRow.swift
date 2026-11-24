@@ -12,7 +12,7 @@ struct EvidenceStatusRow: View {
                     .foregroundStyle(color)
                     .font(theme.font.rowValue.weight(.semibold))
                 Spacer(minLength: theme.spacing.s)
-                Text("p.\(report.page)").font(theme.font.rowValue.monospacedDigit()).foregroundStyle(theme.colors.secondaryLabel)
+                Text(report.location).font(theme.font.rowValue.monospacedDigit()).foregroundStyle(theme.colors.secondaryLabel)
             }
             if let q = report.quote, !q.isEmpty {
                 Text("“\(q)”").font(theme.font.rowValue).foregroundStyle(theme.colors.label)

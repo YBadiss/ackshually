@@ -132,6 +132,9 @@ struct Theme: Sendable, Equatable {
         /// My Games rows: game name and "Opened …".
         var gameTitle = Font.body.weight(.semibold)
         var gameDetail = Font.subheadline
+        /// The viewer's title button ("Root · Riverfolk ⌄", S13) and its chevron.
+        var titleButton = Font.headline
+        var titleChevron = Font.caption.weight(.bold)
     }
 
     /// Relative layout rules (fractions, thresholds), never absolute frames.

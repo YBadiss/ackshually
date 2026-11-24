@@ -1,10 +1,11 @@
 import SwiftUI
 import AckshuallyCore
 
-/// The one secondary line under the verdict: "checkmark.seal  Stated in the rules · p.3, p.4".
+/// The one secondary line under the verdict: "checkmark.seal  Stated in the rules · p.3, p.4" (with several
+/// books: "· Law of Root p.12, Riverfolk p.4").
 struct ProofLine: View {
     var confidence: Confidence
-    var pages: [Int]
+    var pages: [PageReference]
     @Environment(\.theme) private var theme
 
     var body: some View {
@@ -28,28 +29,32 @@ struct ProofLine: View {
         }
     }
 
-    static func text(_ c: Confidence, pages: [Int]) -> String {
-        let p = pages.map { "p.\($0)" }.joined(separator: ", ")
-        return pages.isEmpty ? c.phrase : "\(c.phrase) · \(p)"
+    static func text(_ c: Confidence, pages: [PageReference]) -> String {
+        pages.isEmpty ? c.phrase : "\(c.phrase) · \(pages.label)"
     }
 
-    static func accessibilityText(_ c: Confidence, pages: [Int]) -> String {
-        pages.isEmpty ? c.phrase : "\(c.phrase), page\(pages.count > 1 ? "s" : "") \(pages.map(String.init).joined(separator: ", "))"
+    static func accessibilityText(_ c: Confidence, pages: [PageReference]) -> String {
+        if pages.isEmpty { return c.phrase }
+        if pages.allSatisfy({ $0.book == nil }) {
+            return "\(c.phrase), page\(pages.count > 1 ? "s" : "") \(pages.map { String($0.page) }.joined(separator: ", "))"
+        }
+        return "\(c.phrase), \(pages.map(\.spokenLabel).joined(separator: "; "))"
     }
 }
 
 #Preview("States") {
     VStack(alignment: .leading, spacing: 12) {
-        ProofLine(confidence: .stated, pages: [3, 4])
-        ProofLine(confidence: .inferred, pages: [2])
+        ProofLine(confidence: .stated, pages: [.page(3), .page(4)])
+        ProofLine(confidence: .inferred, pages: [.page(2)])
         ProofLine(confidence: .notCovered, pages: [])
+        ProofLine(confidence: .stated, pages: Fixtures.bookPages)
     }
     .padding()
     .themed()
 }
 
 #Preview("AX5, dark") {
-    ProofLine(confidence: .stated, pages: [3, 4])
+    ProofLine(confidence: .stated, pages: Fixtures.bookPages)
         .padding()
         .themeBackground(\.sheet)
         .themed()

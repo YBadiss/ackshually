@@ -130,7 +130,8 @@ struct AdaptiveViewerLayout: View {
             .overlay(alignment: .top) {
                 if let chrome = model.highlightChrome {
                     HighlightOverlay(evidenceIndex: chrome.evidenceIndex, evidenceCount: chrome.evidenceCount,
-                                     note: chrome.note, noteKind: chrome.noteKind, onNext: { model.nextEvidence() })
+                                     note: chrome.note, noteKind: chrome.noteKind, location: chrome.location,
+                                     onNext: { model.nextEvidence() })
                         .padding(.top, theme.spacing.s)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { overlayHeight = $0 }
                         .onDisappear { overlayHeight = 0 }

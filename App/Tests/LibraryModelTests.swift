@@ -23,7 +23,7 @@ final class LibraryModelTests: XCTestCase {
             let name = "game-\(i).pdf"
             try FileManager.default.copyItem(at: sample, to: storage.url(for: name))
             index.record(fileName: name, title: "Game \(i)")
-            return .game(fileName: name)
+            return .game(id: name)
         }
         storage.save(index)
         library = LibraryModel(dependencies: .inMemory(library: storage, providers: ScriptedProviders()))
@@ -64,7 +64,7 @@ final class LibraryModelTests: XCTestCase {
         XCTAssertNil(b.session.answer)
         back()
         XCTAssertTrue(open(games[0]) === a, "another game in between keeps it too")
-        XCTAssertEqual(library.games.first?.fileName, "game-1.pdf", "opening bumps the game to the top")
+        XCTAssertEqual(library.games.first?.id, "game-1.pdf", "opening bumps the game to the top")
     }
 
     func testOnlyTheLastFewGamesKeepTheirSession() throws {
@@ -114,9 +114,9 @@ final class LibraryModelTests: XCTestCase {
     func testTrySampleAddsTheGameAndOpensIt() throws {
         library.addSample()
         let name = try storage.sampleRulebook().lastPathComponent
-        XCTAssertEqual(library.path, [.game(fileName: name)], "opens the new game right away")
+        XCTAssertEqual(library.path, [.game(id: name)], "opens the new game right away")
         XCTAssertNotNil(library.current)
-        XCTAssertEqual(library.games.map(\.fileName), [name], "and it is in the list behind it")
+        XCTAssertEqual(library.games.map(\.id), [name], "and it is in the list behind it")
         XCTAssertEqual(library.games.first?.title, "Power plant rush")
     }
 

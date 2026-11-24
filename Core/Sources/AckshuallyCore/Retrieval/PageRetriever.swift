@@ -309,7 +309,7 @@ public struct PageSelection: Sendable, Equatable, Codable {
     }
 
     /// Prompt note telling the model which original page each excerpt page is.
-    func excerptNote(title: String) -> String {
+    func excerptNote(title: String, fullDocumentFollows: Bool = true) -> String {
         let list = pages.enumerated().map { "excerpt page \($0.offset + 1) = rulebook page \($0.element)" }.joined(separator: ", ")
         return """
         The attached document is an EXCERPT of the rulebook "\(title)" (\(pageCount) pages in full): only the \
@@ -318,7 +318,7 @@ public struct PageSelection: Sendable, Equatable, Codable {
         i.e. one of \(pages.map(String.init).joined(separator: ", "))), never the position inside the excerpt. \
         Use "inferred" only when the ruling follows from rules that ARE on these pages. If a rule you need is not \
         on these pages (for example the general rule for the action asked about), set confidence to "not_covered" \
-        instead of guessing: the full rulebook will then be checked.
+        instead of guessing\(fullDocumentFollows ? ": the full rulebook will then be checked" : "").
         """
     }
 }

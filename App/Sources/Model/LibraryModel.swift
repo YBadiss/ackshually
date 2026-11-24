@@ -2,22 +2,42 @@ import UIKit
 import Observation
 import AckshuallyCore
 
-/// My Games (S1): the persisted list of imported rulebooks, the navigation path into the viewer, the covers,
-/// and one viewer session per open game. Opening a game creates its `ViewerModel` (or brings back the one
-/// it had), so going back and re-opening a game keeps its answer; the last `sessionLimit` games keep theirs,
-/// older ones are dropped to bound memory (each holds the PDF and a matcher).
+/// My Games (S1) and the books of each game (S13): the persisted list of games, the navigation path into the
+/// viewer, the covers, the "Playing with" list shown before a game with add-ons opens, the choice a picked PDF
+/// waits for (New Game or Add to a game), and one viewer session per open game. Opening a game creates its
+/// `ViewerModel` (or brings back the one it had), so going back and re-opening a game keeps its answer; the last
+/// `sessionLimit` games keep theirs, older ones are dropped to bound memory (each holds the PDF and a matcher).
 @MainActor
 @Observable
 final class LibraryModel {
     static let sessionLimit = 3
 
+    /// The "Playing with" list for a game about to open from My Games.
+    struct Checklist: Identifiable, Equatable {
+        var id: String
+    }
+
+    /// A picked PDF, already copied into the library, waiting for New Game / Add to a game.
+    struct PendingImport: Identifiable, Equatable {
+        var fileName: String
+        var title: String
+        var id: String { fileName }
+    }
+
     private(set) var index: LibraryIndex
     private(set) var path: [GameRoute] = []
+    /// Keyed by the cover book's file name.
     private(set) var covers: [String: UIImage] = [:]
     /// Viewer sessions, least recently opened first.
     private(set) var sessions: [ViewerModel] = []
     /// Shown on the list (an import or open that failed).
     var error: String?
+    /// S13: a game with add-ons asks what you play with every time it is opened from My Games.
+    var checklist: Checklist?
+    /// "Add a Rulebook" picked a PDF: New Game, or Add to a game (as core or add-on). The app never guesses.
+    var pendingImport: PendingImport?
+    /// A game whose books are being joined before it opens (its Play button shows progress).
+    private(set) var opening: String?
 
     @ObservationIgnored private let storage: any LibraryStorage
     @ObservationIgnored private let providers: any AnswerProviderFactory
@@ -26,6 +46,8 @@ final class LibraryModel {
     private(set) var isLoaded: Bool
 
     var games: [LibraryEntry] { index.entries }
+
+    func game(_ id: String) -> LibraryEntry? { index.entry(id: id) }
 
     /// `loadIndex: false` starts empty: the app calls `load()`, which reads the index off the main
     /// thread, so launch does no file I/O before the first frame (with Xcode's debugger attached,
@@ -48,42 +70,39 @@ final class LibraryModel {
 
     /// The session open for `route`, if any (the stack's destination reads it; it never creates one).
     func session(for route: GameRoute) -> ViewerModel? {
-        let url = url(for: route).standardizedFileURL
-        return sessions.first { $0.rulebook.url.standardizedFileURL == url }
+        sessions.first { $0.route == route }
     }
 
     /// The game on top of the stack.
     var current: ViewerModel? { path.last.flatMap(session(for:)) }
 
-    /// The session for `url`: the existing one (moved to most recent) unless `reload`, else a new one.
-    private func openSession(_ url: URL, reload: Bool = false) -> ViewerModel? {
-        let key = url.standardizedFileURL
-        if let i = sessions.firstIndex(where: { $0.rulebook.url.standardizedFileURL == key }) {
-            let s = sessions.remove(at: i)
-            if !reload {
-                sessions.append(s)
-                return s
-            }
-        }
+    private func keep(_ s: ViewerModel) {
+        sessions.removeAll { $0 === s }
+        sessions.append(s)
+        if sessions.count > Self.sessionLimit { sessions.removeFirst(sessions.count - Self.sessionLimit) }
+    }
+
+    private func newSession(_ rb: LoadedRulebook, route: GameRoute) -> ViewerModel {
+        sessions.removeAll { $0.route == route }
+        let s = ViewerModel(rulebook: rb, providers: providers, route: route)
+        keep(s)
+        return s
+    }
+
+    /// A file that stays out of the library (launch arguments).
+    private func openFile(_ url: URL) -> ViewerModel? {
+        if let s = session(for: .file(url)) { keep(s); return s }
         guard let rb = LoadedRulebook(url: url) else {
             error = "Couldn't open \(url.lastPathComponent) as a PDF."
             return nil
         }
-        let s = ViewerModel(rulebook: rb, providers: providers)
-        sessions.append(s)
-        if sessions.count > Self.sessionLimit { sessions.removeFirst(sessions.count - Self.sessionLimit) }
-        return s
-    }
-
-    private func closeSessions(at url: URL) {
-        let key = url.standardizedFileURL
-        sessions.removeAll { $0.rulebook.url.standardizedFileURL == key }
+        return newSession(rb, route: .file(url))
     }
 
     // MARK: Navigation
 
-    /// The stack's path (`$library.navigationPath`): a row's `NavigationLink(value:)` pushes
-    /// `.game`, which opens it first; Back pops.
+    /// The stack's path (`$library.navigationPath`): a row's `NavigationLink(value:)` pushes `.game`, which
+    /// opens it first; Back pops. A game with add-ons shows "Playing with" instead of pushing (Play pushes).
     var navigationPath: [GameRoute] {
         get { path }
         set {
@@ -92,41 +111,209 @@ final class LibraryModel {
         }
     }
 
-    private func push(_ route: GameRoute) {
-        if prepare(route) { path = [route] }
-    }
-
-    /// Opens the route's session (back + tap the same game resumes its answer) and bumps the game to the top
-    /// of the list.
+    /// True when `route` can be pushed right away.
     private func prepare(_ route: GameRoute) -> Bool {
-        guard openSession(url(for: route)) != nil else { return false }
-        if case .game(let name) = route {
-            index.markOpened(name)
-            storage.save(index)
-        }
         error = nil
-        return true
-    }
-
-    func url(for route: GameRoute) -> URL {
         switch route {
-        case .game(let name): storage.url(for: name)
-        case .file(let url): url
+        case .file(let url):
+            return openFile(url) != nil
+        case .game(let id):
+            guard let game = index.entry(id: id) else { return false }
+            if game.hasAddOns {
+                checklist = Checklist(id: id)
+                return false
+            }
+            return open(game)
         }
     }
 
-    // MARK: Adding
+    /// Opens `game` with its books in play. True when it is ready now (one book, or its session is still
+    /// open); several books not loaded yet are joined in the background and pushed when ready.
+    @discardableResult
+    private func open(_ game: LibraryEntry) -> Bool {
+        let route = GameRoute.game(id: game.id)
+        if let s = session(for: route) {
+            keep(s)
+            restage(s, for: game)
+            markOpened(game.id)
+            return true
+        }
+        guard game.booksInPlay.count > 1 else {
+            guard let rb = storage.load(game) else {
+                error = "Couldn't open \(game.title) as a PDF."
+                return false
+            }
+            _ = newSession(rb, route: route)
+            markOpened(game.id)
+            return true
+        }
+        Task { await openInBackground(game) }
+        return false
+    }
 
-    /// "Add a Rulebook": copy the picked PDF into the library and open it right away.
-    func importPicked(_ picked: URL) {
-        do { add(try storage.importPDF(from: picked)) } catch {
+    private func openInBackground(_ game: LibraryEntry) async {
+        guard opening == nil else { return }
+        opening = game.id
+        defer { opening = nil }
+        let storage = storage
+        let rb = await Task.detached(priority: .userInitiated) { storage.load(game) }.value
+        guard let rb else {
+            error = "Couldn't open the rulebooks of \(game.title)."
+            return
+        }
+        _ = newSession(rb, route: .game(id: game.id))
+        markOpened(game.id)
+        checklist = nil
+        path = [.game(id: game.id)]
+    }
+
+    /// An open session whose books in play changed (ticks, roles, names, removed books) gets the new set; it
+    /// applies from its next question (`AnswerSession.stage`).
+    private func restage(_ s: ViewerModel, for game: LibraryEntry) {
+        let signature = Library.signature(of: game)
+        guard s.session.rulebook.signature != signature, s.stagedSignature != signature else { return }
+        s.stagedSignature = signature
+        let storage = storage
+        s.session.stage(Task.detached(priority: .userInitiated) { storage.load(game) })
+    }
+
+    private func markOpened(_ id: String) {
+        index.markOpened(id)
+        storage.save(index)
+    }
+
+    func url(for fileName: String) -> URL { storage.url(for: fileName) }
+
+    // MARK: Playing with (S13)
+
+    /// "Play" on the list shown before the game opens: open it with the ticked books.
+    func play(_ id: String) {
+        guard let game = index.entry(id: id) else { checklist = nil; return }
+        if open(game) {
+            checklist = nil
+            path = [.game(id: id)]
+        }
+    }
+
+    /// The list was closed from the viewer (title button): the open session picks up the change.
+    func booksChanged(_ id: String) {
+        guard let game = index.entry(id: id), let s = session(for: .game(id: id)) else { return }
+        restage(s, for: game)
+    }
+
+    /// "Root · Riverfolk, Rootbotics": the viewer's title button.
+    func playingTitle(for route: GameRoute) -> String? {
+        guard case .game(let id) = route, let game = index.entry(id: id) else { return nil }
+        return game.playingTitle
+    }
+
+    func toggle(_ fileName: String, in id: String) {
+        guard let b = index.entry(id: id)?.book(fileName) else { return }
+        index.setTicked(fileName, in: id, !b.ticked)
+        storage.save(index)
+    }
+
+    func setRole(_ fileName: String, in id: String, to role: BookRole) {
+        index.setRole(fileName, in: id, to: role)
+        storage.save(index)
+    }
+
+    func renameBook(_ fileName: String, in id: String, to title: String) {
+        index.renameBook(fileName, in: id, to: title)
+        storage.save(index)
+    }
+
+    func renameGame(_ id: String, to title: String) {
+        index.renameGame(id, to: title)
+        storage.save(index)
+    }
+
+    /// Swipe → Remove: the book leaves the game and the device (not the game's last core book).
+    func removeBook(_ fileName: String, from id: String) {
+        guard index.removeBook(fileName, from: id) else { return }
+        storage.save(index)
+        covers[fileName] = nil
+        let storage = storage
+        Task { await storage.delete(fileName: fileName) }
+    }
+
+    /// ＋ Add a Rulebook in "Playing with": an add-on of this game, ticked.
+    func addBook(picked: URL, to id: String) {
+        guard let game = index.entry(id: id) else { return }
+        do {
+            let url = try storage.importPDF(from: picked)
+            index.addBook(LibraryBook(fileName: url.lastPathComponent, title: Self.bookTitle(storage.title(of: url), in: game),
+                                      role: .addOn, ticked: true), to: id)
+            storage.save(index)
+        } catch {
             self.error = "Import failed: \(error.localizedDescription)"
         }
     }
 
+    /// A book added to "Root" named "Root Riverfolk" is shown as "Riverfolk" (the game's name is implied).
+    static func bookTitle(_ title: String, in game: LibraryEntry) -> String {
+        let name = game.title
+        // "Root Riverfolk", "Root: Underworld", "Root - FAQ"; not "Rootbotics".
+        guard title.count > name.count, title.lowercased().hasPrefix(name.lowercased()),
+              let next = title.dropFirst(name.count).first, !next.isLetter, !next.isNumber else { return title }
+        let rest = title.dropFirst(name.count).trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return rest.isEmpty ? title : rest.prefix(1).uppercased() + rest.dropFirst()
+    }
+
+    // MARK: Adding
+
+    /// "Add a Rulebook": copy the picked PDF into the library. With no games yet it is a new game, opened right
+    /// away; otherwise the user says where it goes (New Game, or Add to a game as core or add-on).
+    func importPicked(_ picked: URL) {
+        do {
+            let url = try storage.importPDF(from: picked)
+            if index.isEmpty {
+                addNewGame(url)
+            } else {
+                pendingImport = PendingImport(fileName: url.lastPathComponent, title: storage.title(of: url))
+            }
+        } catch {
+            self.error = "Import failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// New Game: the picked book on its own, opened right away (S2).
+    func importAsNewGame() {
+        guard let p = pendingImport else { return }
+        pendingImport = nil
+        addNewGame(storage.url(for: p.fileName))
+    }
+
+    /// Add to <game>, as a core book or an add-on (ticked). That game's "Playing with" list follows, once the
+    /// import sheet is gone (`importSheetDismissed`: one sheet can't present while another dismisses).
+    func importInto(_ id: String, as role: BookRole) {
+        guard let p = pendingImport, let game = index.entry(id: id) else { return }
+        pendingImport = nil
+        index.addBook(LibraryBook(fileName: p.fileName, title: Self.bookTitle(p.title, in: game), role: role, ticked: true), to: id)
+        storage.save(index)
+        checklistAfterImport = id
+    }
+
+    /// The game whose list shows after the import sheet closes.
+    private(set) var checklistAfterImport: String?
+
+    func importSheetDismissed() {
+        guard let id = checklistAfterImport else { return }
+        checklistAfterImport = nil
+        checklist = Checklist(id: id)
+    }
+
+    /// Cancel: the copy is removed again.
+    func cancelImport() {
+        guard let p = pendingImport else { return }
+        pendingImport = nil
+        let storage = storage
+        Task { await storage.delete(fileName: p.fileName) }
+    }
+
     /// "Try the Sample": the bundled Power Plant Rush, as a game in the list.
     func addSample() {
-        do { add(try storage.sampleRulebook()) } catch { self.error = "\(error)" }
+        do { addNewGame(try storage.sampleRulebook()) } catch { self.error = "\(error)" }
     }
 
     /// Adds the sample without opening it (`-seedSample YES`).
@@ -136,9 +323,18 @@ final class LibraryModel {
         storage.save(index)
     }
 
+    /// The sample plus its made-up Solar Expansion as an add-on (`-seedSampleSet YES`, S13 screenshots).
+    func seedSampleSet() {
+        guard let url = try? storage.sampleRulebook(), let solar = try? storage.sampleExpansion() else { return }
+        let id = url.lastPathComponent
+        index.record(fileName: id, title: storage.title(of: url))
+        index.addBook(LibraryBook(fileName: solar.lastPathComponent, title: "Solar Expansion", role: .addOn, ticked: true), to: id)
+        storage.save(index)
+    }
+
     /// Opens a file that stays out of the library (launch arguments): Back returns to the list.
     func openTransient(_ url: URL) {
-        guard openSession(url) != nil else { return }
+        guard openFile(url) != nil else { return }
         path = [.file(url)]
     }
 
@@ -147,25 +343,29 @@ final class LibraryModel {
         openTransient(url)
     }
 
-    private func add(_ url: URL) {
-        // Always reload: a re-import of the same file name replaces its contents (and its conversation).
-        guard let session = openSession(url, reload: true) else { return }
-        index.record(fileName: url.lastPathComponent, title: session.rulebook.title)
+    private func addNewGame(_ url: URL) {
+        let name = url.lastPathComponent
+        index.record(fileName: name, title: storage.title(of: url))
         storage.save(index)
-        covers[url.lastPathComponent] = nil
-        push(.game(fileName: url.lastPathComponent))
+        covers[name] = nil
+        // Always reload: a re-import of the same file replaces its contents (and its conversation).
+        sessions.removeAll { $0.route == .game(id: name) }
+        guard let game = index.entry(id: name), open(game) else { return }
+        path = [.game(id: name)]
     }
 
     // MARK: Removing
 
-    /// Swipe to delete: the entry, its imported copy, its covers and its session.
+    /// Swipe to delete: the game, every one of its books' copies and covers, and its session.
     func delete(_ entries: [LibraryEntry]) {
         for e in entries {
-            index.remove(e.fileName)
-            covers[e.fileName] = nil
-            closeSessions(at: storage.url(for: e.fileName))
-            let storage = storage
-            Task { await storage.delete(fileName: e.fileName) }
+            index.remove(e.id)
+            sessions.removeAll { $0.route == .game(id: e.id) }
+            for b in e.books {
+                covers[b.fileName] = nil
+                let storage = storage
+                Task { await storage.delete(fileName: b.fileName) }
+            }
         }
         storage.save(index)
     }
@@ -180,12 +380,13 @@ final class LibraryModel {
 
     // MARK: Covers
 
-    /// Renders (or reads from cache) the first page at `pixelWidth`, off the main thread.
+    /// Renders (or reads from cache) the cover book's first page at `pixelWidth`, off the main thread.
     func loadCover(for entry: LibraryEntry, pixelWidth: Int, scale: CGFloat) async {
-        if let c = covers[entry.fileName], Int(c.size.width * c.scale) >= pixelWidth { return }
-        guard let img = await storage.cover(for: storage.url(for: entry.fileName), pixelWidth: pixelWidth),
+        guard let file = entry.coverBook?.fileName else { return }
+        if let c = covers[file], Int(c.size.width * c.scale) >= pixelWidth { return }
+        guard let img = await storage.cover(for: storage.url(for: file), pixelWidth: pixelWidth),
               let cg = img.cgImage else { return }
-        covers[entry.fileName] = UIImage(cgImage: cg, scale: scale, orientation: .up)
+        covers[file] = UIImage(cgImage: cg, scale: scale, orientation: .up)
     }
 
     /// Previews: covers made up front.
