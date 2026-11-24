@@ -5,7 +5,7 @@ import AckshuallyCore
 
 /// Several rulebooks per game (S13) in the app's models: the "Playing with" list before a game with add-ons
 /// opens (ticks start from last time), the joined document and its page map, a change of books applying from
-/// the next question, the ＋ choice (New Game / Add to a game), and book names on cards and the pager.
+/// the next question, and book names on cards and the pager. Adding books (S14): `AddRulebooksModelTests`.
 @MainActor
 final class RulebookSetModelTests: XCTestCase {
     private var storage: InMemoryLibraryStorage!
@@ -173,62 +173,6 @@ final class RulebookSetModelTests: XCTestCase {
         XCTAssertTrue(v.pdfFocus.userMovedPDF, "it stays there when the sheet moves")
         v.showBook(7)
         XCTAssertEqual(v.pdfFocus.focus?.highlight.page, 5, "no such book: nothing moves")
-    }
-
-    // MARK: Adding a rulebook
-
-    private func pickedPDF(_ name: String) throws -> URL {
-        let dir = FileManager.default.temporaryDirectory.appending(path: "picked-\(UUID().uuidString)", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return try FixtureRulebook.write(to: dir.appending(path: name), pages: FixtureRulebook.expansionPages)
-    }
-
-    func testAPickedPDFWaitsForNewGameOrAddToAGame() throws {
-        library.importPicked(try pickedPDF("power-plant-rush-storms.pdf"))
-        let p = try XCTUnwrap(library.pendingImport, "the app never guesses the grouping")
-        XCTAssertEqual(p.title, "Power plant rush storms")
-        XCTAssertTrue(library.path.isEmpty)
-
-        library.importInto(id, as: .addOn)
-        XCTAssertNil(library.pendingImport)
-        let book = try XCTUnwrap(library.game(id)?.book(p.fileName))
-        XCTAssertEqual(book.title, "Storms", "the game's name is implied")
-        XCTAssertEqual(book.role, .addOn)
-        XCTAssertTrue(book.ticked, "a book just added is in play")
-        XCTAssertEqual(library.game(id)?.bookCountText, "3 rulebooks")
-        XCTAssertNil(library.checklist, "not while the import sheet is still up")
-        library.importSheetDismissed()
-        XCTAssertEqual(library.checklist?.id, id, "then the game's list shows the new book")
-    }
-
-    func testNewGameFromAPickedPDFOpensItRightAway() throws {
-        library.importPicked(try pickedPDF("tile-garden.pdf"))
-        library.importAsNewGame()
-        XCTAssertEqual(library.path, [.game(id: "tile-garden.pdf")])
-        XCTAssertEqual(library.games.count, 2)
-    }
-
-    func testCancelRemovesTheCopy() async throws {
-        library.importPicked(try pickedPDF("notes.pdf"))
-        let copy = storage.url(for: try XCTUnwrap(library.pendingImport).fileName)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: copy.path))
-        library.cancelImport()
-        await eventually("the copy is deleted") { !FileManager.default.fileExists(atPath: copy.path) }
-        XCTAssertEqual(library.games.count, 1)
-    }
-
-    func testAnImportNeverReplacesAnotherBooksFile() throws {
-        library.importPicked(try pickedPDF(id))
-        XCTAssertEqual(library.pendingImport?.fileName, "power-plant-rush 2.pdf")
-        XCTAssertEqual(PDFDocument(url: storage.url(for: id))?.pageCount, 4, "the sample's file is untouched")
-        XCTAssertEqual(PDFDocument(url: storage.url(for: "power-plant-rush 2.pdf"))?.pageCount, 2)
-    }
-
-    func testWithNoGamesAPickedPDFIsANewGame() throws {
-        library.delete(library.games)
-        library.importPicked(try pickedPDF("azul.pdf"))
-        XCTAssertNil(library.pendingImport)
-        XCTAssertEqual(library.path, [.game(id: "azul.pdf")])
     }
 
     // MARK: Editing the books

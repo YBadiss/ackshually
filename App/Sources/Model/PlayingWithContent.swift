@@ -14,6 +14,8 @@ struct PlayingWithContent: Equatable {
         var inPlay: Bool
         /// The game's last core book can't be removed or made an add-on.
         var isLastCore: Bool
+        /// The game's only book: removing it deletes the game (after asking).
+        var isOnlyBook = false
         var id: String { fileName }
     }
 
@@ -34,7 +36,8 @@ struct PlayingWithContent: Equatable {
 
     init(_ game: LibraryEntry, purpose: Purpose, isOpening: Bool = false) {
         let books = game.books.map {
-            Book(fileName: $0.fileName, title: $0.title, role: $0.role, inPlay: $0.inPlay, isLastCore: game.isLastCore($0.fileName))
+            Book(fileName: $0.fileName, title: $0.title, role: $0.role, inPlay: $0.inPlay, isLastCore: game.isLastCore($0.fileName),
+                 isOnlyBook: game.isOnlyBook($0.fileName))
         }
         self.init(gameTitle: game.title, core: books.filter { $0.role == .core }, addOns: books.filter { $0.role == .addOn },
                   purpose: purpose, isOpening: isOpening)

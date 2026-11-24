@@ -1,4 +1,4 @@
-import UIKit
+import SwiftUI
 import PDFKit
 import AckshuallyCore
 
@@ -24,6 +24,20 @@ enum LibraryFixtures {
         let m = LibraryModel(dependencies: .inMemory(library: InMemoryLibraryStorage(index: LibraryIndex(entries: games))))
         if let cover { m.setCover(cover, for: "power-plant-rush.pdf") }
         return m
+    }
+
+    /// My Games in Edit mode with `selected` ticked: the list and its toolbar (Delete (N) at the bottom).
+    static func editing(selected: Set<String>) -> some View {
+        NavigationStack {
+            GameList(games: games, covers: covers, selection: .constant(selected), loadCover: { _, _, _ in }, onDelete: { _ in })
+                .environment(\.editMode, .constant(.active))
+                .navigationTitle("My Games")
+                .toolbar {
+                    LibraryToolbar(isEditing: true, selectedCount: selected.count, canEdit: true, onAdd: {}, onSettings: {},
+                                   onToggleEditing: {}, onDeleteSelected: {})
+                }
+                .themeBackground(\.groupedBackground)
+        }
     }
 
     /// A game with seven rulebooks (S13): two core books and five add-ons, two of them ticked.
