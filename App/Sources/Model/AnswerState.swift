@@ -76,7 +76,7 @@ struct Highlight: Equatable, Sendable {
     var match = MatchInfo(result: .matched, detail: "matched")
 }
 
-/// What the PDF view should show now. A new `token` re-applies it (Back to step, double-tap).
+/// What the PDF view should show now. A new `token` re-applies it (double-tap, next quote).
 struct PDFFocus: Equatable {
     var token: Int
     var highlight: Highlight

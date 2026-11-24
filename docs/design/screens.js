@@ -63,9 +63,8 @@ const S = [
    <div class="sheet" style="padding:7px 11px 12px"><div class="grab"></div><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:11.5px">Keep 2 energy, discard 1.</b><span class="chip" style="font-size:7.5px;white-space:nowrap">✓ p.14</span></div></div>
    <div class="gest" style="bottom:52px;left:50%;transform:translateX(-50%)">drag down ↓</div>`},
 
- {t:'8 · Inspect freely', ms:'M2', li:['<b>Pinch / pan</b> anytime','<b>Back to step</b> pill re-centers the highlight','<b>Double-tap</b>: evidence ↔ full page'],
+ {t:'8 · Inspect freely', ms:'M2', li:['<b>Pinch / pan</b> anytime','<b>Double-tap</b>: back to the highlight, or evidence ↔ full page'],
   h:`${chrome('Power Grid')}<div class="page" style="padding-top:20px"><p>…Phase 3: buy resources in reverse order.</p><h5>7 · Items</h5><p>Items are bought during phase 3 and stay in front of you.</p><p><span class="hl"><b>Battery:</b> at end of turn…</span></p></div>
-   <div class="pill" style="bottom:192px">⤺ Back to step 2</div>
    <div class="sheet"><div class="grab"></div>${head}<div class="rail mid">${c1(true)}${c2()}${c3(true)}</div></div>
    <div class="gest" style="top:120px;right:14px">pinch / pan</div>`},
 

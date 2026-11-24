@@ -6,7 +6,7 @@ import PDFKit
 /// - wide (iPad, Mac, phone landscape): the answer in a trailing column beside the PDF. Our own
 ///   column, not `.inspector`: on iPhone `.inspector` falls back to a second sheet next to the
 ///   answer sheet, and the two kept a cold launch's first layout from ever finishing (100% CPU)
-/// Also owns the floating chrome over the PDF (ask field, "Back to Step N") and tells the PDF
+/// Also owns the floating chrome over the PDF (the ask field) and tells the PDF
 /// how much of it the sheet / field covers: the sheet's target detent height, so the PDF moves
 /// together with the sheet instead of waiting for it to settle.
 struct AdaptiveViewerLayout: View {
@@ -142,10 +142,6 @@ struct AdaptiveViewerLayout: View {
 
     private var floatingControls: some View {
         VStack(spacing: theme.spacing.m) {
-            if model.pdfFocus.userMovedPDF, model.sheetVisible, let n = model.navigator.focusedStepNumber {
-                BackToStepPill(step: n) { model.backToStep() }
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            }
             if showsAskField {
                 askArea
                     .frame(maxWidth: theme.layout.askFieldMaxWidth)
@@ -158,7 +154,6 @@ struct AdaptiveViewerLayout: View {
         // Above the sheet's top edge (the sheet is a separate presentation, not in this stack).
         .padding(.bottom, sheetPresented ? max(covered - container.safeBottom, 0) + theme.spacing.m : 0)
         .animation(theme.sheetAnimation, value: showsAskField)
-        .animation(.snappy, value: model.pdfFocus.userMovedPDF)
     }
 
     @ViewBuilder private var askArea: some View {

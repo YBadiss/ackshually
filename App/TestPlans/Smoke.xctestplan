@@ -13,7 +13,7 @@
       "selectedTests": [
         "LibraryUITests/testEmptyState()",
         "LibraryUITests/testTrySampleAddsAndOpensIt()",
-        "ViewerUITests/testInspectBackToStepAndDoubleTap()",
+        "ViewerUITests/testInspectAndDoubleTap()",
         "AnswerSheetUITests/testSwipeAndPeekTapStepCards()",
         "ServerRouteUITests/testBundledTokenAnswersThroughServer()"
       ],

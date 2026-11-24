@@ -107,7 +107,7 @@ final class ViewerModelTests: XCTestCase {
         XCTAssertEqual(m.pdfFocus.focus?.token, token)
     }
 
-    func testDoubleTapZoomAndBackToStep() {
+    func testDoubleTapZoomAndBackToEvidence() {
         let m = presented()
         XCTAssertEqual(m.pdfFocus.focus?.zoom, .evidence)
         m.toggleZoom()
@@ -118,8 +118,9 @@ final class ViewerModelTests: XCTestCase {
         let token = m.pdfFocus.focus?.token ?? 0
         m.visibleAreaChanged()
         XCTAssertEqual(m.pdfFocus.focus?.token, token, "no re-centre while the reader inspects")
-        m.backToStep()
+        m.toggleZoom()
         XCTAssertFalse(m.pdfFocus.userMovedPDF)
+        XCTAssertEqual(m.pdfFocus.focus?.zoom, .evidence, "after a move, double-tap goes back to the evidence")
         XCTAssertGreaterThan(m.pdfFocus.focus?.token ?? 0, token)
     }
 

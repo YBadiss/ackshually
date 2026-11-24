@@ -163,8 +163,7 @@
 <section class="screen" id="s8"><div>
   <h3>S8 · Inspect freely <span class="mtag">M2</span></h3>
   <ul><li><b>Pinch / pan</b> the PDF at any time to read the surrounding qualifications. Tapping the PDF never changes steps.</li>
-  <li>A <b>Back to Step N</b> glass button re-centers on the highlight.</li>
-  <li><b>Double-tap</b>: evidence zoom ↔ full page.</li></ul>
+  <li><b>Double-tap</b>: after a pinch/pan, back to the highlight; otherwise evidence zoom ↔ full page. No floating button: a new card or quote also re-centers.</li></ul>
 </div><div class="shot" data-screen="s8"></div></section>
 
 <section class="screen" id="s9"><div>
@@ -345,6 +344,7 @@ Server/  Node 24 service at ackshually.badyass.xyz: holds the API key, checks an
   <tr><td>2026-11-24</td><td>Expanded sheet (S9): the step list replaces the cards in place and the follow-up + thumbs row stays where it is at medium; the separate "Was this right?" and "Follow-up" sections are inspector-only. Row values too long to sit beside their label go under it</td><td>Owner: expanded showed the cards and then the steps, thumbs and follow-up again further down; a long branch verdict was squeezed to one letter per line</td></tr>
   <tr><td>2026-11-24</td><td>Wide layouts (iPad, Mac, phone landscape) all use our own trailing answer column; the system <code>.inspector</code> is gone. <code>Theme</code> is <code>Equatable</code></td><td>On iPhone <code>.inspector</code> falls back to a sheet beside the answer sheet: on a cold launch the viewer's first layout never finished (100% CPU, beige or empty screen, "Observation tracking feedback loop"), which also failed Smoke on fresh simulator clones. One column path instead of two. A non-Equatable theme counted as changed on every pass</td></tr>
   <tr><td>2026-11-24</td><td>My Games reads its index off the main thread after the first frame (the list shows nothing until it is loaded)</td><td>Owner: the first launch from Xcode sat on the beige launch screen; the debugger's main-thread I/O checks cost ~1 s per file call during <code>App.init</code></td></tr>
+  <tr><td>2026-11-24</td><td>No "Back to Step N" button (S8): double-tap re-centers on the highlight after a pinch/pan</td><td>Owner: the button floated just above the sheet, a separate presentation, so the sheet's edge covered it and took its taps (tapping it expanded the sheet instead)</td></tr>
 </table></div>
 
 <!-- ============================================================ -->

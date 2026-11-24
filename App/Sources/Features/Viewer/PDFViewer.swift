@@ -4,8 +4,8 @@ import AckshuallyCore
 
 /// PDFKit viewer that follows the current step (S5/S6) and lets the user inspect freely (S8).
 /// - `focus` changes → go to page, zoom to the evidence inside the visible area, draw highlights.
-/// - Pinch/pan by the user → `onUserMove` (the "⤺ Back to step N" pill). Taps never change steps.
-/// - Double-tap → `onDoubleTap` (evidence zoom ↔ full page).
+/// - Pinch/pan by the user → `onUserMove` (stop following the evidence). Taps never change steps.
+/// - Double-tap → `onDoubleTap` (back to the evidence after a move, else evidence zoom ↔ full page).
 struct PDFViewer: UIViewRepresentable {
     let document: PDFDocument
     var focus: PDFFocus?
@@ -103,12 +103,14 @@ struct PDFViewer: UIViewRepresentable {
                 v.addGestureRecognizer(g)
             }
             let dbl = UITapGestureRecognizer(target: self, action: #selector(doubleTap(_:)))
+            doubleTapRecognizer = dbl
             dbl.numberOfTapsRequired = 2
             dbl.delegate = self
             dbl.cancelsTouchesInView = true
             v.addGestureRecognizer(dbl)
         }
 
+        private weak var doubleTapRecognizer: UITapGestureRecognizer?
         private weak var observedScroll: UIScrollView?
 
         /// Also listen to PDFKit's own scroll-view gestures (created lazily by PDFView).
@@ -121,6 +123,7 @@ struct PDFViewer: UIViewRepresentable {
 
         @objc func userGesture(_ g: UIGestureRecognizer) {
             if g.state == .began {
+                stopAnimation()
                 (view as? FitPagePDFView)?.fitWholePage = false
                 onUserMove()
             }
@@ -130,7 +133,19 @@ struct PDFViewer: UIViewRepresentable {
             if g.state == .ended { onDoubleTap() }
         }
 
-        func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
+        func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            !(g === doubleTapRecognizer && Self.isDoubleTap(other))
+        }
+
+        /// PDFKit has its own double-tap (zoom to fit width). It ran together with ours, so the page
+        /// jumped to fit width and then animated from there. Ours wins: PDFKit's waits for it to fail.
+        func gestureRecognizer(_ g: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            g === doubleTapRecognizer && Self.isDoubleTap(other)
+        }
+
+        private static func isDoubleTap(_ g: UIGestureRecognizer) -> Bool {
+            (g as? UITapGestureRecognizer)?.numberOfTapsRequired == 2
+        }
 
         // MARK: Spotlight
 
@@ -230,26 +245,76 @@ struct PDFViewer: UIViewRepresentable {
             }
             v.autoScales = false
             v.minScaleFactor = min(v.scaleFactorForSizeToFit, scale) * 0.5
-            let changeScale = abs(v.scaleFactor - scale) > 0.001
-            let move = {
-                if changeScale { v.scaleFactor = scale }
-                v.go(to: target, on: page)
+            stopAnimation()
+            let visibleCenter = CGPoint(x: visible.midX, y: visible.midY)
+            /// Zoom to `s` and put the target's centre at `point` (view coordinates).
+            let place = { (s: CGFloat, point: CGPoint) in
+                if abs(v.scaleFactor - s) > 0.001 { v.scaleFactor = s }
                 v.layoutIfNeeded()
                 guard let scroll = Self.scrollView(in: v) else { return }
                 let r = v.convert(target, from: page)
                 var off = scroll.contentOffset
-                off.x += r.midX - visible.midX
-                off.y += r.midY - visible.midY
+                off.x += r.midX - point.x
+                off.y += r.midY - point.y
                 let inset = scroll.adjustedContentInset
                 off.x = min(max(off.x, -inset.left), max(scroll.contentSize.width - scroll.bounds.width + inset.right, -inset.left))
                 off.y = min(max(off.y, -inset.top), max(scroll.contentSize.height - scroll.bounds.height + inset.bottom + self.bottomObscured, -inset.top))
                 scroll.setContentOffset(off, animated: false)
             }
-            if animated {
-                UIView.animate(withDuration: style.moveDuration, delay: 0, options: [.curveEaseInOut, .allowUserInteraction], animations: move)
-            } else {
-                move()
+            let r0 = v.convert(target, from: page)
+            // Far away (another page), not animated or Reduce Motion: jump. PDFKit lays pages out again as the zoom
+            // changes, so neither `UIView.animate` around `place` nor animating the scroll view's
+            // zoom and offset moves the page in a straight line: zooming out to the whole page, it
+            // sank ~75 pt below its final position and jumped back. Instead, every frame sets the zoom
+            // and puts the target where it should be on screen at that moment.
+            guard animated, !UIAccessibility.isReduceMotionEnabled, v.bounds.insetBy(dx: -v.bounds.width, dy: -v.bounds.height).contains(r0) else {
+                v.go(to: target, on: page)
+                return place(scale, visibleCenter)
             }
+            let from = (scale: v.scaleFactor, center: CGPoint(x: r0.midX, y: r0.midY))
+            animation = Animation(duration: style.moveDuration) { e in
+                // Zoom and centre both linear in `e`: every point of the page then moves in a straight
+                // line to where it ends up (a geometric zoom made the page's edge swing past it).
+                place(from.scale + (scale - from.scale) * e,
+                      CGPoint(x: from.center.x + (visibleCenter.x - from.center.x) * e,
+                              y: from.center.y + (visibleCenter.y - from.center.y) * e))
+            }
+            let link = CADisplayLink(target: self, selector: #selector(animationFrame(_:)))
+            link.add(to: .main, forMode: .common)
+            displayLink = link
+        }
+
+        // MARK: Animation
+
+        private struct Animation {
+            var duration: TimeInterval
+            var start: CFTimeInterval?
+            var step: (CGFloat) -> Void
+            init(duration: TimeInterval, step: @escaping (CGFloat) -> Void) {
+                self.duration = duration
+                self.step = step
+            }
+        }
+        private var animation: Animation?
+        private var displayLink: CADisplayLink?
+
+        @objc private func animationFrame(_ link: CADisplayLink) {
+            guard var a = animation else { return stopAnimation() }
+            let start = a.start ?? link.timestamp
+            a.start = start
+            animation = a
+            let t = min(max((link.targetTimestamp - start) / a.duration, 0), 1)
+            // Ease in-out (cubic).
+            let e = t < 0.5 ? 4 * t * t * t : 1 - pow(-2 * t + 2, 3) / 2
+            a.step(CGFloat(e))
+            if t >= 1 { stopAnimation() }
+        }
+
+        /// A new focus or the user's own pinch/pan takes over from a running move.
+        func stopAnimation() {
+            displayLink?.invalidate()
+            displayLink = nil
+            animation = nil
         }
 
         static func scrollView(in v: UIView) -> UIScrollView? {
@@ -325,3 +390,4 @@ final class FitPagePDFView: PDFView {
         go(to: page)
     }
 }
+

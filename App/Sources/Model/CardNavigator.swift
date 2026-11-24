@@ -49,9 +49,6 @@ final class CardNavigator {
 
     var currentCard: CardID? { cardID ?? cards.first }
 
-    /// 1-based step number of the card the PDF follows (main answer or branch).
-    var focusedStepNumber: Int? { focusedRow.map { $0 + 1 } }
-
     /// Index of the step on screen in the expanded step list (main answer or active branch).
     var focusedRow: Int? {
         switch currentCard {

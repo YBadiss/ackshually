@@ -426,7 +426,7 @@ Leaf views take plain values (`HeaderContent`, `StepCardContent`, `CardItem`, `S
 | `AnswerSheet` (system sheet, measured detents, background interaction) | S5, S7, S9 | medium, streaming, collapsed, branch dark, AX5 |
 | `AnswerInspector` (inspector column / landscape column) | wide | iPad landscape |
 | **Features/Viewer/** `PDFViewer` (PDFKit, highlights, zoom, gestures) | S5, S6, S8 | evidence zoom, whole page |
-| `HighlightOverlay` (glass pager, notes), `BackToStepPill` (glass) | S6, S8 | 2 passages, figure note, whole page, AX3/AX5, dark |
+| `HighlightOverlay` (glass pager, notes) | S6, S8 | 2 passages, figure note, whole page, AX3/AX5, dark |
 | `AdaptiveViewerLayout` (sheet vs inspector vs landscape column; covered height for the PDF) | S3–S9 | iPhone 18 Pro, SE, Pro Max, landscape, iPad, AX5, dark, streaming, branch, collapsed, expanded, idle |
 | `ViewerScreen` (pushed from My Games), `ViewerMenu` (`ToolbarOverflowMenu`, answer items only), `ViewerChrome`, `ViewerDialogs`, `ViewerPreview` | S2 | answered, idle, removed dark |
 | **Features/Library/** `LibraryScreen` (root `NavigationStack`), `GameList`, `GameRow`, `GameCover`, `LibraryToolbar`, `EmptyLibraryView` (`ContentUnavailableView`) | S1 | games, empty, error AX5, SE, landscape, iPad, AX5, dark |
