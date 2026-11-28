@@ -21,6 +21,13 @@ protocol LibraryStorage: Sendable {
     func sampleExpansion() throws -> URL
     /// Removes the imported copy and its cached covers.
     func delete(fileName: String) async
+    /// Deleting a game or removing a book: the copy leaves the library but waits in a pending-deletion folder,
+    /// so the delete can be undone until `purgePending`.
+    func moveToPending(fileName: String)
+    /// Undo: the pending copies go back into the library, all or none (false if one can't).
+    func restoreFromPending(fileNames: [String]) -> Bool
+    /// Deletes the pending copies and their cached covers (the app went to the background, or launched).
+    func purgePending() async
     func title(of url: URL) -> String
     /// The first page `pixelWidth` pixels wide (scale 1), rendered off the main thread.
     func cover(for url: URL, pixelWidth: Int) async -> UIImage?
@@ -40,6 +47,13 @@ struct FileLibraryStorage: LibraryStorage {
     func delete(fileName: String) async {
         Library.deleteFile(named: fileName)
         await CoverCache.shared.remove(fileName: fileName)
+    }
+
+    func moveToPending(fileName: String) { Library.moveToPending(fileName) }
+    func restoreFromPending(fileNames: [String]) -> Bool { Library.restoreFromPending(fileNames) }
+
+    func purgePending() async {
+        for name in Library.purgePending() { await CoverCache.shared.remove(fileName: name) }
     }
 
     func cover(for url: URL, pixelWidth: Int) async -> UIImage? {

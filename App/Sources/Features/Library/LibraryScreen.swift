@@ -12,10 +12,14 @@ struct LibraryScreen: View {
     @State private var windowSize = CGSize.zero
     @State private var editMode = EditMode.inactive
     @State private var selection = Set<String>()
+    /// Deletes register here: shake or three-finger swipe undoes them.
+    @Environment(\.undoManager) private var undoManager
+    @Environment(\.theme) private var theme
 
     var body: some View {
         NavigationStack(path: $library.navigationPath) {
             content
+                .safeAreaInset(edge: .bottom) { undoBar }
                 .navigationTitle("My Games")
                 .toolbar {
                     LibraryToolbar(isEditing: editMode.isEditing, selectedCount: selection.count,
@@ -56,8 +60,21 @@ struct LibraryScreen: View {
     }
 
     private func confirmDeletion() {
-        library.confirmDeletion()
+        library.confirmDeletion(undoManager: undoManager)
         endEditing()
+    }
+
+    @ViewBuilder private var undoBar: some View {
+        if let removal = library.undoBar {
+            UndoBar(message: removal.message) { withAnimation(.snappy) { library.undo(removal) } }
+                .padding(.horizontal, theme.spacing.xl)
+                .padding(.bottom, theme.spacing.m)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task(id: removal.id) {
+                    try? await Task.sleep(for: theme.layout.undoBarDuration)
+                    withAnimation(.snappy) { library.dismissUndoBar(removal) }
+                }
+        }
     }
 
     private func toggleEditing() {
@@ -70,7 +87,7 @@ struct LibraryScreen: View {
     }
 
     private func deleteSelected() {
-        library.requestDelete(library.games.filter { selection.contains($0.id) })
+        library.requestDelete(library.games.filter { selection.contains($0.id) }, undoManager: undoManager)
     }
 
     @ViewBuilder private var content: some View {
@@ -81,13 +98,18 @@ struct LibraryScreen: View {
         } else {
             GameList(games: library.games, covers: library.covers, selection: $selection,
                      loadCover: { await library.loadCover(for: $0, pixelWidth: $1, scale: $2) },
-                     onDelete: { library.requestDelete($0) })
+                     onDelete: { library.requestDelete($0, undoManager: undoManager) })
                 .alert("Couldn't Open the Rulebook", item: $library.error) { _ in } message: { Text($0) }
         }
     }
 }
 
 #Preview("Games") { LibraryScreen(library: LibraryFixtures.model(), voice: AskController()).themed() }
+#Preview("Deleted, Undo bar") {
+    let library = LibraryFixtures.model()
+    library.delete([library.games[0]])
+    return LibraryScreen(library: library, voice: AskController()).themed()
+}
 #Preview("Empty") { LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController()).themed() }
 #Preview("Empty, dark") {
     LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController()).themed().preferredColorScheme(.dark)

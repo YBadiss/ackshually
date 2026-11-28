@@ -7,6 +7,7 @@ struct AckshuallyApp: App {
     private let dependencies: AppDependencies
     @State private var library: LibraryModel
     @State private var voice = AskController()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let d = AppDependencies.live()
@@ -23,6 +24,10 @@ struct AckshuallyApp: App {
                     await library.load()
                     LaunchOptions.apply(to: library)
                 }
+        }
+        // Deleted games and removed books can be undone until the app goes to the background.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { Task { await library.purgeRemovals() } }
         }
     }
 }
