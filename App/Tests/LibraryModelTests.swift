@@ -86,6 +86,20 @@ final class LibraryModelTests: XCTestCase {
         XCTAssertTrue(library.games.isEmpty)
     }
 
+    /// A full swipe on a game with several books still asks first (#25: every game allows a full swipe now);
+    /// the confirmation's button names the action.
+    func testFullSwipeOnAMultiBookGameAsksFirst() {
+        let library = LibraryFixtures.model()
+        let woodland = library.games.first { $0.books.count > 1 }!
+        library.requestDelete([woodland])
+        XCTAssertNotNil(library.game(woodland.id), "nothing deleted before the confirmation")
+        XCTAssertEqual(library.pendingDeletion?.question, "Delete Woodland Court and its 7 rulebooks?")
+        XCTAssertEqual(library.pendingDeletion?.confirmTitle, "Delete Game")
+        library.pendingDeletion = nil
+        library.requestDelete(Array(library.games.prefix(3)))
+        XCTAssertEqual(library.pendingDeletion?.confirmTitle, "Delete 3 Games")
+    }
+
     func testReimportReplacesTheSession() throws {
         library.addSample()
         let first = try XCTUnwrap(library.current)

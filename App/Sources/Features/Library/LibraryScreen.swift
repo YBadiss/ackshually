@@ -1,4 +1,5 @@
 import SwiftUI
+import AckshuallyCore
 
 /// Root of the app (S1 · My Games): the list of imported rulebooks in a `NavigationStack`;
 /// a row pushes the viewer, whose Back returns here. The same stack on every size: on wide
@@ -12,6 +13,10 @@ struct LibraryScreen: View {
     @State private var windowSize = CGSize.zero
     @State private var editMode = EditMode.inactive
     @State private var selection = Set<String>()
+    /// Long press → Rename…: the game being renamed and the alert's text.
+    @State private var renaming: LibraryEntry?
+    @State private var isRenaming = false
+    @State private var newName = ""
     /// Deletes register here: shake or three-finger swipe undoes them.
     @Environment(\.undoManager) private var undoManager
     @Environment(\.theme) private var theme
@@ -22,10 +27,11 @@ struct LibraryScreen: View {
                 .safeAreaInset(edge: .bottom) { undoBar }
                 .navigationTitle("My Games")
                 .toolbar {
-                    LibraryToolbar(isEditing: editMode.isEditing, selectedCount: selection.count,
-                                   canEdit: !library.games.isEmpty,
+                    LibraryToolbar(isSelecting: editMode.isEditing, selectedCount: selection.count,
+                                   allSelected: !library.games.isEmpty && selection.count == library.games.count,
+                                   canSelect: !library.games.isEmpty,
                                    onAdd: { importing = true }, onSettings: { settings = true },
-                                   onToggleEditing: toggleEditing, onDeleteSelected: deleteSelected)
+                                   onToggleSelecting: toggleSelecting, onSelectAll: selectAll, onDeleteSelected: deleteSelected)
                 }
                 .environment(\.editMode, $editMode)
                 .themeBackground(\.groupedBackground)
@@ -52,16 +58,28 @@ struct LibraryScreen: View {
         }
         // S14: ＋ → "Add N Rulebooks".
         .addRulebooksSheet(library)
-        .confirmationDialog(library.pendingDeletion?.question ?? "", item: $library.pendingDeletion, titleVisibility: .visible) { _ in
-            Button("Delete", role: .destructive, action: confirmDeletion)
+        .confirmationDialog(library.pendingDeletion?.question ?? "", item: $library.pendingDeletion, titleVisibility: .visible) { d in
+            Button(d.confirmTitle, role: .destructive, action: confirmDeletion)
                 .accessibilityIdentifier("confirmDelete")
         } message: { Text($0.detail) }
+        .alert("Rename Game", isPresented: $isRenaming, presenting: renaming) { game in
+            TextField("Name", text: $newName)
+                .accessibilityIdentifier("renameGameField")
+            Button("Cancel", role: .cancel) {}
+            Button("Rename") { library.renameGame(game.id, to: newName) }
+        }
         .environment(library)
     }
 
     private func confirmDeletion() {
         library.confirmDeletion(undoManager: undoManager)
-        endEditing()
+        endSelecting()
+    }
+
+    private func rename(_ game: LibraryEntry) {
+        renaming = game
+        newName = game.title
+        isRenaming = true
     }
 
     @ViewBuilder private var undoBar: some View {
@@ -77,17 +95,23 @@ struct LibraryScreen: View {
         }
     }
 
-    private func toggleEditing() {
-        if editMode.isEditing { endEditing() } else { editMode = .active }
+    private func toggleSelecting() {
+        if editMode.isEditing { endSelecting() } else { editMode = .active }
     }
 
-    private func endEditing() {
+    private func endSelecting() {
         editMode = .inactive
         selection = []
     }
 
+    private func selectAll(_ all: Bool) {
+        selection = all ? Set(library.games.map(\.id)) : []
+    }
+
+    /// One one-book game goes at once (undoable); otherwise the confirmation ends selecting.
     private func deleteSelected() {
         library.requestDelete(library.games.filter { selection.contains($0.id) }, undoManager: undoManager)
+        if library.pendingDeletion == nil { endSelecting() }
     }
 
     @ViewBuilder private var content: some View {
@@ -98,6 +122,8 @@ struct LibraryScreen: View {
         } else {
             GameList(games: library.games, covers: library.covers, selection: $selection,
                      loadCover: { await library.loadCover(for: $0, pixelWidth: $1, scale: $2) },
+                     onOpen: { library.navigationPath = [.game(id: $0.id)] },
+                     onRename: rename,
                      onDelete: { library.requestDelete($0, undoManager: undoManager) })
                 .alert("Couldn't Open the Rulebook", item: $library.error) { _ in } message: { Text($0) }
         }

@@ -118,7 +118,7 @@ final class ScreenSnapshotTests: XCTestCase {
 
     func testLibrary() async throws {
         try await snap("games", safeArea: true) { LibraryScreen(library: LibraryFixtures.model(), voice: AskController()) }
-        try await snap("editing", safeArea: true) { LibraryFixtures.editing(selected: ["tile-garden.pdf", "woodland-court.pdf"]) }
+        try await snap("selecting", safeArea: true) { LibraryFixtures.selecting(selected: ["tile-garden.pdf", "woodland-court.pdf"]) }
         try await snap("empty", safeArea: true) { LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController()) }
         try await snap("empty-dark", dark: true, safeArea: true) {
             LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController())

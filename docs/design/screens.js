@@ -17,9 +17,9 @@ const footer = `<div class="fb" style="margin:6px 11px 0"><span style="flex:4;te
 const dots = n => `<div class="dots">${[0,1,2].map(i=>`<i${i===n?' class="on"':''}></i>`).join('')}</div>`;
 
 const S = [
- {t:'1 · My Games', ms:'Home · M2 (sessions + export in M3)', li:['App <b>opens here</b>; most recently used first','<b>Tap a game</b> → viewer, Back returns here','<b>＋</b> → pick one or more PDFs → review the suggested games (S14)','<b>Swipe left</b> → Delete · <b>Edit</b> → select several'],
+ {t:'1 · My Games', ms:'Home · M2 (sessions + export in M3)', li:['App <b>opens here</b>; most recently used first','<b>Tap a game</b> → viewer, Back returns here','<b>＋</b> → pick one or more PDFs → review the suggested games (S14)','<b>Long press</b> → Open, Rename…, Delete','<b>Swipe left</b> → Delete · <b>Select</b> → several, trash'],
   h:`<div class="notch"></div><div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="home">
-   <div style="display:flex;justify-content:space-between;color:var(--accent);font-size:13px;margin:2px 0 4px"><span>⚙︎</span><span>Edit &nbsp; ＋</span></div>
+   <div style="display:flex;justify-content:space-between;color:var(--accent);font-size:13px;margin:2px 0 4px"><span>⚙︎</span><span>Select &nbsp; ＋</span></div>
    <div style="font-size:19px;font-weight:700;margin-bottom:8px">My Games</div>
    <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Power plant rush</b><span>Opened 2 minutes ago</span></div><span style="color:var(--muted)">›</span></div>
    <div class="game"><div class="cover" style="background:#fff;border:1px solid var(--line)"></div><div style="flex:1"><b>Azul</b><span>Opened yesterday</span></div><span style="color:var(--muted)">›</span></div>
