@@ -4,7 +4,8 @@ import AckshuallyCore
 
 /// My Games (S1) and the books of each game (S13): the persisted list of games, the navigation path into the
 /// viewer, the covers, the "Playing with" list shown before a game with add-ons opens, the "Add N Rulebooks"
-/// review of picked PDFs (S14), deletions waiting for a confirmation, and one viewer session per open game. Opening a game creates its
+/// review of picked PDFs (S14), deletions waiting for a confirmation, deletions and removals that can still be undone
+/// (their PDFs pending deletion until the app goes to the background), and one viewer session per open game. Opening a game creates its
 /// `ViewerModel` (or brings back the one it had), so going back and re-opening a game keeps its answer; the last
 /// `sessionLimit` games keep theirs, older ones are dropped to bound memory (each holds the PDF and a matcher).
 @MainActor
@@ -49,6 +50,12 @@ final class LibraryModel {
     private(set) var review: ImportBatch?
     /// Asked before deleting (Edit → Delete, or a swipe on a game with several books).
     var pendingDeletion: Deletion?
+    /// Deletions and removals that can still be undone (their PDFs are pending deletion), oldest first.
+    private(set) var removals: [Removal] = []
+    /// My Games' "Deleted Root · Undo" bar: the latest game deletion, until the next action or a timeout.
+    private(set) var undoBar: Removal?
+    /// The window's undo manager the removals were registered with, cleared when they're purged.
+    @ObservationIgnored private weak var undoManager: UndoManager?
     /// A game whose books are being joined before it opens (its Play button shows progress).
     private(set) var opening: String?
 
@@ -77,11 +84,12 @@ final class LibraryModel {
         isLoaded = loadIndex
     }
 
-    /// Reads the saved index in the background.
+    /// Reads the saved index in the background, and deletes what the last run left pending deletion.
     func load() async {
         let storage = storage
         index = await Task.detached(priority: .userInitiated) { storage.loadIndex() }.value
         isLoaded = true
+        await storage.purgePending()
     }
 
     // MARK: Sessions
@@ -132,6 +140,7 @@ final class LibraryModel {
     /// True when `route` can be pushed right away.
     private func prepare(_ route: GameRoute) -> Bool {
         error = nil
+        undoBar = nil
         switch route {
         case .file(let url):
             return openFile(url) != nil
@@ -246,19 +255,22 @@ final class LibraryModel {
         storage.save(index)
     }
 
-    /// Swipe → Remove: the book leaves the game and the device (not the game's last core book).
-    func removeBook(_ fileName: String, from id: String) {
-        guard index.removeBook(fileName, from: id) else { return }
+    /// Swipe → Remove: the book leaves the game and, once purged, the device (not the game's last core book).
+    /// Undoable until then.
+    func removeBook(_ fileName: String, from id: String, undoManager: UndoManager? = nil) {
+        guard let game = index.entry(id: id), let position = game.books.firstIndex(where: { $0.fileName == fileName }),
+              index.removeBook(fileName, from: id) else { return }
         storage.save(index)
-        covers[fileName] = nil
-        let storage = storage
-        Task { await storage.delete(fileName: fileName) }
+        var removal = Removal(kind: .book(game.books[position], gameID: id, position: position))
+        removal.covers[fileName] = covers.removeValue(forKey: fileName)
+        storage.moveToPending(fileName: fileName)
+        remember(removal, undoManager: undoManager, showsBar: false)
     }
 
     /// Remove on a game's only book, after "Delete <game>?" (S13): the game goes with it.
-    func deleteGame(_ id: String) {
+    func deleteGame(_ id: String, undoManager: UndoManager? = nil) {
         guard let game = index.entry(id: id) else { return }
-        delete([game])
+        delete([game], undoManager: undoManager)
     }
 
     /// A book added to "Root" named "Root Riverfolk" is shown as "Riverfolk" (the game's name is implied).
@@ -279,6 +291,7 @@ final class LibraryModel {
     func addRulebooks(_ picked: [URL], to gameID: String? = nil) {
         guard review == nil else { return }
         error = nil
+        undoBar = nil
         let target = gameID.flatMap { index.entry(id: $0) }
         var copied: [(fileName: String, title: String)] = []
         for url in picked where url.pathExtension.lowercased() == "pdf" {
@@ -419,41 +432,43 @@ final class LibraryModel {
 
     // MARK: Removing
 
-    /// Swipe → Delete or Edit → Delete: a single game with one book goes at once; several games, or a game with
-    /// several books, wait for a confirmation (`pendingDeletion`).
-    func requestDelete(_ entries: [LibraryEntry]) {
+    /// Swipe → Delete or Edit → Delete: a single game with one book goes at once (undoable); several games, or a
+    /// game with several books, wait for a confirmation (`pendingDeletion`).
+    func requestDelete(_ entries: [LibraryEntry], undoManager: UndoManager? = nil) {
         guard !entries.isEmpty else { return }
         if entries.count == 1, entries[0].books.count == 1 {
-            delete(entries)
+            delete(entries, undoManager: undoManager)
         } else {
             pendingDeletion = Deletion(games: entries)
         }
     }
 
-    func confirmDeletion() {
+    func confirmDeletion(undoManager: UndoManager? = nil) {
         guard let d = pendingDeletion else { return }
         pendingDeletion = nil
-        delete(d.games)
+        delete(d.games, undoManager: undoManager)
     }
 
-    /// The game, every one of its books' copies and covers, its session, and its place on the stack.
-    func delete(_ entries: [LibraryEntry]) {
+    /// The games leave the list with their session and their place on the stack; their PDFs wait in the
+    /// pending-deletion folder, so the delete can be undone until the app goes to the background.
+    func delete(_ entries: [LibraryEntry], undoManager: UndoManager? = nil) {
         let removed = index.remove(entries.map(\.id))
+        guard !removed.isEmpty else { return }
+        storage.save(index)
+        var removal = Removal(kind: .games(removed))
+        for name in removal.fileNames {
+            removal.covers[name] = covers.removeValue(forKey: name)
+            storage.moveToPending(fileName: name)
+        }
         forget(removed)
-        storage.save(index)
+        remember(removal, undoManager: undoManager, showsBar: true)
     }
 
-    /// Settings → Developer → Remove All Games (after its confirmation).
+    /// Settings → Developer → Remove All Games (after its confirmation): at once, not undoable.
     func removeAllGames() {
-        forget(index.removeAll())
+        let games = index.removeAll()
+        forget(games)
         storage.save(index)
-    }
-
-    private func forget(_ games: [LibraryEntry]) {
-        let ids = Set(games.map(\.id))
-        sessions.removeAll { if case .game(let id) = $0.route { ids.contains(id) } else { false } }
-        path.removeAll { if case .game(let id) = $0 { ids.contains(id) } else { false } }
-        if let c = checklist, ids.contains(c.id) { checklist = nil }
         let storage = storage
         for b in games.flatMap(\.books) {
             covers[b.fileName] = nil
@@ -461,9 +476,75 @@ final class LibraryModel {
         }
     }
 
+    private func forget(_ games: [LibraryEntry]) {
+        let ids = Set(games.map(\.id))
+        sessions.removeAll { if case .game(let id) = $0.route { ids.contains(id) } else { false } }
+        path.removeAll { if case .game(let id) = $0 { ids.contains(id) } else { false } }
+        if let c = checklist, ids.contains(c.id) { checklist = nil }
+    }
+
+    // MARK: Undo
+
+    private func remember(_ removal: Removal, undoManager: UndoManager?, showsBar: Bool) {
+        removals.append(removal)
+        if showsBar { undoBar = removal }
+        guard let undoManager else { return }
+        self.undoManager = undoManager
+        let id = removal.id
+        undoManager.registerUndo(withTarget: self) { model in
+            MainActor.assumeIsolated { model.undoRemoval(id) }
+        }
+        undoManager.setActionName(removal.actionName)
+    }
+
+    /// Undo on My Games' bar.
+    func undo(_ removal: Removal) {
+        undoRemoval(removal.id)
+    }
+
+    /// Puts the games back where they were in the list (it's ordered by last opened), or the book back in its
+    /// place in its game, with their files and covers. Nothing happens once purged, or if the game a book
+    /// came from is gone, or a new import took one of the file names.
+    private func undoRemoval(_ id: UUID) {
+        guard let i = removals.firstIndex(where: { $0.id == id }) else { return }
+        let removal = removals[i]
+        switch removal.kind {
+        case .games(let games):
+            guard games.allSatisfy({ index.entry(id: $0.id) == nil }),
+                  storage.restoreFromPending(fileNames: removal.fileNames) else { return }
+            index = LibraryIndex(entries: index.entries + games)
+        case .book(let book, let gameID, let position):
+            guard var game = index.entry(id: gameID), game.book(book.fileName) == nil,
+                  storage.restoreFromPending(fileNames: removal.fileNames) else { return }
+            game.books.insert(book, at: min(position, game.books.count))
+            index = LibraryIndex(entries: index.entries.filter { $0.id != gameID } + [game])
+            if let s = session(for: .game(id: gameID)) { restage(s, for: game) }
+        }
+        storage.save(index)
+        removals.remove(at: i)
+        if undoBar?.id == id { undoBar = nil }
+        covers.merge(removal.covers) { current, _ in current }
+    }
+
+    /// The bar timed out (or `removal` is no longer the latest): it goes, the undo stays.
+    func dismissUndoBar(_ removal: Removal? = nil) {
+        guard removal == nil || undoBar?.id == removal?.id else { return }
+        undoBar = nil
+    }
+
+    /// The app went to the background: pending files are deleted and nothing can be undone any more.
+    func purgeRemovals() async {
+        removals = []
+        undoBar = nil
+        undoManager?.removeAllActions(withTarget: self)
+        await storage.purgePending()
+    }
+
     /// `-emptyLibrary YES`: start from no games.
     func reset() {
         index = storage.reset()
+        removals = []
+        undoBar = nil
         covers = [:]
         sessions = []
         path = []

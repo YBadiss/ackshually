@@ -123,6 +123,45 @@ enum Library {
         try? FileManager.default.removeItem(at: url(for: fileName))
     }
 
+    // MARK: Pending deletion (undo)
+
+    /// Deleted games' and removed books' PDFs wait here, inside the library folder, until the app goes to the
+    /// background or launches again, so a delete can be undone. Not a PDF, so an index rebuild skips it.
+    static let pendingDeletionFolderName = "Pending Deletion"
+
+    static func pendingFolder(in folder: URL) -> URL {
+        folder.appending(path: pendingDeletionFolderName, directoryHint: .isDirectory)
+    }
+
+    /// Moves a copy out of the library into the pending folder (replacing an older pending file of that name).
+    static func moveToPending(_ fileName: String, in folder: URL = folder) {
+        let pending = pendingFolder(in: folder)
+        try? FileManager.default.createDirectory(at: pending, withIntermediateDirectories: true)
+        let dest = pending.appending(path: fileName)
+        try? FileManager.default.removeItem(at: dest)
+        try? FileManager.default.moveItem(at: folder.appending(path: fileName), to: dest)
+    }
+
+    /// Moves the files back, all or none: false when a name has been taken again in the library (a new import).
+    /// A file that isn't pending (it was already missing) doesn't block the undo; the index prunes it on launch.
+    static func restoreFromPending(_ fileNames: [String], in folder: URL = folder) -> Bool {
+        let fm = FileManager.default
+        let pending = pendingFolder(in: folder)
+        let back = fileNames.filter { fm.fileExists(atPath: pending.appending(path: $0).path) }
+        guard back.allSatisfy({ !fm.fileExists(atPath: folder.appending(path: $0).path) }) else { return false }
+        for name in back { try? fm.moveItem(at: pending.appending(path: name), to: folder.appending(path: name)) }
+        return true
+    }
+
+    /// Deletes every pending file; returns their names (for their cached covers).
+    @discardableResult
+    static func purgePending(in folder: URL = folder) -> [String] {
+        let pending = pendingFolder(in: folder)
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: pending.path)) ?? []
+        for name in names { try? FileManager.default.removeItem(at: pending.appending(path: name)) }
+        return names
+    }
+
     // MARK: Opening a game
 
     /// The document for `game`'s books in play. One book: its PDF as is. Several: joined once and kept in

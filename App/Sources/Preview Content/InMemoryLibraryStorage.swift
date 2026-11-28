@@ -20,6 +20,9 @@ final class InMemoryLibraryStorage: LibraryStorage {
     func url(for fileName: String) -> URL { folder.appending(path: fileName) }
     func title(of url: URL) -> String { LoadedRulebook.prettyTitle(from: url, pdfTitle: nil) }
     func delete(fileName: String) async { try? FileManager.default.removeItem(at: url(for: fileName)) }
+    func moveToPending(fileName: String) { Library.moveToPending(fileName, in: folder) }
+    func restoreFromPending(fileNames: [String]) -> Bool { Library.restoreFromPending(fileNames, in: folder) }
+    func purgePending() async { Library.purgePending(in: folder) }
     func cover(for url: URL, pixelWidth: Int) async -> UIImage? { nil }
 
     func importPDF(from picked: URL) throws -> URL { try Library.importPDF(from: picked, into: folder) }

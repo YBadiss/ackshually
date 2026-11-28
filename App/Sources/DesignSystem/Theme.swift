@@ -135,6 +135,8 @@ struct Theme: Sendable, Equatable {
         /// The viewer's title button ("Root · Riverfolk ⌄", S13) and its chevron.
         var titleButton = Font.headline
         var titleChevron = Font.caption.weight(.bold)
+        /// My Games' "Deleted Root · Undo" bar.
+        var undoBar = Font.subheadline
     }
 
     /// Relative layout rules (fractions, thresholds), never absolute frames.
@@ -166,6 +168,8 @@ struct Theme: Sendable, Equatable {
         var maxEvidenceZoom: CGFloat = 3.2
         /// Wait this long after the sheet stops moving before re-centering the PDF.
         var sheetSettleDelay: Duration = .milliseconds(160)
+        /// The "Deleted Root · Undo" bar stays this long (shake undoes until the app goes to the background).
+        var undoBarDuration: Duration = .seconds(6)
     }
 
     var sheetAnimation: Animation { .snappy(duration: 0.3) }
