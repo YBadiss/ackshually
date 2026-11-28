@@ -55,6 +55,7 @@ struct GameList: View {
     @ViewBuilder private func row(_ game: LibraryEntry) -> some View {
         let content = GameRow(title: game.title, books: game.bookCountText, lastOpened: game.lastOpened,
                               cover: game.coverBook.flatMap { covers[$0.fileName] })
+            .accessibilityElement(children: .combine)
         if isSelecting {
             content
         } else {
