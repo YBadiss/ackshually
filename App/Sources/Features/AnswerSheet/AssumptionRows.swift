@@ -12,6 +12,8 @@ struct AssumptionRows: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("assumptions")
     }
 }
 
