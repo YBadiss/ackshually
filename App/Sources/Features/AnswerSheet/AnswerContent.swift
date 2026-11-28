@@ -43,7 +43,7 @@ struct AnswerContent: View {
                             AnswerShelf(model: model)
                                 // Edge to edge: the cards peek from the sheet's sides.
                                 .padding(.horizontal, -theme.spacing.sheetMargin)
-                                .hiddenWhenCollapsed(placement.isCollapsed)
+                                .revealed(!placement.isCollapsed)
                         }
                     }
                     // On the sheet, follow-up + thumbs in their own row under the steps, at every
@@ -53,14 +53,16 @@ struct AnswerContent: View {
                         AnswerFooterRow(draft: Bindable(model.session).draft, voice: voice, rating: model.session.currentRating,
                                         onRate: model.session.rate, onSend: model.session.ask)
                             .disabled(!model.session.canFollowUp)
-                            .hiddenWhenCollapsed(placement.isCollapsed)
+                            .revealed(!placement.isCollapsed)
                     }
                     if answered, !model.navigator.branchRows.isEmpty {
                         BranchRows(rows: model.navigator.branchRows, onSelect: selectBranch)
-                            .hiddenWhenCollapsed(placement.isCollapsed)
+                            .revealed(!placement.isCollapsed)
                     }
                     // The medium detent ends here; what follows shows when expanded. The stack's
-                    // spacing above this marker is the bottom margin of the medium detent.
+                    // spacing above this marker is the bottom margin of the medium detent. The sheet
+                    // adds the home-indicator inset and the content draws under it, so what follows is
+                    // only revealed when expanded instead of showing half-cut under the edge.
                     Color.clear.frame(height: 0)
                         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.space)).minY } action: {
                             metrics.medium = $0 + topMargin
@@ -70,12 +72,12 @@ struct AnswerContent: View {
                         FullAnswerSections(model: model)
                     } else if answered, let a = model.session.answer?.assumptions, !a.isEmpty {
                         AssumptionRows(assumptions: a)
-                            .hiddenWhenCollapsed(placement.isCollapsed)
+                            .revealed(placement.isExpanded)
                     }
                     if model.session.canFollowUp, placement == .inspector {
                         FollowUpSection(session: model.session, voice: voice)
                     }
-                    if model.session.isDemo, answered { DemoNote() }
+                    if model.session.isDemo, answered { DemoNote().revealed(placement.isExpanded) }
                 }
                 .coordinateSpace(.named(Self.space))
             }
@@ -138,12 +140,14 @@ struct AnswerContent: View {
 }
 
 private extension View {
-    /// Keeps the layout (detent heights are measured from it) but hides content below the header
-    /// in the collapsed sheet, so the detent edge never cuts through a half-visible card.
-    func hiddenWhenCollapsed(_ collapsed: Bool) -> some View {
-        opacity(collapsed ? 0 : 1)
-            .allowsHitTesting(!collapsed)
-            .accessibilityHidden(collapsed)
-            .animation(.snappy, value: collapsed)
+    /// Keeps the layout (detent heights are measured from it) but hides content past the detent the
+    /// sheet rests on (below the header when collapsed, below the branch rows at medium), so the
+    /// detent edge never cuts through a half-visible card or section. Opacity, hit testing and
+    /// VoiceOver only, so the measurements don't change.
+    func revealed(_ shown: Bool) -> some View {
+        opacity(shown ? 1 : 0)
+            .allowsHitTesting(shown)
+            .accessibilityHidden(!shown)
+            .animation(.snappy, value: shown)
     }
 }

@@ -83,6 +83,37 @@ final class AnswerLayoutTests: XCTestCase {
         }
     }
 
+    /// Medium (S5) ends on a content boundary: the sheet is the medium height plus the home-indicator
+    /// inset, and the scroll content draws under the indicator, so whatever follows the branch rows
+    /// ("Assumes", the demo note) must be hidden at medium, not left half-cut by the sheet's edge
+    /// (13 mini and 18 Pro, 2026-11-28: the top of "ASSUMES" showed under the If… row).
+    func testMediumDetentEndsAfterTheBranchRows() async throws {
+        let homeIndicator: CGFloat = 34
+        for size in [CGSize(width: 375, height: 812), Self.phone] {
+            for typeSize in [DynamicTypeSize.large, .accessibility3] {
+                var metrics = AnswerMetrics()
+                let m = presented()
+                let h = HostedView(size: size, typeSize: typeSize) {
+                    AnswerContent(model: m, voice: AskController(), placement: .sheet(.medium), onMetrics: { metrics = $0 })
+                        .themeBackground(\.sheet)
+                }
+                await h.settle()
+                let edge = metrics.medium + homeIndicator
+                let branch = try unwrap(h, "branch-0")
+                XCTAssertLessThanOrEqual(branch.maxY, metrics.medium, "medium includes the branch rows (\(size), \(typeSize))")
+                for below in ["assumptions", "demoNote"] {
+                    if let f = h.frame(below) {
+                        XCTAssertGreaterThanOrEqual(f.minY, edge, "\(below) at \(f.minY) shows under the medium edge \(edge) (\(size), \(typeSize))")
+                    }
+                }
+                h.close()
+            }
+        }
+        // Expanded still shows them.
+        let h = await column(presented(), .sheet(.expanded))
+        XCTAssertNotNil(h.frame("assumptions"), "expanded shows Assumes")
+    }
+
     /// Medium (S5): the follow-up field and thumbs sit in their own row under the shelf, once.
     func testFollowUpRowSitsUnderTheShelf() async throws {
         let h = await column(presented(), .sheet(.medium))
