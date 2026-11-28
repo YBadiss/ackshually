@@ -33,6 +33,8 @@ struct PlayingWithScreen: View {
                 }
                 // S14 with this game suggested.
                 .addRulebooksSheet(library, from: gameID)
+                // "Removed Riverfolk · Undo" (#29: removing a book doesn't ask).
+                .undoBar(library)
         } else {
             ContentUnavailableView("Game Removed", systemImage: "book.closed")
         }
@@ -61,4 +63,11 @@ struct PlayingWithScreen: View {
         .environment(library)
         .themed()
         .preferredColorScheme(.dark)
+}
+#Preview("Removed, Undo bar") {
+    let library = PlayingWithFixtures.library()
+    library.removeBook(Library.sampleExpansionFileName, from: PlayingWithFixtures.sampleID)
+    return PlayingWithScreen(gameID: PlayingWithFixtures.sampleID, purpose: .change) {}
+        .environment(library)
+        .themed()
 }

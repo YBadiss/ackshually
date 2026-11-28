@@ -106,7 +106,7 @@ final class UndoRemovalTests: XCTestCase {
         XCTAssertFalse(exists(solar))
         XCTAssertEqual(pendingFiles, [solar])
         XCTAssertEqual(undo.undoActionName, "Remove Rulebook")
-        XCTAssertNil(library.undoBar, "the bar is for My Games; Playing with relies on shake to undo")
+        XCTAssertEqual(library.undoBar?.message, "Removed Solar Expansion", "Playing with shows the bar too (#29)")
 
         undo.undo()
         XCTAssertEqual(library.game(id), game, "the book is back in its place, with its role and tick")

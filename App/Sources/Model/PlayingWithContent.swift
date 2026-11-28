@@ -7,6 +7,16 @@ struct PlayingWithContent: Equatable {
     /// From My Games the list confirms with Play (then the game opens); from the viewer's title, with Done.
     enum Purpose: Equatable { case play, change }
 
+    /// What swipe → Remove does on a row (#29).
+    enum Removal: Equatable {
+        /// The last core book of a game with other books: no Remove.
+        case none
+        /// Goes at once; Undo on the bar (or shake) brings it back.
+        case undoable
+        /// The game's only book: "Delete <game>?" first, since the game goes with it.
+        case asksToDeleteGame
+    }
+
     struct Book: Identifiable, Equatable {
         var fileName: String
         var title: String
@@ -17,6 +27,8 @@ struct PlayingWithContent: Equatable {
         /// The game's only book: removing it deletes the game (after asking).
         var isOnlyBook = false
         var id: String { fileName }
+
+        var removal: Removal { isOnlyBook ? .asksToDeleteGame : isLastCore ? .none : .undoable }
     }
 
     var gameTitle: String

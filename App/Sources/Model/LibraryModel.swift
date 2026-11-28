@@ -55,7 +55,7 @@ final class LibraryModel {
     var pendingDeletion: Deletion?
     /// Deletions and removals that can still be undone (their PDFs are pending deletion), oldest first.
     private(set) var removals: [Removal] = []
-    /// My Games' "Deleted Root · Undo" bar: the latest game deletion, until the next action or a timeout.
+    /// The "Deleted Root · Undo" / "Removed Riverfolk · Undo" bar (My Games, Playing with): the latest removal, until the next action or a timeout.
     private(set) var undoBar: Removal?
     /// The window's undo manager the removals were registered with, cleared when they're purged.
     @ObservationIgnored private weak var undoManager: UndoManager?
@@ -267,7 +267,7 @@ final class LibraryModel {
         var removal = Removal(kind: .book(game.books[position], gameID: id, position: position))
         removal.covers[fileName] = covers.removeValue(forKey: fileName)
         storage.moveToPending(fileName: fileName)
-        remember(removal, undoManager: undoManager, showsBar: false)
+        remember(removal, undoManager: undoManager)
     }
 
     /// Remove on a game's only book, after "Delete <game>?" (S13): the game goes with it.
@@ -464,7 +464,7 @@ final class LibraryModel {
             storage.moveToPending(fileName: name)
         }
         forget(removed)
-        remember(removal, undoManager: undoManager, showsBar: true)
+        remember(removal, undoManager: undoManager)
     }
 
     /// Settings → Developer → Remove All Games (after its confirmation): at once, not undoable.
@@ -488,9 +488,9 @@ final class LibraryModel {
 
     // MARK: Undo
 
-    private func remember(_ removal: Removal, undoManager: UndoManager?, showsBar: Bool) {
+    private func remember(_ removal: Removal, undoManager: UndoManager?) {
         removals.append(removal)
-        if showsBar { undoBar = removal }
+        undoBar = removal
         guard let undoManager else { return }
         self.undoManager = undoManager
         let id = removal.id
