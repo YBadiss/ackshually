@@ -26,15 +26,16 @@ enum LibraryFixtures {
         return m
     }
 
-    /// My Games in Edit mode with `selected` ticked: the list and its toolbar (Delete (N) at the bottom).
-    static func editing(selected: Set<String>) -> some View {
+    /// My Games selecting, with `selected` ticked: the list and its toolbar (Select All, Done, "N Selected", trash).
+    static func selecting(selected: Set<String>) -> some View {
         NavigationStack {
             GameList(games: games, covers: covers, selection: .constant(selected), loadCover: { _, _, _ in }, onDelete: { _ in })
                 .environment(\.editMode, .constant(.active))
                 .navigationTitle("My Games")
                 .toolbar {
-                    LibraryToolbar(isEditing: true, selectedCount: selected.count, canEdit: true, onAdd: {}, onSettings: {},
-                                   onToggleEditing: {}, onDeleteSelected: {})
+                    LibraryToolbar(isSelecting: true, selectedCount: selected.count, allSelected: selected.count == games.count,
+                                   canSelect: true, onAdd: {}, onSettings: {}, onToggleSelecting: {}, onSelectAll: { _ in },
+                                   onDeleteSelected: {})
                 }
                 .themeBackground(\.groupedBackground)
         }

@@ -34,6 +34,9 @@ final class LibraryModel {
         }
 
         var detail: String { bookCount == 1 ? "The PDF is removed from this device." : "The PDFs are removed from this device." }
+
+        /// The destructive button names the action: "Delete Game", "Delete 3 Games".
+        var confirmTitle: String { games.count == 1 ? "Delete Game" : "Delete \(games.count) Games" }
     }
 
     private(set) var index: LibraryIndex

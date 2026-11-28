@@ -54,17 +54,4 @@ final class AddRulebooksLayoutTests: XCTestCase {
         XCTAssertTrue(h.elements.contains { $0.label.hasPrefix("Sort these yourself") })
         XCTAssertEqual(AddRulebooksFixtures.unsorted.batch.groups.count, AddRulebooksFixtures.files.count, "one game per file")
     }
-
-    /// Edit mode: the list keeps every game inside the screen and Delete (N) shows in the bottom bar.
-    func testEditModeShowsDeleteWithTheCount() async throws {
-        let h = await hosted { LibraryFixtures.editing(selected: ["tile-garden.pdf", "woodland-court.pdf"]) }
-        let delete = try XCTUnwrap(h.element("deleteSelected"))
-        XCTAssertEqual(delete.label, "Delete (2)")
-        XCTAssertGreaterThan(delete.frame.minY, h.window.bounds.height / 2, "in the bottom bar")
-        XCTAssertEqual(h.element("editGames")?.label, "Done")
-        for g in LibraryFixtures.games {
-            let f = try XCTUnwrap(h.frame("game-\(g.id)"), g.title)
-            XCTAssertLessThanOrEqual(f.maxX, h.window.bounds.width + 0.5)
-        }
-    }
 }

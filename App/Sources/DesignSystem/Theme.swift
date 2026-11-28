@@ -44,6 +44,8 @@ struct Theme: Sendable, Equatable {
         var notCovered: Color
         /// Web findings that disagree (S10).
         var warning: Color
+        /// Delete and Remove swipe actions: the system red, not the brick tint (the root `.tint` reaches them).
+        var destructive: Color
         var dot: Color
         var dotActive: Color
         /// Spotlight on the cited passage: the rest of the evidence page is dimmed with this…
@@ -196,6 +198,7 @@ extension Theme {
             inferred: Color(uiColor: .systemOrange),
             notCovered: Color(uiColor: .secondaryLabel),
             warning: Color(light: 0xA2412B, dark: 0xE2775C),
+            destructive: Color(uiColor: .systemRed),
             dot: Color(uiColor: .tertiaryLabel),
             dotActive: Color(uiColor: .label),
             spotlightDim: Color(light: 0x1A1410, dark: 0x000000, alpha: 0.34),
