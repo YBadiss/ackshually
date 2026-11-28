@@ -3,7 +3,7 @@ import AckshuallyCore
 
 /// S13 · Playing with: the game's rulebooks, core books (always on) and add-ons ticked for tonight. Shown every
 /// time a game with add-ons is opened from My Games (Play opens it) and from the viewer's title (Done).
-/// Swipe left on a book → Remove (the game's only book: delete the game?); long-press → Make Core / Make Add-on,
+/// Swipe left on a book → Remove, at once and undoable (the game's only book: "Delete <game>?" first); long-press → Make Core / Make Add-on,
 /// Rename; ＋ Add Rulebooks at the bottom (S14, this game suggested).
 struct PlayingWithSheet: View {
     var content: PlayingWithContent
@@ -68,9 +68,10 @@ struct PlayingWithSheet: View {
                 Button("Rename Game", systemImage: "pencil") { startRenaming(.game, current: content.gameTitle) }
             }
             .toolbar { toolbar }
-            .alert("Delete \(content.gameTitle)?", isPresented: $confirmingDeleteGame) {
+            // An intentional action: an action sheet, not an alert (HIG), like My Games' "Delete Root…?".
+            .confirmationDialog("Delete \(content.gameTitle)?", isPresented: $confirmingDeleteGame, titleVisibility: .visible) {
                 Button("Delete Game", role: .destructive, action: onDeleteGame)
-                Button("Cancel", role: .cancel) {}
+                    .accessibilityIdentifier("confirmDeleteGame")
             } message: {
                 Text("It's this game's only rulebook. The game and its PDF are removed from this device.")
             }
@@ -101,12 +102,17 @@ struct PlayingWithSheet: View {
 
     private func row(_ book: PlayingWithContent.Book) -> some View {
         BookRow(book: book) { onToggle(book.fileName) }
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                if book.isOnlyBook {
-                    Button("Remove", systemImage: "trash") { confirmingDeleteGame = true }
-                        .tint(theme.colors.warning)
-                } else if !book.isLastCore {
+            // One red Remove for every row: a book goes at once (undoable); the only book asks first.
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                switch book.removal {
+                case .none:
+                    EmptyView()
+                case .undoable:
                     Button("Remove", systemImage: "trash", role: .destructive) { onRemove(book.fileName) }
+                        .tint(theme.colors.destructive)
+                case .asksToDeleteGame:
+                    Button("Remove", systemImage: "trash", role: .destructive) { confirmingDeleteGame = true }
+                        .tint(theme.colors.destructive)
                 }
             }
             .contextMenu {

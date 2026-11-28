@@ -206,6 +206,17 @@ final class RulebookSetModelTests: XCTestCase {
         XCTAssertEqual(c.addOns.first?.inPlay, true)
     }
 
+    /// #29: removing a book is undoable, so only the game's only book asks first (it deletes the game); the
+    /// last core book of a game with add-ons can't be removed.
+    func testWhichRowsRemoveAndWhichAsk() throws {
+        let c = PlayingWithContent(try XCTUnwrap(library.game(id)), purpose: .play)
+        let core = try XCTUnwrap(c.core.first), solar = try XCTUnwrap(c.addOns.first)
+        XCTAssertEqual(core.removal, .none, "the last core book stays")
+        XCTAssertEqual(solar.removal, .undoable, "an add-on goes at once, with Undo")
+        let only = try XCTUnwrap(PlayingWithFixtures.oneBook.core.first)
+        XCTAssertEqual(only.removal, .asksToDeleteGame, "the only book asks: it deletes the game")
+    }
+
     func testBookTitleDropsTheGameName() {
         let game = LibraryEntry(fileName: "root.pdf", title: "Root", added: .now, lastOpened: .now)
         XCTAssertEqual(LibraryModel.bookTitle("Root riverfolk learning", in: game), "Riverfolk learning")

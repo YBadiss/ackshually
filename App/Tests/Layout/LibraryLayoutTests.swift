@@ -62,6 +62,25 @@ final class LibraryLayoutTests: XCTestCase {
         }
     }
 
+    /// Playing with (#29): removing an add-on doesn't ask; "Removed Solar Expansion · Undo" shows at the bottom
+    /// of the sheet, and Undo puts the book back.
+    func testRemovingABookInPlayingWithOffersUndo() async throws {
+        let library = PlayingWithFixtures.library()
+        let id = PlayingWithFixtures.sampleID
+        library.removeBook(Library.sampleExpansionFileName, from: id)
+        let h = HostedView(size: CGSize(width: 375, height: 812), safeArea: true) {
+            PlayingWithScreen(gameID: id, purpose: .play) {}.environment(library)
+        }
+        host = h
+        await h.settle()
+        XCTAssertNotNil(h.frame("undoBar"))
+        XCTAssertTrue(h.elements.contains { $0.label == "Removed Solar Expansion" })
+        library.undo(try XCTUnwrap(library.undoBar))
+        await h.settle()
+        XCTAssertNil(h.frame("undoBar"))
+        XCTAssertNotNil(library.game(id)?.book(Library.sampleExpansionFileName))
+    }
+
     /// After a delete, "Deleted <game> · Undo" sits at the bottom, inside the screen, with a 44 pt Undo; Undo
     /// brings the game back and the bar goes (#28).
     func testUndoBarAfterADelete() async throws {

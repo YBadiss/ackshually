@@ -19,12 +19,11 @@ struct LibraryScreen: View {
     @State private var newName = ""
     /// Deletes register here: shake or three-finger swipe undoes them.
     @Environment(\.undoManager) private var undoManager
-    @Environment(\.theme) private var theme
 
     var body: some View {
         NavigationStack(path: $library.navigationPath) {
             content
-                .safeAreaInset(edge: .bottom) { undoBar }
+                .undoBar(library)
                 .navigationTitle("My Games")
                 .toolbar {
                     LibraryToolbar(isSelecting: editMode.isEditing, selectedCount: selection.count,
@@ -80,19 +79,6 @@ struct LibraryScreen: View {
         renaming = game
         newName = game.title
         isRenaming = true
-    }
-
-    @ViewBuilder private var undoBar: some View {
-        if let removal = library.undoBar {
-            UndoBar(message: removal.message) { withAnimation(.snappy) { library.undo(removal) } }
-                .padding(.horizontal, theme.spacing.xl)
-                .padding(.bottom, theme.spacing.m)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .task(id: removal.id) {
-                    try? await Task.sleep(for: theme.layout.undoBarDuration)
-                    withAnimation(.snappy) { library.dismissUndoBar(removal) }
-                }
-        }
     }
 
     private func toggleSelecting() {
