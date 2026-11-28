@@ -119,6 +119,10 @@ final class ScreenSnapshotTests: XCTestCase {
     func testLibrary() async throws {
         try await snap("games", safeArea: true) { LibraryScreen(library: LibraryFixtures.model(), voice: AskController()) }
         try await snap("selecting", safeArea: true) { LibraryFixtures.selecting(selected: ["tile-garden.pdf", "woodland-court.pdf"]) }
+        // #27: at the largest text size the rows stack (cover above the text) instead of breaking words.
+        try await snap("selecting-ax5", size: CGSize(width: 375, height: 812), typeSize: .accessibility5, safeArea: true) {
+            LibraryFixtures.selecting(selected: ["tile-garden.pdf"])
+        }
         try await snap("empty", safeArea: true) { LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController()) }
         try await snap("empty-dark", dark: true, safeArea: true) {
             LibraryScreen(library: LibraryFixtures.model(games: []), voice: AskController())

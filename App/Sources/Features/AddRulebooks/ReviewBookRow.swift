@@ -13,9 +13,17 @@ struct ReviewBookRow: View {
     var onRename: () -> Void
     var onSetRole: (BookRole) -> Void
     @Environment(\.theme) private var theme
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// Cover, text and menu in a row; stacked at accessibility sizes so no word breaks (#27).
+    private var layout: AnyLayout {
+        typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: theme.spacing.m))
+            : AnyLayout(HStackLayout(spacing: theme.spacing.l))
+    }
 
     var body: some View {
-        HStack(spacing: theme.spacing.l) {
+        layout {
             GameCover(image: cover)
             VStack(alignment: .leading, spacing: theme.spacing.xxs) {
                 Button(action: onRename) {
@@ -26,10 +34,12 @@ struct ReviewBookRow: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Renames this rulebook")
+                .accessibilityIdentifier("reviewTitle")
                 if let reason = book.reason {
                     Text(reason)
                         .font(theme.font.gameDetail)
                         .foregroundStyle(theme.colors.secondaryLabel)
+                        .accessibilityIdentifier("reviewReason")
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
